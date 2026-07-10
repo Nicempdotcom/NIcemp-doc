@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "NicEmp Docs"
+version = "1.0.0"
+id = "artifacts/nicemp-docs"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26009
+
+[services.development]
+run = "pnpm --filter @workspace/nicemp-docs run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nicemp-docs", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nicemp-docs/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26009"
+BASE_PATH = "/"

@@ -1,0 +1,374 @@
+[
+  {
+    "id": "tbl-users",
+    "name": "users",
+    "description": "Usuários do sistema com credenciais de acesso e dados de autenticação.",
+    "module": "auth",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "Identificador único." },
+      { "name": "name", "type": "varchar", "nullable": false, "description": "Nome completo." },
+      { "name": "email", "type": "varchar", "nullable": false, "unique": true, "description": "E-mail único de acesso." },
+      { "name": "password_hash", "type": "varchar", "nullable": false, "description": "Hash bcrypt da senha." },
+      { "name": "active", "type": "boolean", "nullable": false, "description": "Usuário ativo/inativo." },
+      { "name": "email_verified_at", "type": "timestamp", "nullable": true, "description": "Data de verificação do e-mail." },
+      { "name": "last_login_at", "type": "timestamp", "nullable": true, "description": "Último acesso." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data de criação." },
+      { "name": "updated_at", "type": "timestamp", "nullable": false, "description": "Última atualização." }
+    ],
+    "indexes": ["users_email_idx", "users_active_idx"],
+    "estimatedRows": 850,
+    "lastUpdated": "2025-07-08"
+  },
+  {
+    "id": "tbl-sessions",
+    "name": "sessions",
+    "description": "Sessões ativas de usuários com refresh tokens e metadados de dispositivo.",
+    "module": "auth",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID da sessão." },
+      { "name": "user_id", "type": "uuid", "nullable": false, "foreignKey": "users.id", "description": "Usuário proprietário." },
+      { "name": "refresh_token", "type": "varchar", "nullable": false, "unique": true, "description": "Token de renovação." },
+      { "name": "device_info", "type": "jsonb", "nullable": true, "description": "User-agent e IP." },
+      { "name": "expires_at", "type": "timestamp", "nullable": false, "description": "Expiração do refresh token." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Criação da sessão." }
+    ],
+    "indexes": ["sessions_user_id_idx", "sessions_refresh_token_idx", "sessions_expires_at_idx"],
+    "estimatedRows": 2400,
+    "lastUpdated": "2025-07-08"
+  },
+  {
+    "id": "tbl-roles",
+    "name": "roles",
+    "description": "Roles de acesso do sistema com definição de permissões por módulo.",
+    "module": "auth",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do role." },
+      { "name": "name", "type": "varchar", "nullable": false, "unique": true, "description": "Nome único do role." },
+      { "name": "description", "type": "text", "nullable": true, "description": "Descrição das permissões." },
+      { "name": "is_system", "type": "boolean", "nullable": false, "description": "Role do sistema (não editável)." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data de criação." }
+    ],
+    "indexes": ["roles_name_idx"],
+    "estimatedRows": 12,
+    "lastUpdated": "2025-07-04"
+  },
+  {
+    "id": "tbl-user-roles",
+    "name": "user_roles",
+    "description": "Tabela de junção entre usuários e roles (N:N).",
+    "module": "auth",
+    "status": "active",
+    "columns": [
+      { "name": "user_id", "type": "uuid", "nullable": false, "foreignKey": "users.id", "description": "Referência ao usuário." },
+      { "name": "role_id", "type": "uuid", "nullable": false, "foreignKey": "roles.id", "description": "Referência ao role." },
+      { "name": "assigned_at", "type": "timestamp", "nullable": false, "description": "Data de atribuição." },
+      { "name": "assigned_by", "type": "uuid", "nullable": true, "foreignKey": "users.id", "description": "Quem atribuiu o role." }
+    ],
+    "indexes": ["user_roles_user_id_idx", "user_roles_role_id_idx"],
+    "estimatedRows": 1700,
+    "lastUpdated": "2025-07-04"
+  },
+  {
+    "id": "tbl-employees",
+    "name": "employees",
+    "description": "Dados profissionais dos colaboradores vinculados a usuários.",
+    "module": "employees",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do colaborador." },
+      { "name": "user_id", "type": "uuid", "nullable": true, "foreignKey": "users.id", "description": "Usuário vinculado (nullable)." },
+      { "name": "registration", "type": "varchar", "nullable": false, "unique": true, "description": "Matrícula interna." },
+      { "name": "full_name", "type": "varchar", "nullable": false, "description": "Nome completo." },
+      { "name": "cpf", "type": "varchar", "nullable": false, "unique": true, "description": "CPF (armazenado criptografado)." },
+      { "name": "birth_date", "type": "date", "nullable": false, "description": "Data de nascimento." },
+      { "name": "hire_date", "type": "date", "nullable": false, "description": "Data de contratação." },
+      { "name": "termination_date", "type": "date", "nullable": true, "description": "Data de desligamento." },
+      { "name": "department_id", "type": "uuid", "nullable": false, "foreignKey": "departments.id", "description": "Departamento atual." },
+      { "name": "position_id", "type": "uuid", "nullable": false, "foreignKey": "positions.id", "description": "Cargo atual." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data de cadastro." },
+      { "name": "updated_at", "type": "timestamp", "nullable": false, "description": "Última atualização." }
+    ],
+    "indexes": ["employees_user_id_idx", "employees_department_id_idx", "employees_registration_idx"],
+    "estimatedRows": 780,
+    "lastUpdated": "2025-07-03"
+  },
+  {
+    "id": "tbl-departments",
+    "name": "departments",
+    "description": "Estrutura de departamentos da empresa com hierarquia.",
+    "module": "employees",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do departamento." },
+      { "name": "name", "type": "varchar", "nullable": false, "description": "Nome do departamento." },
+      { "name": "code", "type": "varchar", "nullable": false, "unique": true, "description": "Código interno (ex: TI-01)." },
+      { "name": "parent_id", "type": "uuid", "nullable": true, "foreignKey": "departments.id", "description": "Departamento pai (hierarquia)." },
+      { "name": "manager_id", "type": "uuid", "nullable": true, "foreignKey": "employees.id", "description": "Responsável." },
+      { "name": "active", "type": "boolean", "nullable": false, "description": "Departamento ativo." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data de criação." }
+    ],
+    "indexes": ["departments_code_idx", "departments_parent_id_idx"],
+    "estimatedRows": 24,
+    "lastUpdated": "2025-06-20"
+  },
+  {
+    "id": "tbl-positions",
+    "name": "positions",
+    "description": "Cargos disponíveis com faixas salariais de referência.",
+    "module": "employees",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do cargo." },
+      { "name": "title", "type": "varchar", "nullable": false, "description": "Título do cargo." },
+      { "name": "code", "type": "varchar", "nullable": false, "unique": true, "description": "CBO ou código interno." },
+      { "name": "salary_min", "type": "integer", "nullable": true, "description": "Salário mínimo em centavos." },
+      { "name": "salary_max", "type": "integer", "nullable": true, "description": "Salário máximo em centavos." },
+      { "name": "active", "type": "boolean", "nullable": false, "description": "Cargo ativo." }
+    ],
+    "indexes": ["positions_code_idx"],
+    "estimatedRows": 67,
+    "lastUpdated": "2025-06-15"
+  },
+  {
+    "id": "tbl-salaries",
+    "name": "salaries",
+    "description": "Histórico salarial de cada colaborador com datas de vigência.",
+    "module": "financeiro",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do registro." },
+      { "name": "employee_id", "type": "uuid", "nullable": false, "foreignKey": "employees.id", "description": "Colaborador." },
+      { "name": "amount", "type": "integer", "nullable": false, "description": "Valor em centavos." },
+      { "name": "effective_from", "type": "date", "nullable": false, "description": "Início de vigência." },
+      { "name": "effective_to", "type": "date", "nullable": true, "description": "Fim de vigência (null = atual)." },
+      { "name": "reason", "type": "varchar", "nullable": true, "description": "Motivo do reajuste." },
+      { "name": "created_by", "type": "uuid", "nullable": false, "foreignKey": "users.id", "description": "Usuário que registrou." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data do registro." }
+    ],
+    "indexes": ["salaries_employee_id_idx", "salaries_effective_from_idx"],
+    "estimatedRows": 1940,
+    "lastUpdated": "2025-07-07"
+  },
+  {
+    "id": "tbl-payroll",
+    "name": "payroll",
+    "description": "Cabeçalho das folhas de pagamento por competência mensal.",
+    "module": "financeiro",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID da folha." },
+      { "name": "competence_month", "type": "integer", "nullable": false, "description": "Mês de competência (1-12)." },
+      { "name": "competence_year", "type": "integer", "nullable": false, "description": "Ano de competência." },
+      { "name": "status", "type": "varchar", "nullable": false, "description": "draft | processing | closed." },
+      { "name": "total_gross", "type": "integer", "nullable": false, "description": "Total bruto em centavos." },
+      { "name": "total_deductions", "type": "integer", "nullable": false, "description": "Total de descontos." },
+      { "name": "total_net", "type": "integer", "nullable": false, "description": "Total líquido." },
+      { "name": "employee_count", "type": "integer", "nullable": false, "description": "Qtd de colaboradores." },
+      { "name": "closed_at", "type": "timestamp", "nullable": true, "description": "Data de fechamento." },
+      { "name": "created_by", "type": "uuid", "nullable": false, "foreignKey": "users.id", "description": "Quem gerou." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data de criação." }
+    ],
+    "indexes": ["payroll_competence_idx", "payroll_status_idx"],
+    "estimatedRows": 36,
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "tbl-payroll-items",
+    "name": "payroll_items",
+    "description": "Itens individuais (holerites) de cada colaborador em cada folha.",
+    "module": "financeiro",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do item." },
+      { "name": "payroll_id", "type": "uuid", "nullable": false, "foreignKey": "payroll.id", "description": "Folha de referência." },
+      { "name": "employee_id", "type": "uuid", "nullable": false, "foreignKey": "employees.id", "description": "Colaborador." },
+      { "name": "gross_salary", "type": "integer", "nullable": false, "description": "Salário bruto." },
+      { "name": "inss_deduction", "type": "integer", "nullable": false, "description": "Desconto INSS." },
+      { "name": "irrf_deduction", "type": "integer", "nullable": false, "description": "Desconto IRRF." },
+      { "name": "other_deductions", "type": "integer", "nullable": false, "description": "Outros descontos." },
+      { "name": "net_salary", "type": "integer", "nullable": false, "description": "Salário líquido." },
+      { "name": "details", "type": "jsonb", "nullable": true, "description": "Rubrica detalhada em JSON." }
+    ],
+    "indexes": ["payroll_items_payroll_id_idx", "payroll_items_employee_id_idx"],
+    "estimatedRows": 28080,
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "tbl-notifications",
+    "name": "notifications",
+    "description": "Notificações internas do sistema para cada usuário.",
+    "module": "comunicacao",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID da notificação." },
+      { "name": "user_id", "type": "uuid", "nullable": false, "foreignKey": "users.id", "description": "Destinatário." },
+      { "name": "type", "type": "varchar", "nullable": false, "description": "Tipo: info | warning | success | error." },
+      { "name": "title", "type": "varchar", "nullable": false, "description": "Título da notificação." },
+      { "name": "body", "type": "text", "nullable": false, "description": "Conteúdo da mensagem." },
+      { "name": "module", "type": "varchar", "nullable": true, "description": "Módulo de origem." },
+      { "name": "metadata", "type": "jsonb", "nullable": true, "description": "Dados extras (link, entityId, etc.)." },
+      { "name": "read_at", "type": "timestamp", "nullable": true, "description": "Data de leitura (null = não lida)." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data de criação." }
+    ],
+    "indexes": ["notifications_user_id_idx", "notifications_read_at_idx", "notifications_created_at_idx"],
+    "estimatedRows": 15600,
+    "lastUpdated": "2025-06-20"
+  },
+  {
+    "id": "tbl-notification-prefs",
+    "name": "notification_preferences",
+    "description": "Preferências de notificação por usuário e canal (e-mail, in-app).",
+    "module": "comunicacao",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID da preferência." },
+      { "name": "user_id", "type": "uuid", "nullable": false, "foreignKey": "users.id", "unique": true, "description": "Usuário dono." },
+      { "name": "email_enabled", "type": "boolean", "nullable": false, "description": "Notificações por e-mail." },
+      { "name": "inapp_enabled", "type": "boolean", "nullable": false, "description": "Notificações in-app." },
+      { "name": "modules", "type": "jsonb", "nullable": false, "description": "Configuração por módulo." },
+      { "name": "updated_at", "type": "timestamp", "nullable": false, "description": "Última atualização." }
+    ],
+    "indexes": ["notif_prefs_user_id_idx"],
+    "estimatedRows": 840,
+    "lastUpdated": "2025-06-19"
+  },
+  {
+    "id": "tbl-audit-logs",
+    "name": "audit_logs",
+    "description": "Registro imutável de ações críticas realizadas no sistema.",
+    "module": "auth",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "bigint", "nullable": false, "primary": true, "description": "ID sequencial." },
+      { "name": "user_id", "type": "uuid", "nullable": true, "foreignKey": "users.id", "description": "Usuário que executou." },
+      { "name": "action", "type": "varchar", "nullable": false, "description": "Ação executada (ex: user.delete)." },
+      { "name": "entity_type", "type": "varchar", "nullable": false, "description": "Entidade afetada." },
+      { "name": "entity_id", "type": "varchar", "nullable": false, "description": "ID da entidade." },
+      { "name": "old_value", "type": "jsonb", "nullable": true, "description": "Valor anterior." },
+      { "name": "new_value", "type": "jsonb", "nullable": true, "description": "Novo valor." },
+      { "name": "ip_address", "type": "varchar", "nullable": true, "description": "IP de origem." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Timestamp da ação." }
+    ],
+    "indexes": ["audit_logs_user_id_idx", "audit_logs_action_idx", "audit_logs_entity_idx", "audit_logs_created_at_idx"],
+    "estimatedRows": 245000,
+    "lastUpdated": "2025-07-08"
+  },
+  {
+    "id": "tbl-reports",
+    "name": "reports",
+    "description": "Definição e metadados dos relatórios disponíveis no sistema.",
+    "module": "relatorios",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do relatório." },
+      { "name": "name", "type": "varchar", "nullable": false, "description": "Nome do relatório." },
+      { "name": "module", "type": "varchar", "nullable": false, "description": "Módulo de origem." },
+      { "name": "description", "type": "text", "nullable": true, "description": "Descrição detalhada." },
+      { "name": "query_template", "type": "text", "nullable": false, "description": "Template SQL parametrizado." },
+      { "name": "available_formats", "type": "jsonb", "nullable": false, "description": "Formatos: ['pdf', 'xlsx']." },
+      { "name": "roles_allowed", "type": "jsonb", "nullable": false, "description": "Roles com acesso." },
+      { "name": "active", "type": "boolean", "nullable": false, "description": "Relatório ativo." }
+    ],
+    "indexes": ["reports_module_idx", "reports_active_idx"],
+    "estimatedRows": 18,
+    "lastUpdated": "2025-06-28"
+  },
+  {
+    "id": "tbl-report-schedules",
+    "name": "report_schedules",
+    "description": "Agendamentos de geração automática de relatórios por cron.",
+    "module": "relatorios",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do agendamento." },
+      { "name": "report_id", "type": "uuid", "nullable": false, "foreignKey": "reports.id", "description": "Relatório a gerar." },
+      { "name": "cron_expression", "type": "varchar", "nullable": false, "description": "Expressão cron." },
+      { "name": "recipients", "type": "jsonb", "nullable": false, "description": "Lista de e-mails destinatários." },
+      { "name": "last_run_at", "type": "timestamp", "nullable": true, "description": "Última execução." },
+      { "name": "active", "type": "boolean", "nullable": false, "description": "Agendamento ativo." }
+    ],
+    "indexes": ["report_schedules_report_id_idx"],
+    "estimatedRows": 7,
+    "lastUpdated": "2025-06-28"
+  },
+  {
+    "id": "tbl-settings",
+    "name": "settings",
+    "description": "Configurações globais do sistema em formato chave-valor tipado.",
+    "module": "configuracoes",
+    "status": "active",
+    "columns": [
+      { "name": "key", "type": "varchar", "nullable": false, "primary": true, "description": "Chave única da configuração." },
+      { "name": "value", "type": "jsonb", "nullable": false, "description": "Valor serializado." },
+      { "name": "type", "type": "varchar", "nullable": false, "description": "Tipo: string | number | boolean | json." },
+      { "name": "description", "type": "text", "nullable": true, "description": "Descrição da configuração." },
+      { "name": "updated_at", "type": "timestamp", "nullable": false, "description": "Última atualização." },
+      { "name": "updated_by", "type": "uuid", "nullable": true, "foreignKey": "users.id", "description": "Quem alterou." }
+    ],
+    "indexes": [],
+    "estimatedRows": 42,
+    "lastUpdated": "2025-07-06"
+  },
+  {
+    "id": "tbl-integrations",
+    "name": "integrations",
+    "description": "Integrações externas configuradas com credenciais criptografadas.",
+    "module": "configuracoes",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID da integração." },
+      { "name": "name", "type": "varchar", "nullable": false, "description": "Nome da integração (ex: Slack)." },
+      { "name": "type", "type": "varchar", "nullable": false, "description": "Tipo: webhook | oauth | api_key." },
+      { "name": "credentials", "type": "jsonb", "nullable": false, "description": "Credenciais criptografadas (AES-256)." },
+      { "name": "config", "type": "jsonb", "nullable": true, "description": "Configurações adicionais." },
+      { "name": "active", "type": "boolean", "nullable": false, "description": "Integração ativa." },
+      { "name": "last_sync_at", "type": "timestamp", "nullable": true, "description": "Última sincronização." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data de criação." }
+    ],
+    "indexes": ["integrations_type_idx", "integrations_active_idx"],
+    "estimatedRows": 6,
+    "lastUpdated": "2025-07-06"
+  },
+  {
+    "id": "tbl-calendar-events",
+    "name": "calendar_events",
+    "description": "Eventos do calendário: feriados, férias, afastamentos e marcos corporativos.",
+    "module": "agenda",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID do evento." },
+      { "name": "title", "type": "varchar", "nullable": false, "description": "Título do evento." },
+      { "name": "type", "type": "varchar", "nullable": false, "description": "holiday | vacation | absence | corporate." },
+      { "name": "start_date", "type": "date", "nullable": false, "description": "Data de início." },
+      { "name": "end_date", "type": "date", "nullable": false, "description": "Data de fim." },
+      { "name": "employee_id", "type": "uuid", "nullable": true, "foreignKey": "employees.id", "description": "Colaborador (null = todos)." },
+      { "name": "approved_by", "type": "uuid", "nullable": true, "foreignKey": "users.id", "description": "Aprovador." },
+      { "name": "status", "type": "varchar", "nullable": false, "description": "pending | approved | rejected." },
+      { "name": "created_at", "type": "timestamp", "nullable": false, "description": "Data de criação." }
+    ],
+    "indexes": ["calendar_events_start_date_idx", "calendar_events_employee_id_idx", "calendar_events_type_idx"],
+    "estimatedRows": 1200,
+    "lastUpdated": "2025-07-01"
+  },
+  {
+    "id": "tbl-agenda-settings",
+    "name": "agenda_settings",
+    "description": "Configurações do módulo de agenda por empresa (fuso, dias úteis, feriados locais).",
+    "module": "agenda",
+    "status": "active",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "primary": true, "description": "ID." },
+      { "name": "work_days", "type": "jsonb", "nullable": false, "description": "Dias úteis da semana." },
+      { "name": "work_hours_start", "type": "varchar", "nullable": false, "description": "Horário de início (HH:MM)." },
+      { "name": "work_hours_end", "type": "varchar", "nullable": false, "description": "Horário de fim (HH:MM)." },
+      { "name": "national_holidays", "type": "jsonb", "nullable": false, "description": "Feriados nacionais aplicados." },
+      { "name": "updated_at", "type": "timestamp", "nullable": false, "description": "Última atualização." }
+    ],
+    "indexes": [],
+    "estimatedRows": 1,
+    "lastUpdated": "2025-07-01"
+  }
+]
