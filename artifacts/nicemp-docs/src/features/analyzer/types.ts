@@ -1,34 +1,43 @@
 // ─── Analyzer Feature — Types ─────────────────────────────────────────────────
 
 import type { ProjectMap } from '@/services/engine';
+import type { LiveCounts } from '@/workers/types';
 
-export type { ProjectMap };
+export type { ProjectMap, LiveCounts };
 
-/** Fine-grained pipeline phases shown in the UI. */
 export type AnalysisPhase =
   | 'idle'
-  | 'scanning'      // Lendo conteúdo dos arquivos do ZIP
-  | 'categorizing'  // Classificando arquivos por categoria
-  | 'dependencies'  // Analisando dependências
-  | 'technology'    // Detectando stack tecnológico
-  | 'building'      // Montando mapa do projeto
+  | 'reading_file'   // File bytes being read by UploadProvider (shown in ProcessingScreen)
+  | 'scanning'       // Worker: reading ZIP entries + file content
+  | 'categorizing'   // Worker: classifying files by category
+  | 'dependencies'   // Worker: parsing package.json + imports
+  | 'technology'     // Worker: detecting tech stack
+  | 'building'       // Worker: assembling ProjectMap
   | 'completed'
+  | 'cancelled'
   | 'failed';
 
 export const PHASE_LABELS: Record<AnalysisPhase, string> = {
   idle:         'Aguardando',
-  scanning:     'Lendo arquivos',
+  reading_file: 'Lendo arquivo',
+  scanning:     'Lendo estrutura',
   categorizing: 'Classificando',
   dependencies: 'Dependências',
   technology:   'Stack tech',
   building:     'Montando mapa',
   completed:    'Concluído',
+  cancelled:    'Cancelado',
   failed:       'Erro',
 };
 
 export interface AnalyzerState {
   phase:      AnalysisPhase;
-  progress:   number;              // 0–100
+  pct:        number;          // 0–100 worker progress
+  label:      string;          // Current step label from worker
+  counts:     LiveCounts;
   projectMap: ProjectMap | null;
   error:      string | null;
+  /** File info for the ProcessingScreen header. */
+  fileName:   string;
+  fileSize:   number;
 }

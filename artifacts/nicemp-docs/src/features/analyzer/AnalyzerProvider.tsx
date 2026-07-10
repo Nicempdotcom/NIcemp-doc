@@ -1,69 +1,170 @@
-import React, { createContext, useContext, useCallback, useState } from 'react';
-import { ProjectAnalyzer } from '@/services/engine';
-import type { AnalyzerState, AnalysisPhase, ProjectMap } from './types';
+import React, {
+  createContext, useContext, useCallback,
+  useState, useRef, useEffect,
+} from 'react';
+import { EMPTY_COUNTS }                        from '@/workers/types';
+import type { WorkerOutMsg, WorkerInMsg }      from '@/workers/types';
+import type { AnalyzerState, AnalysisPhase }  from './types';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 interface AnalyzerContextValue extends AnalyzerState {
   /**
-   * Run the full analysis pipeline on a ZIP ArrayBuffer.
-   * The buffer is consumed and released internally — never stored.
+   * Hand the ZIP buffer to the worker for full analysis.
+   * The buffer is *transferred* (zero-copy, Transferable) — the caller's
+   * reference becomes detached immediately after this call.
    */
-  startAnalysis: (buffer: ArrayBuffer) => Promise<void>;
+  startAnalysis: (buffer: ArrayBuffer, fileName: string, fileSize: number) => void;
+  /** Send a cancel signal to the running worker. */
+  cancelAnalysis: () => void;
+  /** Terminate worker (if running) and reset to idle. */
   reset: () => void;
 }
 
 const AnalyzerContext = createContext<AnalyzerContextValue | undefined>(undefined);
 
-// ─── Progress → phase mapping ─────────────────────────────────────────────────
+// ─── Initial state ────────────────────────────────────────────────────────────
 
-function phaseFromProgress(pct: number): AnalysisPhase {
-  if (pct < 12)  return 'scanning';
-  if (pct < 60)  return 'scanning';
-  if (pct < 75)  return 'categorizing';
-  if (pct < 85)  return 'dependencies';
-  if (pct < 95)  return 'technology';
-  if (pct < 100) return 'building';
-  return 'completed';
-}
+const INITIAL: AnalyzerState = {
+  phase:      'idle',
+  pct:        0,
+  label:      '',
+  counts:     { ...EMPTY_COUNTS },
+  projectMap: null,
+  error:      null,
+  fileName:   '',
+  fileSize:   0,
+};
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-const INITIAL: AnalyzerState = {
-  phase: 'idle', progress: 0, projectMap: null, error: null,
-};
-
 export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AnalyzerState>(INITIAL);
+  const workerRef         = useRef<Worker | null>(null);
 
-  const startAnalysis = useCallback(async (buffer: ArrayBuffer) => {
-    setState({ phase: 'scanning', progress: 0, projectMap: null, error: null });
+  // ── Terminate worker on unmount ───────────────────────────────────────────
+  useEffect(() => () => { workerRef.current?.terminate(); }, []);
 
-    const analyzer = new ProjectAnalyzer();
+  // ── startAnalysis ─────────────────────────────────────────────────────────
+  const startAnalysis = useCallback((
+    buffer:   ArrayBuffer,
+    fileName: string,
+    fileSize: number,
+  ) => {
+    // Kill any previous worker
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
 
-    try {
-      const projectMap = await analyzer.analyze(buffer, (pct) => {
-        setState((s) => ({
-          ...s,
-          progress: pct,
-          phase:    phaseFromProgress(pct),
-        }));
-      });
+    setState({
+      ...INITIAL,
+      phase:    'scanning',
+      label:    'Preparando análise…',
+      fileName,
+      fileSize,
+    });
 
-      setState({ phase: 'completed', progress: 100, projectMap, error: null });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro desconhecido durante a análise.';
-      setState({ phase: 'failed', progress: 0, projectMap: null, error: message });
+    // Spawn worker — Vite detects `new URL(...)` and bundles it as a separate chunk
+    const worker = new Worker(
+      new URL('../../workers/analysis.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+    workerRef.current = worker;
+
+    // ── Message handler ──────────────────────────────────────────────────
+    worker.addEventListener('message', (e: MessageEvent<WorkerOutMsg>) => {
+      const msg = e.data;
+
+      switch (msg.type) {
+        case 'progress':
+          setState((s) => ({
+            ...s,
+            pct:    msg.pct,
+            label:  msg.label,
+            counts: msg.counts,
+            phase:  phasFromPct(msg.pct),
+          }));
+          break;
+
+        case 'completed':
+          setState((s) => ({
+            ...s,
+            phase:      'completed',
+            pct:        100,
+            label:      'Concluído',
+            projectMap: msg.projectMap,
+          }));
+          worker.terminate();
+          workerRef.current = null;
+          break;
+
+        case 'cancelled':
+          setState((s) => ({ ...s, phase: 'cancelled', label: 'Análise cancelada pelo usuário.' }));
+          worker.terminate();
+          workerRef.current = null;
+          break;
+
+        case 'error':
+          setState((s) => ({
+            ...s,
+            phase: 'failed',
+            label: msg.message,
+            error: msg.message,
+          }));
+          worker.terminate();
+          workerRef.current = null;
+          break;
+      }
+    });
+
+    // ── Error handler (worker crash) ──────────────────────────────────────
+    worker.addEventListener('error', (e: ErrorEvent) => {
+      const msg = e.message || 'O worker de análise falhou inesperadamente.';
+      setState((s) => ({ ...s, phase: 'failed', label: msg, error: msg }));
+      worker.terminate();
+      workerRef.current = null;
+    });
+
+    // ── Transfer buffer (zero-copy — detaches from main thread immediately) ─
+    const startMsg: WorkerInMsg = { type: 'start', buffer, fileName };
+    worker.postMessage(startMsg, [buffer]);
+  }, []);
+
+  // ── cancelAnalysis ────────────────────────────────────────────────────────
+  const cancelAnalysis = useCallback(() => {
+    if (workerRef.current) {
+      const msg: WorkerInMsg = { type: 'cancel' };
+      workerRef.current.postMessage(msg);
     }
   }, []);
 
-  const reset = useCallback(() => setState(INITIAL), []);
+  // ── reset ─────────────────────────────────────────────────────────────────
+  const reset = useCallback(() => {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
+    setState(INITIAL);
+  }, []);
 
   return (
-    <AnalyzerContext.Provider value={{ ...state, startAnalysis, reset }}>
+    <AnalyzerContext.Provider value={{ ...state, startAnalysis, cancelAnalysis, reset }}>
       {children}
     </AnalyzerContext.Provider>
   );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function phasFromPct(pct: number): AnalysisPhase {
+  if (pct < 10)  return 'scanning';
+  if (pct < 62)  return 'scanning';
+  if (pct < 76)  return 'categorizing';
+  if (pct < 86)  return 'dependencies';
+  if (pct < 93)  return 'technology';
+  if (pct < 100) return 'building';
+  return 'completed';
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

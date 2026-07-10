@@ -1,0 +1,187 @@
+# CORREÇÃO CRÍTICA — Sistema de Upload de Projetos Grandes
+
+Precisamos refatorar completamente o sistema de upload do NicEmp Docs.
+
+## Problema Atual
+
+Hoje existe um limite de aproximadamente 50 MB para upload de arquivos ZIP.
+
+Esse comportamento não atende ao objetivo do projeto.
+
+O NicEmp Docs será utilizado para analisar projetos completos e grandes, portanto NÃO pode possuir um limite artificial de tamanho.
+
+---
+
+# Objetivo
+
+Transformar o upload em um sistema profissional capaz de processar projetos grandes.
+
+O único limite aceitável será a capacidade da máquina ou da infraestrutura onde o NicEmp Docs estiver sendo executado.
+
+Não criar nenhum limite de tamanho no código.
+
+---
+
+# Novo Fluxo
+
+Selecionar arquivo ZIP
+
+↓
+
+Validar extensão
+
+↓
+
+Iniciar processamento
+
+↓
+
+Exibir tela de Loading em tela cheia
+
+↓
+
+Ler o arquivo em streaming ou em blocos (chunks), quando possível
+
+↓
+
+Extrair apenas temporariamente durante a análise
+
+↓
+
+Executar toda a análise
+
+↓
+
+Gerar a documentação
+
+↓
+
+Excluir imediatamente todos os arquivos temporários
+
+↓
+
+Exibir relatório da análise
+
+---
+
+# Loading Screen
+
+Criar uma tela exclusiva para processamento.
+
+Essa tela deve impedir que o usuário pense que o sistema travou.
+
+Exibir continuamente informações como:
+
+• Nome do arquivo
+
+• Tamanho do arquivo
+
+• Tempo decorrido
+
+• Etapa atual
+
+Exemplos de etapas:
+
+* Preparando análise...
+* Lendo estrutura do ZIP...
+* Identificando páginas...
+* Identificando componentes...
+* Identificando hooks...
+* Identificando APIs...
+* Identificando banco de dados...
+* Construindo mapa de dependências...
+* Gerando documentação...
+* Finalizando...
+
+Também mostrar:
+
+* Quantidade de arquivos analisados
+* Quantidade de componentes encontrados
+* Quantidade de páginas encontradas
+* Quantidade de hooks encontrados
+* Quantidade de APIs encontradas
+
+Caso seja possível calcular percentual, mostrar barra de progresso.
+
+Caso não seja possível, utilizar barra indeterminada com atualização da etapa atual.
+
+---
+
+# Processamento
+
+O processamento nunca deve bloquear a interface.
+
+Executar em background utilizando a melhor arquitetura disponível para o projeto (por exemplo Web Worker no frontend ou processamento no backend, conforme a arquitetura existente).
+
+Adicionar botão:
+
+Cancelar análise
+
+Adicionar botão:
+
+Reiniciar análise
+
+---
+
+# Arquivos Temporários
+
+O ZIP nunca deve permanecer salvo.
+
+Criar armazenamento temporário apenas durante a análise.
+
+Após finalizar:
+
+Excluir automaticamente:
+
+* ZIP enviado
+* Arquivos extraídos
+* Diretórios temporários
+* Qualquer cache utilizado durante a análise
+
+A documentação final deve armazenar apenas os dados extraídos (estrutura, páginas, componentes, APIs, dependências etc.).
+
+Nunca armazenar o código-fonte do projeto.
+
+---
+
+# Tratamento de Erros
+
+Implementar tratamento para:
+
+* ZIP corrompido
+* Arquivo inválido
+* Estrutura de projeto incompatível
+* Falha de leitura
+* Falha de extração
+* Memória insuficiente
+* Cancelamento pelo usuário
+
+Mostrar mensagens claras e amigáveis.
+
+---
+
+# Performance
+
+Evitar carregar todo o arquivo em memória quando houver alternativa.
+
+Priorizar leitura em streaming ou processamento por blocos.
+
+Garantir que o sistema continue responsivo durante toda a análise.
+
+---
+
+# Compatibilidade
+
+A solução deve funcionar tanto para projetos pequenos quanto para projetos grandes, sem necessidade de alterar o código futuramente.
+
+---
+
+# Ao Final
+
+Apresente um relatório contendo:
+
+1. Todos os arquivos criados.
+2. Todos os arquivos modificados.
+3. Motivo de cada alteração.
+4. Como o novo fluxo funciona.
+5. Confirme explicitamente que o limite artificial de tamanho foi removido e que o NicEmp Docs está preparado para analisar projetos grandes.
