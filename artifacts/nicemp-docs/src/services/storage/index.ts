@@ -1,6 +1,6 @@
 export * from './types';
 export { StorageService } from './StorageService';
-export { mapProjectMapToEntities, buildAnalysisHistoryEntry } from './mapper';
+export { mapProjectMapToEntities, buildAnalysisHistoryEntry, buildVersionSnapshot } from './mapper';
 export type { MappedEntities } from './mapper';
 export {
   DocumentationRepository,
@@ -11,5 +11,6 @@ export {
   TableRepository,
   ProjectRepository,
   VersionRepository,
+  VersionSnapshotRepository,
   HistoryRepository,
 } from './repositories';

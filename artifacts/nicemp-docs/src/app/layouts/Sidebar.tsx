@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   UploadCloud,
+  GitCompare,
   Network,
   Monitor,
   Server,
@@ -18,8 +19,9 @@ const NAV_GROUPS = [
   {
     label: 'Plataforma',
     items: [
-      { label: 'Dashboard',      icon: LayoutDashboard, href: ROUTES.dashboard },
-      { label: 'Upload',         icon: UploadCloud,     href: ROUTES.upload    },
+      { label: 'Dashboard',      icon: LayoutDashboard, href: ROUTES.dashboard  },
+      { label: 'Upload',         icon: UploadCloud,     href: ROUTES.upload     },
+      { label: 'Comparação',     icon: GitCompare,      href: ROUTES.comparison },
     ],
   },
   {

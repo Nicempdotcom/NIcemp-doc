@@ -34,6 +34,7 @@ export type TechCategory =
 export type StoreKey =
   | 'projects'
   | 'versions'
+  | 'versionSnapshots'
   | 'pages'
   | 'components'
   | 'hooks'
@@ -45,16 +46,17 @@ export type StoreKey =
 
 /** Maps StoreKey → the logical JSON filename it corresponds to. */
 export const STORE_FILE_NAMES: Record<StoreKey, string> = {
-  projects:     'projects.json',
-  versions:     'versions.json',
-  pages:        'pages.json',
-  components:   'components.json',
-  hooks:        'hooks.json',
-  apis:         'apis.json',
-  tables:       'database.json',
-  dependencies: 'dependencies.json',
-  technologies: 'technologies.json',
-  history:      'history.json',
+  projects:         'projects.json',
+  versions:         'versions.json',
+  versionSnapshots: 'version-snapshots.json',
+  pages:            'pages.json',
+  components:       'components.json',
+  hooks:            'hooks.json',
+  apis:             'apis.json',
+  tables:           'database.json',
+  dependencies:     'dependencies.json',
+  technologies:     'technologies.json',
+  history:          'history.json',
 };
 
 // ─── Base entity ──────────────────────────────────────────────────────────────
@@ -247,6 +249,35 @@ export interface HistoryEntry {
   projectId:   string;
   entityId:    string;    // The entity this event relates to, or ''
   metadata:    Record<string, unknown>;
+}
+
+// ─── Version snapshot (for comparison / diffing) ─────────────────────────────
+//
+// A lightweight, comparable fingerprint of every entity that existed at the
+// time a version was analyzed. Stored alongside VersionEntity so the
+// Comparador de Versões (EPIC 05) can diff any two versions of a project
+// without needing to re-run analysis.
+
+export interface EntitySummary {
+  id:        string;
+  name:      string;
+  location:  string;
+  module:    string;
+  /** Deterministic JSON fingerprint of the comparable fields — used to detect "changed". */
+  signature: string;
+}
+
+export interface VersionSnapshotEntity {
+  /** Same as versionId — 1:1 with a VersionEntity. */
+  id:         string;
+  projectId:  string;
+  versionId:  string;
+  createdAt:  string;
+  pages:      EntitySummary[];
+  components: EntitySummary[];
+  hooks:      EntitySummary[];
+  apis:       EntitySummary[];
+  tables:     EntitySummary[];
 }
 
 // ─── Union type ───────────────────────────────────────────────────────────────

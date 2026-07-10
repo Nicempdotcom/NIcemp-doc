@@ -22,6 +22,8 @@ import type {
   RiskLevel,
   DocStatus,
   TechCategory,
+  EntitySummary,
+  VersionSnapshotEntity,
 } from './types';
 
 // ─── ID generation ────────────────────────────────────────────────────────────
@@ -351,6 +353,46 @@ function toTechnologyEntities(tech: TechnologyProfile, projectId: string): Techn
     }
   }
   return result;
+}
+
+// ─── Version snapshot builder (for EPIC 05 — version comparison) ──────────────
+
+/** Deterministic fingerprint of an entity's comparable fields (excludes id/timestamps). */
+function signatureOf(fields: Record<string, unknown>): string {
+  const sorted = Object.keys(fields).sort().reduce<Record<string, unknown>>((acc, k) => {
+    acc[k] = fields[k];
+    return acc;
+  }, {});
+  return JSON.stringify(sorted);
+}
+
+function toSummary(e: { id: string; name: string; location: string }, module: string, extra: Record<string, unknown>): EntitySummary {
+  return {
+    id:        e.id,
+    name:      e.name,
+    location:  e.location,
+    module,
+    signature: signatureOf({ name: e.name, location: e.location, module, ...extra }),
+  };
+}
+
+/** Build a lightweight, comparable snapshot of a version's entities for diffing. */
+export function buildVersionSnapshot(
+  projectId: string,
+  versionId: string,
+  entities: Pick<MappedEntities, 'pages' | 'components' | 'hooks' | 'apis' | 'tables'>,
+): VersionSnapshotEntity {
+  return {
+    id:        versionId,
+    projectId,
+    versionId,
+    createdAt: now(),
+    pages:      entities.pages.map((p) => toSummary(p, p.module, { route: p.route, status: p.status })),
+    components: entities.components.map((c) => toSummary(c, c.module, { category: c.category, status: c.status, props: c.props })),
+    hooks:      entities.hooks.map((h) => toSummary(h, h.module, { status: h.status, params: h.params, returns: h.returns })),
+    apis:       entities.apis.map((a) => toSummary(a, a.module, { method: a.method, path: a.path, status: a.status, auth: a.auth })),
+    tables:     entities.tables.map((t) => toSummary(t, t.module, { tableName: t.tableName, status: t.status, columns: t.columns })),
+  };
 }
 
 // ─── History entry builder ─────────────────────────────────────────────────────

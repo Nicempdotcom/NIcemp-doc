@@ -2,6 +2,9 @@
 // Diffs two versions of a document or analysis result, producing a structured
 // change summary used by the history and impact features.
 
+export { VersionComparator, COMPARISON_CATEGORY_LABELS } from './VersionComparator';
+export type { ComparisonCategory, VersionComparisonResult } from './VersionComparator';
+
 export type ChangeKind = 'added' | 'removed' | 'modified' | 'unchanged';
 
 export interface ChangedField {

@@ -1,20 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertCircle, RefreshCcw, Loader2, CheckCircle2, Database, Save } from 'lucide-react';
 import { useUpload }   from '@/features/upload';
 import { useAnalyzer } from '@/features/analyzer';
 import {
   mapProjectMapToEntities,
+  buildVersionSnapshot,
   StorageService,
   ProjectRepository,
   VersionRepository,
+  VersionSnapshotRepository,
   DocumentationRepository,
   HistoryRepository,
 } from '@/services/storage';
-import FileDropZone     from './FileDropZone';
-import ProcessingScreen from './ProcessingScreen';
-import ProjectMapView   from './ProjectMapView';
-import { Button }       from '@/app/components/ui/button';
-import { cn }           from '@/utils';
+import { VersionComparator, type VersionComparisonResult } from '@/services/comparison';
+import FileDropZone       from './FileDropZone';
+import ProcessingScreen   from './ProcessingScreen';
+import ProjectMapView     from './ProjectMapView';
+import ComparisonSummary  from './ComparisonSummary';
+import { Button }         from '@/app/components/ui/button';
+import { cn }             from '@/utils';
+import { ROUTES }         from '@/routes';
 
 // ─── Reading progress (before worker starts) ──────────────────────────────────
 
@@ -138,6 +144,10 @@ export default function UploadProject() {
   const [savedCounts, setSavedCounts] = useState<SavedCounts | null>(null);
   const [dbError,     setDbError]     = useState<string | null>(null);
   const didSave = useRef(false);
+  const navigate = useNavigate();
+
+  // ── Version comparison (EPIC 05) ──────────────────────────────────────────
+  const [comparison, setComparison] = useState<VersionComparisonResult | null>(null);
 
   useEffect(() => {
     if (phase !== 'completed' || !projectMap || didSave.current) return;
@@ -146,7 +156,16 @@ export default function UploadProject() {
 
     Promise.resolve().then(() => {
       try {
-        const entities = mapProjectMapToEntities(projectMap);
+        const entities  = mapProjectMapToEntities(projectMap);
+        const projectId = entities.project.id;
+
+        // Capture the previous latest version + its snapshot BEFORE overwriting,
+        // so we can diff "last version" vs the one we're about to save.
+        const previousVersion  = VersionRepository.findLatest(projectId);
+        const previousSnapshot = previousVersion
+          ? VersionSnapshotRepository.findByVersion(previousVersion.id)
+          : undefined;
+
         ProjectRepository.save(entities.project);
         VersionRepository.save(entities.version);
         DocumentationRepository.pages.saveMany(entities.pages);
@@ -157,6 +176,13 @@ export default function UploadProject() {
         StorageService.upsertMany('dependencies', entities.dependencies);
         StorageService.upsertMany('technologies', entities.technologies);
         HistoryRepository.append(entities.historyEntry);
+
+        const newSnapshot = buildVersionSnapshot(projectId, entities.version.id, entities);
+        VersionSnapshotRepository.save(newSnapshot);
+
+        if (previousSnapshot) {
+          setComparison(VersionComparator.compare(previousSnapshot, newSnapshot));
+        }
 
         setSavedCounts({
           Páginas:      entities.pages.length,
@@ -181,8 +207,14 @@ export default function UploadProject() {
     setDbPhase('idle');
     setSavedCounts(null);
     setDbError(null);
+    setComparison(null);
     didSave.current  = false;
     didStart.current = false;
+  };
+
+  const handleViewComparison = () => {
+    if (!comparison) return;
+    navigate(`${ROUTES.comparison}?from=${comparison.fromVersionId}&to=${comparison.toVersionId}`);
   };
 
   // ── Render: file reading progress (fast, before worker starts) ────────────
@@ -221,6 +253,9 @@ export default function UploadProject() {
           </Button>
         </div>
         <DbSaveStatus dbPhase={dbPhase} counts={savedCounts} error={dbError} />
+        {comparison && (
+          <ComparisonSummary result={comparison} onViewDetails={handleViewComparison} />
+        )}
         <ProjectMapView map={projectMap} />
       </div>
     );

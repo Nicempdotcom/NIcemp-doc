@@ -9,6 +9,7 @@ import Topbar from '@/app/layouts/Topbar';
 
 import Dashboard    from '@/app/pages/Dashboard';
 import Upload       from '@/app/pages/Upload';
+import Comparison   from '@/app/pages/Comparison';
 import Architecture from '@/app/pages/Architecture';
 import Frontend     from '@/app/pages/Frontend';
 import Backend      from '@/app/pages/Backend';
@@ -62,6 +63,7 @@ function Layout() {
             <Routes>
               <Route path={ROUTES.dashboard}    element={<Dashboard />}    />
               <Route path={ROUTES.upload}       element={<Upload />}       />
+              <Route path={ROUTES.comparison}   element={<Comparison />}   />
               <Route path={ROUTES.architecture} element={<Architecture />} />
               <Route path={ROUTES.frontend}     element={<Frontend />}     />
               <Route path={ROUTES.backend}      element={<Backend />}      />
