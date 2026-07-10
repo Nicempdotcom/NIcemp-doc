@@ -23,12 +23,12 @@ import type {
   ModuleStats,
 } from '@/types';
 
-import rawModules    from '@/data/modules.json';
-import rawPages      from '@/data/pages.json';
-import rawComponents from '@/data/components.json';
-import rawHooks      from '@/data/hooks.json';
-import rawApis       from '@/data/apis.json';
-import rawDatabase   from '@/data/database.json';
+import rawModules    from '@/database/modules.json';
+import rawPages      from '@/database/pages.json';
+import rawComponents from '@/database/components.json';
+import rawHooks      from '@/database/hooks.json';
+import rawApis       from '@/database/apis.json';
+import rawDatabase   from '@/database/database.json';
 
 // ─── Typed raw casts ─────────────────────────────────────────────────────────
 

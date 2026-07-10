@@ -1,22 +1,30 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/toaster';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/app/components/ui/toaster';
+import { TooltipProvider } from '@/app/components/ui/tooltip';
 
-import Sidebar from '@/components/layout/Sidebar';
-import Topbar from '@/components/layout/Topbar';
+import Sidebar from '@/app/layouts/Sidebar';
+import Topbar from '@/app/layouts/Topbar';
 
-import Dashboard from '@/pages/Dashboard';
-import Architecture from '@/pages/Architecture';
-import Frontend from '@/pages/Frontend';
-import Backend from '@/pages/Backend';
-import Database from '@/pages/Database';
-import Modules from '@/pages/Modules';
-import Prompts from '@/pages/Prompts';
-import Settings from '@/pages/Settings';
-import NotFound from '@/pages/not-found';
-import { ROUTES } from '@/routes';
+import Dashboard    from '@/app/pages/Dashboard';
+import Upload       from '@/app/pages/Upload';
+import Architecture from '@/app/pages/Architecture';
+import Frontend     from '@/app/pages/Frontend';
+import Backend      from '@/app/pages/Backend';
+import Database     from '@/app/pages/Database';
+import Modules      from '@/app/pages/Modules';
+import Prompts      from '@/app/pages/Prompts';
+import Settings     from '@/app/pages/Settings';
+import NotFound     from '@/app/pages/not-found';
+import { ROUTES }   from '@/routes';
+
+import { AnalyzerProvider }       from '@/features/analyzer';
+import { DocumentationProvider }  from '@/features/documentation';
+import { HistoryProvider }        from '@/features/history';
+import { ImpactProvider }         from '@/features/impact';
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
 
 type Theme = 'light' | 'dark';
 
@@ -33,7 +41,11 @@ export function useTheme() {
   return context;
 }
 
+// ─── React Query ──────────────────────────────────────────────────────────────
+
 const queryClient = new QueryClient();
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
 
 function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -41,22 +53,23 @@ function Layout() {
   return (
     <div className="flex min-h-[100dvh] w-full bg-background text-foreground">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      
+
       <div className="flex-1 flex flex-col md:pl-60 min-w-0">
         <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
-        
+
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-4xl px-8 py-8">
             <Routes>
-              <Route path={ROUTES.dashboard} element={<Dashboard />} />
+              <Route path={ROUTES.dashboard}    element={<Dashboard />}    />
+              <Route path={ROUTES.upload}       element={<Upload />}       />
               <Route path={ROUTES.architecture} element={<Architecture />} />
-              <Route path={ROUTES.frontend} element={<Frontend />} />
-              <Route path={ROUTES.backend} element={<Backend />} />
-              <Route path={ROUTES.database} element={<Database />} />
-              <Route path={ROUTES.modules} element={<Modules />} />
-              <Route path={ROUTES.prompts} element={<Prompts />} />
-              <Route path={ROUTES.settings} element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path={ROUTES.frontend}     element={<Frontend />}     />
+              <Route path={ROUTES.backend}      element={<Backend />}      />
+              <Route path={ROUTES.database}     element={<Database />}     />
+              <Route path={ROUTES.modules}      element={<Modules />}      />
+              <Route path={ROUTES.prompts}      element={<Prompts />}      />
+              <Route path={ROUTES.settings}     element={<Settings />}     />
+              <Route path="*"                   element={<NotFound />}     />
             </Routes>
           </div>
         </main>
@@ -64,6 +77,8 @@ function Layout() {
     </div>
   );
 }
+
+// ─── App ──────────────────────────────────────────────────────────────────────
 
 function App() {
   const [theme, setThemeState] = useState<Theme>(() => {
@@ -80,12 +95,20 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeContext.Provider value={{ theme, setTheme: setThemeState }}>
-        <TooltipProvider>
-          <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Layout />
-          </BrowserRouter>
-          <Toaster />
-        </TooltipProvider>
+        <AnalyzerProvider>
+          <DocumentationProvider>
+            <HistoryProvider>
+              <ImpactProvider>
+                <TooltipProvider>
+                  <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+                    <Layout />
+                  </BrowserRouter>
+                  <Toaster />
+                </TooltipProvider>
+              </ImpactProvider>
+            </HistoryProvider>
+          </DocumentationProvider>
+        </AnalyzerProvider>
       </ThemeContext.Provider>
     </QueryClientProvider>
   );
