@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Loader2, XCircle, AlertCircle, RefreshCcw,
-  FileArchive, Clock, File, Layers, Hook,
+  FileArchive, Clock, File, Layers, Zap,
   Server, Database, CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
@@ -208,7 +208,7 @@ export default function ProcessingScreen({
             <div className="grid grid-cols-5 gap-2">
               <CountChip icon={File}     label="Páginas"     value={counts.pages}      highlight />
               <CountChip icon={Layers}   label="Componentes" value={counts.components}  highlight />
-              <CountChip icon={Hook}     label="Hooks"       value={counts.hooks}       highlight />
+              <CountChip icon={Zap}      label="Hooks"       value={counts.hooks}       highlight />
               <CountChip icon={Server}   label="APIs"        value={counts.apis}        highlight />
               <CountChip icon={Database} label="Tabelas"     value={counts.tables}      highlight />
             </div>
