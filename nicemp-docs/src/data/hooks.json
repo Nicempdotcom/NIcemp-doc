@@ -1,0 +1,226 @@
+[
+  {
+    "id": "hk-use-auth",
+    "name": "useAuth",
+    "description": "Fornece o usuário autenticado, token JWT e helpers de login/logout.",
+    "params": [],
+    "returns": "{ user: User | null, token: string | null, login: (credentials) => Promise<void>, logout: () => void, isAuthenticated: boolean }",
+    "status": "stable",
+    "module": "auth",
+    "usedIn": ["Topbar", "ProtectedRoute", "ProfilePage"],
+    "filePath": "src/hooks/useAuth.ts",
+    "lastUpdated": "2025-07-08"
+  },
+  {
+    "id": "hk-use-current-user",
+    "name": "useCurrentUser",
+    "description": "Retorna os dados completos do usuário logado com re-fetch automático.",
+    "params": [],
+    "returns": "{ user: User | null, isLoading: boolean, refetch: () => void }",
+    "status": "stable",
+    "module": "auth",
+    "usedIn": ["ProfilePage", "UserMenu"],
+    "filePath": "src/hooks/useCurrentUser.ts",
+    "lastUpdated": "2025-07-01"
+  },
+  {
+    "id": "hk-use-permissions",
+    "name": "usePermissions",
+    "description": "Verifica permissões do usuário autenticado por módulo e ação.",
+    "params": [
+      { "name": "module", "type": "string", "required": true, "description": "Nome do módulo." },
+      { "name": "action", "type": "string", "required": false, "description": "Ação específica (ex: 'create', 'delete')." }
+    ],
+    "returns": "{ can: (action: string) => boolean, isAdmin: boolean }",
+    "status": "stable",
+    "module": "auth",
+    "usedIn": ["UsersList", "EmployeeDetail", "PayrollDetail"],
+    "filePath": "src/hooks/usePermissions.ts",
+    "lastUpdated": "2025-07-04"
+  },
+  {
+    "id": "hk-use-toast",
+    "name": "useToast",
+    "description": "Exibe notificações toast com variantes de sucesso, erro, info e warning.",
+    "params": [],
+    "returns": "{ toast: (options: ToastOptions) => void, success: (msg) => void, error: (msg) => void, warning: (msg) => void }",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["UserForm", "EmployeeForm", "PayrollActions"],
+    "filePath": "src/hooks/use-toast.ts",
+    "lastUpdated": "2025-06-10"
+  },
+  {
+    "id": "hk-use-local-storage",
+    "name": "useLocalStorage",
+    "description": "Persiste e lê valores do localStorage com tipagem genérica e SSR-safe.",
+    "params": [
+      { "name": "key", "type": "string", "required": true, "description": "Chave no localStorage." },
+      { "name": "initialValue", "type": "T", "required": true, "description": "Valor padrão se não existir." }
+    ],
+    "returns": "[T, (value: T) => void, () => void]",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["useTheme", "useFilters", "SidebarPreferences"],
+    "filePath": "src/hooks/useLocalStorage.ts",
+    "lastUpdated": "2025-05-20"
+  },
+  {
+    "id": "hk-use-debounce",
+    "name": "useDebounce",
+    "description": "Atrasa a atualização de um valor por um delay configurável.",
+    "params": [
+      { "name": "value", "type": "T", "required": true, "description": "Valor a ser debounced." },
+      { "name": "delay", "type": "number", "required": true, "description": "Delay em milissegundos." }
+    ],
+    "returns": "T",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["SearchInput", "useSearch"],
+    "filePath": "src/hooks/useDebounce.ts",
+    "lastUpdated": "2025-05-15"
+  },
+  {
+    "id": "hk-use-pagination",
+    "name": "usePagination",
+    "description": "Controla estado de paginação: página atual, tamanho e helpers de navegação.",
+    "params": [
+      { "name": "initialPage", "type": "number", "required": false, "description": "Página inicial (default: 1)." },
+      { "name": "initialPageSize", "type": "number", "required": false, "description": "Itens por página (default: 20)." }
+    ],
+    "returns": "{ page: number, pageSize: number, setPage: (n) => void, setPageSize: (n) => void, reset: () => void }",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["DataTable", "UsersList", "EmployeesList"],
+    "filePath": "src/hooks/usePagination.ts",
+    "lastUpdated": "2025-06-05"
+  },
+  {
+    "id": "hk-use-search",
+    "name": "useSearch",
+    "description": "Estado e handlers de busca com debounce embutido e reset automático.",
+    "params": [
+      { "name": "debounce", "type": "number", "required": false, "description": "Delay do debounce (default: 300ms)." }
+    ],
+    "returns": "{ query: string, debouncedQuery: string, setQuery: (s) => void, clear: () => void }",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["UsersList", "EmployeesList"],
+    "filePath": "src/hooks/useSearch.ts",
+    "lastUpdated": "2025-06-12"
+  },
+  {
+    "id": "hk-use-filters",
+    "name": "useFilters",
+    "description": "Gerencia filtros de listagem com persistência em URL query params.",
+    "params": [
+      { "name": "defaults", "type": "Record<string, unknown>", "required": false, "description": "Valores padrão dos filtros." }
+    ],
+    "returns": "{ filters: Record<string, unknown>, set: (key, value) => void, reset: () => void, active: number }",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["UsersList", "EmployeesList", "PayrollList"],
+    "filePath": "src/hooks/useFilters.ts",
+    "lastUpdated": "2025-06-18"
+  },
+  {
+    "id": "hk-use-modal",
+    "name": "useModal",
+    "description": "Controla abertura e fechamento de modais com payload genérico tipado.",
+    "params": [
+      { "name": "initialOpen", "type": "boolean", "required": false, "description": "Estado inicial (default: false)." }
+    ],
+    "returns": "{ isOpen: boolean, open: (payload?: T) => void, close: () => void, payload: T | null }",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["UserForm", "EmployeeForm", "ConfirmDialog"],
+    "filePath": "src/hooks/useModal.ts",
+    "lastUpdated": "2025-06-22"
+  },
+  {
+    "id": "hk-use-confirm",
+    "name": "useConfirm",
+    "description": "Abre dialog de confirmação programaticamente e resolve uma Promise.",
+    "params": [],
+    "returns": "{ confirm: (options: ConfirmOptions) => Promise<boolean> }",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["UserDetail", "EmployeeDetail"],
+    "filePath": "src/hooks/useConfirm.ts",
+    "lastUpdated": "2025-06-25"
+  },
+  {
+    "id": "hk-use-date-format",
+    "name": "useDateFormat",
+    "description": "Formatação de datas e intervalos em pt-BR com suporte a diferentes formatos.",
+    "params": [],
+    "returns": "{ format: (date, pattern) => string, fromNow: (date) => string, toISO: (date) => string }",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["EmployeeDetail", "PayrollList", "NotificationItem"],
+    "filePath": "src/hooks/useDateFormat.ts",
+    "lastUpdated": "2025-05-28"
+  },
+  {
+    "id": "hk-use-currency",
+    "name": "useCurrency",
+    "description": "Formata valores monetários em BRL e converte entre centavos e reais.",
+    "params": [],
+    "returns": "{ format: (cents: number) => string, toCents: (value: number) => number, parse: (str) => number }",
+    "status": "stable",
+    "module": "financeiro",
+    "usedIn": ["SalaryBadge", "PayrollDetail", "EmployeeDetail"],
+    "filePath": "src/hooks/useCurrency.ts",
+    "lastUpdated": "2025-07-07"
+  },
+  {
+    "id": "hk-use-export",
+    "name": "useExport",
+    "description": "Dispara download de relatórios em PDF ou Excel com estado de loading.",
+    "params": [
+      { "name": "reportId", "type": "string", "required": true, "description": "ID do relatório a exportar." }
+    ],
+    "returns": "{ exportPDF: () => Promise<void>, exportExcel: () => Promise<void>, isExporting: boolean }",
+    "status": "beta",
+    "module": "relatorios",
+    "usedIn": ["ReportDetail"],
+    "filePath": "src/hooks/useExport.ts",
+    "lastUpdated": "2025-06-28"
+  },
+  {
+    "id": "hk-use-notifications",
+    "name": "useNotifications",
+    "description": "Carrega e gerencia notificações do usuário com contagem de não lidas.",
+    "params": [],
+    "returns": "{ notifications: Notification[], unreadCount: number, markRead: (id) => void, markAllRead: () => void, isLoading: boolean }",
+    "status": "stable",
+    "module": "comunicacao",
+    "usedIn": ["Topbar", "NotificationsList"],
+    "filePath": "src/hooks/useNotifications.ts",
+    "lastUpdated": "2025-06-20"
+  },
+  {
+    "id": "hk-use-theme",
+    "name": "useTheme",
+    "description": "Acessa e alterna entre tema claro e escuro com persistência em localStorage.",
+    "params": [],
+    "returns": "{ theme: 'light' | 'dark', setTheme: (theme) => void }",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["Topbar", "App"],
+    "filePath": "src/App.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "hk-use-mobile",
+    "name": "useMobile",
+    "description": "Detecta se o viewport é mobile (< 768px) com listener de resize.",
+    "params": [],
+    "returns": "boolean",
+    "status": "stable",
+    "module": "core",
+    "usedIn": ["Sidebar", "DataTable"],
+    "filePath": "src/hooks/use-mobile.tsx",
+    "lastUpdated": "2025-05-10"
+  }
+]

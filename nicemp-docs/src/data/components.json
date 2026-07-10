@@ -1,0 +1,336 @@
+[
+  {
+    "id": "cmp-sidebar",
+    "name": "Sidebar",
+    "category": "layout",
+    "module": "core",
+    "status": "stable",
+    "description": "Menu lateral fixo com navegação principal, logo e suporte a modo mobile.",
+    "props": [
+      { "name": "isOpen", "type": "boolean", "required": true, "description": "Controla visibilidade em mobile." },
+      { "name": "onClose", "type": "() => void", "required": true, "description": "Callback para fechar em mobile." }
+    ],
+    "usedIn": ["App"],
+    "filePath": "src/components/layout/Sidebar.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-topbar",
+    "name": "Topbar",
+    "category": "layout",
+    "module": "core",
+    "status": "stable",
+    "description": "Barra superior com breadcrumb, busca e toggle de tema.",
+    "props": [
+      { "name": "onMenuClick", "type": "() => void", "required": true, "description": "Abre sidebar em mobile." }
+    ],
+    "usedIn": ["App"],
+    "filePath": "src/components/layout/Topbar.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-page-header",
+    "name": "PageHeader",
+    "category": "layout",
+    "module": "core",
+    "status": "stable",
+    "description": "Cabeçalho de página com título, descrição e badge de status.",
+    "props": [
+      { "name": "title", "type": "string", "required": true, "description": "Título principal da página." },
+      { "name": "description", "type": "string", "required": false, "description": "Subtítulo descritivo." },
+      { "name": "badge", "type": "string", "required": false, "description": "Texto do badge." },
+      { "name": "badgeVariant", "type": "BadgeVariant", "required": false, "defaultValue": "default", "description": "Variante de cor do badge." }
+    ],
+    "usedIn": ["Dashboard", "Architecture", "Frontend", "Backend", "Database", "Modules", "Prompts", "Settings"],
+    "filePath": "src/components/layout/PageHeader.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-breadcrumb",
+    "name": "Breadcrumb",
+    "category": "layout",
+    "module": "core",
+    "status": "stable",
+    "description": "Trilha de navegação baseada no pathname atual da rota.",
+    "props": [],
+    "usedIn": ["Topbar"],
+    "filePath": "src/components/layout/Breadcrumb.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-doc-card",
+    "name": "DocCard",
+    "category": "docs",
+    "module": "core",
+    "status": "stable",
+    "description": "Card de documentação com ícone, título e descrição. Suporta href e onClick.",
+    "props": [
+      { "name": "title", "type": "string", "required": true, "description": "Título do card." },
+      { "name": "description", "type": "string", "required": true, "description": "Descrição do card." },
+      { "name": "icon", "type": "LucideIcon", "required": false, "description": "Ícone Lucide." },
+      { "name": "href", "type": "string", "required": false, "description": "Rota de navegação interna." },
+      { "name": "onClick", "type": "() => void", "required": false, "description": "Handler de clique." }
+    ],
+    "usedIn": ["Architecture", "Frontend", "Backend", "Database", "Modules", "Prompts", "Settings"],
+    "filePath": "src/components/docs/Card.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-feature-card",
+    "name": "FeatureCard",
+    "category": "docs",
+    "module": "core",
+    "status": "stable",
+    "description": "Card de feature com tag de status no canto superior direito.",
+    "props": [
+      { "name": "title", "type": "string", "required": true, "description": "Título da feature." },
+      { "name": "description", "type": "string", "required": true, "description": "Descrição da feature." },
+      { "name": "tag", "type": "string", "required": false, "description": "Rótulo da tag." }
+    ],
+    "usedIn": ["Modules"],
+    "filePath": "src/components/docs/Card.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-link-card",
+    "name": "LinkCard",
+    "category": "docs",
+    "module": "core",
+    "status": "stable",
+    "description": "Card de link horizontal com ícone de navegação. Suporta links externos.",
+    "props": [
+      { "name": "title", "type": "string", "required": true, "description": "Texto principal." },
+      { "name": "description", "type": "string", "required": true, "description": "Subtexto." },
+      { "name": "href", "type": "string", "required": true, "description": "URL de destino." },
+      { "name": "external", "type": "boolean", "required": false, "defaultValue": "false", "description": "Abre em nova aba." }
+    ],
+    "usedIn": ["Architecture"],
+    "filePath": "src/components/docs/Card.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-section",
+    "name": "Section",
+    "category": "docs",
+    "module": "core",
+    "status": "stable",
+    "description": "Bloco de seção com título, descrição opcional e separador.",
+    "props": [
+      { "name": "title", "type": "string", "required": true, "description": "Título da seção." },
+      { "name": "description", "type": "string", "required": false, "description": "Texto descritivo." },
+      { "name": "children", "type": "React.ReactNode", "required": true, "description": "Conteúdo interno." },
+      { "name": "className", "type": "string", "required": false, "description": "Classes CSS adicionais." }
+    ],
+    "usedIn": ["Architecture", "Frontend", "Backend", "Database", "Modules", "Prompts", "Settings"],
+    "filePath": "src/components/docs/Section.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-infobox",
+    "name": "InfoBox",
+    "category": "docs",
+    "module": "core",
+    "status": "stable",
+    "description": "Caixa de destaque com borda colorida. Variantes: info, tip, warning, danger.",
+    "props": [
+      { "name": "variant", "type": "'info' | 'tip' | 'warning' | 'danger'", "required": true, "description": "Estilo visual." },
+      { "name": "title", "type": "string", "required": false, "description": "Título em negrito." },
+      { "name": "children", "type": "React.ReactNode", "required": true, "description": "Conteúdo." }
+    ],
+    "usedIn": ["Dashboard", "Architecture", "Frontend", "Backend", "Database", "Modules", "Prompts", "Settings"],
+    "filePath": "src/components/docs/InfoBox.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-status-badge",
+    "name": "StatusBadge",
+    "category": "docs",
+    "module": "core",
+    "status": "stable",
+    "description": "Badge com ponto colorido para status: stable, beta, deprecated, experimental, planned, wip.",
+    "props": [
+      { "name": "status", "type": "StatusType", "required": true, "description": "Status a ser exibido." }
+    ],
+    "usedIn": ["Dashboard"],
+    "filePath": "src/components/docs/StatusBadge.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-risk-badge",
+    "name": "RiskBadge",
+    "category": "docs",
+    "module": "core",
+    "status": "stable",
+    "description": "Badge de nível de risco: low, medium, high, critical.",
+    "props": [
+      { "name": "level", "type": "RiskLevel", "required": true, "description": "Nível de risco." }
+    ],
+    "usedIn": [],
+    "filePath": "src/components/docs/RiskBadge.tsx",
+    "lastUpdated": "2025-07-10"
+  },
+  {
+    "id": "cmp-user-avatar",
+    "name": "UserAvatar",
+    "category": "ui",
+    "module": "users",
+    "status": "stable",
+    "description": "Avatar do usuário com iniciais como fallback e indicador de status online.",
+    "props": [
+      { "name": "name", "type": "string", "required": true, "description": "Nome do usuário." },
+      { "name": "imageUrl", "type": "string", "required": false, "description": "URL da foto." },
+      { "name": "size", "type": "'sm' | 'md' | 'lg'", "required": false, "defaultValue": "md", "description": "Tamanho." },
+      { "name": "online", "type": "boolean", "required": false, "description": "Exibe dot verde." }
+    ],
+    "usedIn": ["UserDetail", "Topbar", "EmployeeCard"],
+    "filePath": "src/components/ui/UserAvatar.tsx",
+    "lastUpdated": "2025-07-01"
+  },
+  {
+    "id": "cmp-employee-card",
+    "name": "EmployeeCard",
+    "category": "ui",
+    "module": "employees",
+    "status": "stable",
+    "description": "Card resumido do colaborador com avatar, cargo e departamento.",
+    "props": [
+      { "name": "employee", "type": "Employee", "required": true, "description": "Dados do colaborador." },
+      { "name": "onClick", "type": "() => void", "required": false, "description": "Ação ao clicar." }
+    ],
+    "usedIn": ["EmployeesList"],
+    "filePath": "src/components/ui/EmployeeCard.tsx",
+    "lastUpdated": "2025-06-30"
+  },
+  {
+    "id": "cmp-data-table",
+    "name": "DataTable",
+    "category": "ui",
+    "module": "core",
+    "status": "stable",
+    "description": "Tabela de dados genérica com paginação, ordenação e seleção de linhas.",
+    "props": [
+      { "name": "columns", "type": "ColumnDef<T>[]", "required": true, "description": "Definição das colunas." },
+      { "name": "data", "type": "T[]", "required": true, "description": "Array de dados." },
+      { "name": "loading", "type": "boolean", "required": false, "description": "Estado de carregamento." },
+      { "name": "pageSize", "type": "number", "required": false, "defaultValue": "20", "description": "Itens por página." }
+    ],
+    "usedIn": ["UsersList", "EmployeesList", "PayrollList", "ReportsList"],
+    "filePath": "src/components/ui/DataTable.tsx",
+    "lastUpdated": "2025-07-08"
+  },
+  {
+    "id": "cmp-search-input",
+    "name": "SearchInput",
+    "category": "ui",
+    "module": "core",
+    "status": "stable",
+    "description": "Input de busca com ícone, debounce embutido e botão de limpar.",
+    "props": [
+      { "name": "value", "type": "string", "required": true, "description": "Valor atual." },
+      { "name": "onChange", "type": "(v: string) => void", "required": true, "description": "Callback de mudança." },
+      { "name": "placeholder", "type": "string", "required": false, "description": "Texto de placeholder." },
+      { "name": "debounce", "type": "number", "required": false, "defaultValue": "300", "description": "Delay em ms." }
+    ],
+    "usedIn": ["UsersList", "EmployeesList"],
+    "filePath": "src/components/ui/SearchInput.tsx",
+    "lastUpdated": "2025-07-02"
+  },
+  {
+    "id": "cmp-confirm-dialog",
+    "name": "ConfirmDialog",
+    "category": "ui",
+    "module": "core",
+    "status": "stable",
+    "description": "Modal de confirmação com título, mensagem e ações de confirmar/cancelar.",
+    "props": [
+      { "name": "open", "type": "boolean", "required": true, "description": "Visibilidade do dialog." },
+      { "name": "title", "type": "string", "required": true, "description": "Título." },
+      { "name": "description", "type": "string", "required": true, "description": "Mensagem." },
+      { "name": "onConfirm", "type": "() => void", "required": true, "description": "Ação de confirmar." },
+      { "name": "onCancel", "type": "() => void", "required": true, "description": "Ação de cancelar." },
+      { "name": "variant", "type": "'default' | 'danger'", "required": false, "defaultValue": "default", "description": "Estilo do botão principal." }
+    ],
+    "usedIn": ["UserDetail", "EmployeeDetail"],
+    "filePath": "src/components/ui/ConfirmDialog.tsx",
+    "lastUpdated": "2025-06-25"
+  },
+  {
+    "id": "cmp-empty-state",
+    "name": "EmptyState",
+    "category": "ui",
+    "module": "core",
+    "status": "stable",
+    "description": "Estado vazio genérico com ícone, título, descrição e ação opcional.",
+    "props": [
+      { "name": "icon", "type": "LucideIcon", "required": false, "description": "Ícone ilustrativo." },
+      { "name": "title", "type": "string", "required": true, "description": "Título." },
+      { "name": "description", "type": "string", "required": false, "description": "Descrição." },
+      { "name": "action", "type": "React.ReactNode", "required": false, "description": "Botão de ação." }
+    ],
+    "usedIn": ["UsersList", "EmployeesList", "PayrollList"],
+    "filePath": "src/components/ui/EmptyState.tsx",
+    "lastUpdated": "2025-06-18"
+  },
+  {
+    "id": "cmp-salary-badge",
+    "name": "SalaryBadge",
+    "category": "ui",
+    "module": "financeiro",
+    "status": "stable",
+    "description": "Exibe valor salarial formatado em BRL com ícone e variação percentual opcional.",
+    "props": [
+      { "name": "value", "type": "number", "required": true, "description": "Valor em centavos." },
+      { "name": "change", "type": "number", "required": false, "description": "Variação em % (positivo/negativo)." }
+    ],
+    "usedIn": ["EmployeeDetail", "PayrollDetail"],
+    "filePath": "src/components/ui/SalaryBadge.tsx",
+    "lastUpdated": "2025-07-07"
+  },
+  {
+    "id": "cmp-department-badge",
+    "name": "DepartmentBadge",
+    "category": "ui",
+    "module": "employees",
+    "status": "stable",
+    "description": "Badge colorido com nome do departamento. Cor derivada do ID.",
+    "props": [
+      { "name": "name", "type": "string", "required": true, "description": "Nome do departamento." },
+      { "name": "id", "type": "string", "required": true, "description": "ID para derivar a cor." }
+    ],
+    "usedIn": ["EmployeeCard", "EmployeeDetail", "EmployeesList"],
+    "filePath": "src/components/ui/DepartmentBadge.tsx",
+    "lastUpdated": "2025-06-22"
+  },
+  {
+    "id": "cmp-notification-item",
+    "name": "NotificationItem",
+    "category": "ui",
+    "module": "comunicacao",
+    "status": "stable",
+    "description": "Item de notificação com ícone, mensagem, timestamp e estado de leitura.",
+    "props": [
+      { "name": "notification", "type": "Notification", "required": true, "description": "Dados da notificação." },
+      { "name": "onRead", "type": "(id: string) => void", "required": true, "description": "Marcar como lida." }
+    ],
+    "usedIn": ["NotificationsList"],
+    "filePath": "src/components/ui/NotificationItem.tsx",
+    "lastUpdated": "2025-06-19"
+  },
+  {
+    "id": "cmp-stats-card",
+    "name": "StatsCard",
+    "category": "ui",
+    "module": "dashboard",
+    "status": "stable",
+    "description": "Card de métrica com ícone, valor, rótulo e sub-descrição.",
+    "props": [
+      { "name": "icon", "type": "LucideIcon", "required": true, "description": "Ícone representativo." },
+      { "name": "label", "type": "string", "required": true, "description": "Rótulo da métrica." },
+      { "name": "value", "type": "string | number", "required": true, "description": "Valor principal." },
+      { "name": "subLabel", "type": "string", "required": false, "description": "Texto auxiliar." }
+    ],
+    "usedIn": ["Dashboard"],
+    "filePath": "src/components/ui/StatsCard.tsx",
+    "lastUpdated": "2025-07-10"
+  }
+]

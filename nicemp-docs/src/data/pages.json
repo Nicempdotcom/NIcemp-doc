@@ -1,0 +1,222 @@
+[
+  {
+    "id": "pg-login",
+    "title": "Login",
+    "route": "/login",
+    "section": "auth",
+    "status": "stable",
+    "description": "Página de autenticação com email e senha. Suporta redirecionamento pós-login.",
+    "author": "Carlos M.",
+    "lastUpdated": "2025-07-08",
+    "tags": ["auth", "public"]
+  },
+  {
+    "id": "pg-forgot-password",
+    "title": "Esqueci a senha",
+    "route": "/forgot-password",
+    "section": "auth",
+    "status": "stable",
+    "description": "Envio de e-mail para redefinição de senha via token temporário.",
+    "author": "Carlos M.",
+    "lastUpdated": "2025-06-15",
+    "tags": ["auth", "public"]
+  },
+  {
+    "id": "pg-reset-password",
+    "title": "Redefinir senha",
+    "route": "/reset-password/:token",
+    "section": "auth",
+    "status": "stable",
+    "description": "Formulário de nova senha após validação do token recebido por e-mail.",
+    "author": "Carlos M.",
+    "lastUpdated": "2025-06-15",
+    "tags": ["auth", "public"]
+  },
+  {
+    "id": "pg-dashboard",
+    "title": "Dashboard",
+    "route": "/dashboard",
+    "section": "dashboard",
+    "status": "stable",
+    "description": "Visão geral do sistema com métricas, alertas e atalhos para módulos principais.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-07-10",
+    "tags": ["private", "overview"]
+  },
+  {
+    "id": "pg-users-list",
+    "title": "Lista de Usuários",
+    "route": "/users",
+    "section": "users",
+    "status": "stable",
+    "description": "Tabela paginada de usuários com busca, filtros por role e ações de gestão.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-07-05",
+    "tags": ["private", "admin"]
+  },
+  {
+    "id": "pg-users-detail",
+    "title": "Detalhe do Usuário",
+    "route": "/users/:id",
+    "section": "users",
+    "status": "stable",
+    "description": "Perfil completo do usuário com histórico de ações e configurações de acesso.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-07-05",
+    "tags": ["private", "admin"]
+  },
+  {
+    "id": "pg-users-new",
+    "title": "Novo Usuário",
+    "route": "/users/new",
+    "section": "users",
+    "status": "stable",
+    "description": "Formulário de criação de usuário com validação de dados e envio de convite.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-06-30",
+    "tags": ["private", "admin"]
+  },
+  {
+    "id": "pg-employees-list",
+    "title": "Colaboradores",
+    "route": "/employees",
+    "section": "employees",
+    "status": "stable",
+    "description": "Listagem de colaboradores com filtro por departamento, cargo e situação.",
+    "author": "Carlos M.",
+    "lastUpdated": "2025-07-03",
+    "tags": ["private", "hr"]
+  },
+  {
+    "id": "pg-employees-detail",
+    "title": "Detalhe do Colaborador",
+    "route": "/employees/:id",
+    "section": "employees",
+    "status": "stable",
+    "description": "Ficha completa do colaborador: dados pessoais, cargo, salário e histórico.",
+    "author": "Carlos M.",
+    "lastUpdated": "2025-07-03",
+    "tags": ["private", "hr"]
+  },
+  {
+    "id": "pg-employees-new",
+    "title": "Novo Colaborador",
+    "route": "/employees/new",
+    "section": "employees",
+    "status": "stable",
+    "description": "Cadastro de novo colaborador com dados pessoais, cargo e vínculo de usuário.",
+    "author": "Carlos M.",
+    "lastUpdated": "2025-06-28",
+    "tags": ["private", "hr"]
+  },
+  {
+    "id": "pg-departments",
+    "title": "Departamentos",
+    "route": "/departments",
+    "section": "employees",
+    "status": "stable",
+    "description": "Gestão de departamentos com estrutura hierárquica e responsáveis.",
+    "author": "Carlos M.",
+    "lastUpdated": "2025-06-20",
+    "tags": ["private", "hr"]
+  },
+  {
+    "id": "pg-payroll-list",
+    "title": "Folha de Pagamento",
+    "route": "/payroll",
+    "section": "financeiro",
+    "status": "stable",
+    "description": "Listagem de folhas por competência com status de processamento.",
+    "author": "Sofia R.",
+    "lastUpdated": "2025-07-10",
+    "tags": ["private", "finance"]
+  },
+  {
+    "id": "pg-payroll-detail",
+    "title": "Detalhe da Folha",
+    "route": "/payroll/:id",
+    "section": "financeiro",
+    "status": "stable",
+    "description": "Visualização detalhada da folha com holerites individuais e totalizadores.",
+    "author": "Sofia R.",
+    "lastUpdated": "2025-07-10",
+    "tags": ["private", "finance"]
+  },
+  {
+    "id": "pg-reports-list",
+    "title": "Relatórios",
+    "route": "/reports",
+    "section": "relatorios",
+    "status": "beta",
+    "description": "Central de relatórios disponíveis com filtros por módulo e período.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-06-28",
+    "tags": ["private", "reports"]
+  },
+  {
+    "id": "pg-reports-detail",
+    "title": "Visualizar Relatório",
+    "route": "/reports/:id",
+    "section": "relatorios",
+    "status": "beta",
+    "description": "Exibição do relatório com opções de exportação em PDF e Excel.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-06-28",
+    "tags": ["private", "reports"]
+  },
+  {
+    "id": "pg-notifications",
+    "title": "Notificações",
+    "route": "/notifications",
+    "section": "comunicacao",
+    "status": "stable",
+    "description": "Central de notificações do usuário com marcação de leitura e filtros.",
+    "author": "Sofia R.",
+    "lastUpdated": "2025-06-20",
+    "tags": ["private"]
+  },
+  {
+    "id": "pg-profile",
+    "title": "Meu Perfil",
+    "route": "/profile",
+    "section": "users",
+    "status": "stable",
+    "description": "Dados pessoais, senha e preferências do usuário autenticado.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-07-01",
+    "tags": ["private"]
+  },
+  {
+    "id": "pg-settings-general",
+    "title": "Configurações Gerais",
+    "route": "/settings/general",
+    "section": "configuracoes",
+    "status": "stable",
+    "description": "Configurações globais do sistema: nome, logo, timezone e idioma.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-07-06",
+    "tags": ["private", "admin"]
+  },
+  {
+    "id": "pg-settings-integrations",
+    "title": "Integrações",
+    "route": "/settings/integrations",
+    "section": "configuracoes",
+    "status": "stable",
+    "description": "Gerenciamento de integrações ativas: chaves de API, webhooks e serviços externos.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-07-06",
+    "tags": ["private", "admin"]
+  },
+  {
+    "id": "pg-settings-roles",
+    "title": "Roles & Permissões",
+    "route": "/settings/roles",
+    "section": "configuracoes",
+    "status": "stable",
+    "description": "Criação e edição de roles com matriz de permissões por módulo.",
+    "author": "Ana P.",
+    "lastUpdated": "2025-07-04",
+    "tags": ["private", "admin"]
+  }
+]
