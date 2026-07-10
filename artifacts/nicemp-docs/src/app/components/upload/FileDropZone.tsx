@@ -34,8 +34,6 @@ export default function FileDropZone({ onFile, disabled = false }: FileDropZoneP
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     handleFile(e.target.files?.[0]);
 
-  const maxMB = UPLOAD_CONFIG.maxSizeBytes / 1024 / 1024;
-
   return (
     <div
       onDragEnter={onDragEnter}
@@ -75,7 +73,7 @@ export default function FileDropZone({ onFile, disabled = false }: FileDropZoneP
 
       {/* Hint */}
       <p className="mt-4 text-xs text-muted-foreground/70">
-        Apenas arquivos <span className="font-mono font-medium text-muted-foreground">.zip</span> • máximo {maxMB} MB
+        Apenas arquivos <span className="font-mono font-medium text-muted-foreground">.zip</span> • sem limite de tamanho
       </p>
 
       {/* Hidden input */}
