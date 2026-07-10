@@ -1,33 +1,24 @@
 // ─── History Feature — Types ──────────────────────────────────────────────────
+//
+// HistoryEntry and HistoryEventKind are the canonical definitions from the
+// storage layer. Re-exported here so feature code doesn't import from services.
 
-export type HistoryEventKind =
-  | 'upload'
-  | 'analysis'
-  | 'doc_created'
-  | 'doc_updated'
-  | 'doc_deleted'
-  | 'comparison'
-  | 'export';
-
-export interface HistoryEntry {
-  id: string;
-  kind: HistoryEventKind;
-  label: string;
-  description: string;
-  timestamp: string;
-  metadata: Record<string, unknown>;
-}
+export type {
+  HistoryEntry,
+  HistoryEventKind,
+} from '@/services/storage';
 
 export interface HistoryFilter {
-  kinds?: HistoryEventKind[];
-  from?: string;
-  to?: string;
-  search?: string;
+  projectId?: string;
+  kind?:      string;
+  from?:      string;
+  to?:        string;
+  search?:    string;
 }
 
 export interface HistoryState {
-  entries: HistoryEntry[];
-  filter: HistoryFilter;
+  entries: import('@/services/storage').HistoryEntry[];
+  filter:  HistoryFilter;
   loading: boolean;
-  error: string | null;
+  error:   string | null;
 }

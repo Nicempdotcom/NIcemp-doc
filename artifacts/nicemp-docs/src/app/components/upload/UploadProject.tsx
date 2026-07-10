@@ -1,17 +1,27 @@
-import React from 'react';
-import { AlertCircle, RefreshCcw, Scan, Loader2, CheckCircle2 } from 'lucide-react';
-import { useUpload } from '@/features/upload';
-import { useAnalyzer } from '@/features/analyzer';
-import { PHASE_LABELS } from '@/features/analyzer';
-import FileDropZone from './FileDropZone';
-import ProgressBar from './ProgressBar';
-import StageIndicator from './StageIndicator';
-import ZipSummary from './ZipSummary';
-import ProjectMapView from './ProjectMapView';
-import { Button } from '@/app/components/ui/button';
-import { cn } from '@/utils';
+import React, { useEffect, useState } from 'react';
+import {
+  AlertCircle, RefreshCcw, Scan, Loader2, CheckCircle2,
+  Database, Save, ChevronRight,
+} from 'lucide-react';
+import { useUpload }                        from '@/features/upload';
+import { useAnalyzer, PHASE_LABELS }        from '@/features/analyzer';
+import {
+  mapProjectMapToEntities,
+  StorageService,
+  ProjectRepository,
+  VersionRepository,
+  DocumentationRepository,
+  HistoryRepository,
+} from '@/services/storage';
+import FileDropZone      from './FileDropZone';
+import ProgressBar       from './ProgressBar';
+import StageIndicator    from './StageIndicator';
+import ZipSummary        from './ZipSummary';
+import ProjectMapView    from './ProjectMapView';
+import { Button }        from '@/app/components/ui/button';
+import { cn }            from '@/utils';
 
-// ─── Analysis pipeline progress strip ────────────────────────────────────────
+// ─── Analysis progress strip ──────────────────────────────────────────────────
 
 function AnalysisProgress() {
   const { phase, progress } = useAnalyzer();
@@ -19,7 +29,6 @@ function AnalysisProgress() {
   const phaseSteps = [
     'scanning', 'categorizing', 'dependencies', 'technology', 'building',
   ] as const;
-
   const currentIdx = phaseSteps.indexOf(phase as never);
 
   return (
@@ -34,7 +43,6 @@ function AnalysisProgress() {
 
       <ProgressBar value={progress} />
 
-      {/* Mini step strip */}
       <div className="flex items-center gap-1 overflow-x-auto pt-1">
         {phaseSteps.map((step, i) => {
           const isDone   = currentIdx > i;
@@ -60,6 +68,85 @@ function AnalysisProgress() {
   );
 }
 
+// ─── DB save status card ──────────────────────────────────────────────────────
+
+type DbPhase = 'idle' | 'saving' | 'saved' | 'error';
+
+interface SavedCounts {
+  Páginas:      number;
+  Componentes:  number;
+  Hooks:        number;
+  APIs:         number;
+  Tabelas:      number;
+  Dependências: number;
+  Tecnologias:  number;
+}
+
+function DbSaveStatus({
+  dbPhase,
+  counts,
+  error,
+}: {
+  dbPhase: DbPhase;
+  counts: SavedCounts | null;
+  error: string | null;
+}) {
+  if (dbPhase === 'idle') return null;
+
+  if (dbPhase === 'saving') {
+    return (
+      <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-5 py-3.5">
+        <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+        <span className="text-sm text-muted-foreground">Salvando no banco de documentação…</span>
+      </div>
+    );
+  }
+
+  if (dbPhase === 'error') {
+    return (
+      <div className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/5 px-5 py-3.5">
+        <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+        <span className="text-sm text-destructive">{error ?? 'Falha ao salvar no banco.'}</span>
+      </div>
+    );
+  }
+
+  // saved
+  return (
+    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-5 py-4 space-y-3">
+      <div className="flex items-center gap-2.5">
+        <Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+          Banco de documentação atualizado
+        </span>
+        <Save className="h-3.5 w-3.5 ml-auto text-emerald-500 shrink-0" />
+      </div>
+
+      {counts && (
+        <div className="flex flex-wrap gap-2">
+          {(Object.entries(counts) as [string, number][])
+            .filter(([, n]) => n > 0)
+            .map(([label, n]) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400"
+              >
+                <span className="font-bold tabular-nums">{n}</span>
+                {label}
+              </span>
+            ))}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Dados salvos localmente em{' '}
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">localStorage</code>
+        {' '}— nenhum código-fonte foi armazenado.
+      </p>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function UploadProject() {
@@ -69,13 +156,58 @@ export default function UploadProject() {
   const { stage, progress, zip, error, processFile, takeBuffer, reset: resetUpload } = upload;
   const { phase, projectMap, error: analysisError, startAnalysis, reset: resetAnalysis } = analyzer;
 
-  const isUploading  = stage === 'reading' || stage === 'analyzing';
-  const isAnalyzing  = phase !== 'idle' && phase !== 'completed' && phase !== 'failed';
-  const showDropZone = (stage === 'idle' || stage === 'error') && phase === 'idle';
-  const showAnalysisBtn = stage === 'completed' && phase === 'idle';
+  const [dbPhase,     setDbPhase]     = useState<DbPhase>('idle');
+  const [savedCounts, setSavedCounts] = useState<SavedCounts | null>(null);
+  const [dbError,     setDbError]     = useState<string | null>(null);
+
+  // ── Auto-save to DB after analysis ───────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'completed' || !projectMap || dbPhase !== 'idle') return;
+
+    setDbPhase('saving');
+
+    // Use a microtask to let the UI render the saving state first
+    Promise.resolve().then(() => {
+      try {
+        const entities = mapProjectMapToEntities(projectMap);
+
+        // Persist all entity groups
+        ProjectRepository.save(entities.project);
+        VersionRepository.save(entities.version);
+        DocumentationRepository.pages.saveMany(entities.pages);
+        DocumentationRepository.components.saveMany(entities.components);
+        DocumentationRepository.hooks.saveMany(entities.hooks);
+        DocumentationRepository.apis.saveMany(entities.apis);
+        DocumentationRepository.tables.saveMany(entities.tables);
+        StorageService.upsertMany('dependencies', entities.dependencies);
+        StorageService.upsertMany('technologies', entities.technologies);
+        HistoryRepository.append(entities.historyEntry);
+
+        setSavedCounts({
+          Páginas:      entities.pages.length,
+          Componentes:  entities.components.length,
+          Hooks:        entities.hooks.length,
+          APIs:         entities.apis.length,
+          Tabelas:      entities.tables.length,
+          Dependências: entities.dependencies.length,
+          Tecnologias:  entities.technologies.length,
+        });
+        setDbPhase('saved');
+      } catch (err) {
+        setDbError(err instanceof Error ? err.message : 'Erro ao salvar no banco.');
+        setDbPhase('error');
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, projectMap]);
+
+  const isUploading     = stage === 'reading' || stage === 'analyzing';
+  const isAnalyzing     = phase !== 'idle' && phase !== 'completed' && phase !== 'failed';
+  const showDropZone    = (stage === 'idle' || stage === 'error') && phase === 'idle';
+  const showAnalyzeBtn  = stage === 'completed' && phase === 'idle';
 
   const handleAnalyze = async () => {
-    const buffer = takeBuffer(); // ZIP wiped from upload state immediately
+    const buffer = takeBuffer(); // wipes ZIP from upload state immediately
     if (!buffer) return;
     await startAnalysis(buffer); // buffer consumed + released by engine
   };
@@ -83,10 +215,14 @@ export default function UploadProject() {
   const handleReset = () => {
     resetUpload();
     resetAnalysis();
+    setDbPhase('idle');
+    setSavedCounts(null);
+    setDbError(null);
   };
 
   return (
     <div className="space-y-6">
+
       {/* Drop zone */}
       {showDropZone && (
         <FileDropZone onFile={processFile} disabled={isUploading} />
@@ -105,12 +241,11 @@ export default function UploadProject() {
         />
       )}
 
-      {/* Upload success: ZIP summary + Analyze button */}
+      {/* ZIP summary + analyze button */}
       {stage === 'completed' && zip && phase === 'idle' && (
         <div className="space-y-4">
           <ProgressBar value={100} variant="success" />
           <ZipSummary zip={zip} />
-
           <div className="flex items-center justify-between gap-3 pt-1">
             <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
               <RefreshCcw className="h-3.5 w-3.5" />
@@ -139,7 +274,7 @@ export default function UploadProject() {
         </div>
       )}
 
-      {/* Analysis in progress */}
+      {/* Analysis running */}
       {isAnalyzing && <AnalysisProgress />}
 
       {/* Analysis error */}
@@ -157,17 +292,21 @@ export default function UploadProject() {
         </div>
       )}
 
-      {/* Analysis completed: project map */}
+      {/* Analysis completed: project map + DB save status */}
       {phase === 'completed' && projectMap && (
         <div className="space-y-4">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-            <p className="text-sm font-semibold text-foreground">Mapa do projeto gerado com sucesso</p>
+            <p className="text-sm font-semibold text-foreground">Mapa do projeto gerado</p>
             <Button variant="outline" size="sm" onClick={handleReset} className="ml-auto gap-2">
               <RefreshCcw className="h-3.5 w-3.5" />
               Novo projeto
             </Button>
           </div>
+
+          {/* DB save status (auto-triggered) */}
+          <DbSaveStatus dbPhase={dbPhase} counts={savedCounts} error={dbError} />
+
           <ProjectMapView map={projectMap} />
         </div>
       )}
