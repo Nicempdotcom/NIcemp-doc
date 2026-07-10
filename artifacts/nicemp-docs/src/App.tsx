@@ -11,6 +11,7 @@ import Dashboard    from '@/app/pages/Dashboard';
 import Upload       from '@/app/pages/Upload';
 import Comparison   from '@/app/pages/Comparison';
 import History      from '@/app/pages/History';
+import Impact       from '@/app/pages/Impact';
 import Architecture from '@/app/pages/Architecture';
 import Frontend     from '@/app/pages/Frontend';
 import Backend      from '@/app/pages/Backend';
@@ -66,6 +67,7 @@ function Layout() {
               <Route path={ROUTES.upload}       element={<Upload />}       />
               <Route path={ROUTES.history}      element={<History />}      />
               <Route path={ROUTES.comparison}   element={<Comparison />}   />
+              <Route path={ROUTES.impact}       element={<Impact />}       />
               <Route path={ROUTES.architecture} element={<Architecture />} />
               <Route path={ROUTES.frontend}     element={<Frontend />}     />
               <Route path={ROUTES.backend}      element={<Backend />}      />

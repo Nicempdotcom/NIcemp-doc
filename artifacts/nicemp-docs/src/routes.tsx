@@ -3,6 +3,7 @@ export const ROUTES = {
   upload:       '/upload',
   history:      '/history',
   comparison:   '/comparison',
+  impact:       '/impact',
   architecture: '/architecture',
   frontend:     '/frontend',
   backend:      '/backend',

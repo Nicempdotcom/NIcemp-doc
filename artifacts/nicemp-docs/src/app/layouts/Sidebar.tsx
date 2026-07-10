@@ -5,6 +5,7 @@ import {
   UploadCloud,
   GitCompare,
   History,
+  AlertTriangle,
   Network,
   Monitor,
   Server,
@@ -24,6 +25,7 @@ const NAV_GROUPS = [
       { label: 'Upload',         icon: UploadCloud,     href: ROUTES.upload     },
       { label: 'Histórico',      icon: History,         href: ROUTES.history    },
       { label: 'Comparação',     icon: GitCompare,      href: ROUTES.comparison },
+      { label: 'Impacto',        icon: AlertTriangle,   href: ROUTES.impact     },
     ],
   },
   {
