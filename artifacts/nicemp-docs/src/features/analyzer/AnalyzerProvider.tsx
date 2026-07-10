@@ -4,6 +4,7 @@ import React, {
 } from 'react';
 import { EMPTY_COUNTS }                        from '@/workers/types';
 import type { WorkerOutMsg, WorkerInMsg }      from '@/workers/types';
+import { runAnalysisPipeline, AnalysisCancelledError } from '@/services/engine/runAnalysisPipeline';
 import type { AnalyzerState, AnalysisPhase }  from './types';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -45,6 +46,43 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
   // ── Terminate worker on unmount ───────────────────────────────────────────
   useEffect(() => () => { workerRef.current?.terminate(); }, []);
 
+  // Guards against a worker that fails asynchronously (e.g. 'error' event)
+  // *after* it already reported completion/cancellation for this run.
+  const runIdRef = useRef(0);
+
+  /**
+   * Fallback path: runs the exact same pipeline on the main thread.
+   * Used when a dedicated Worker can't be created or crashes before
+   * producing any output — e.g. a sandboxed/CSP-restricted preview iframe
+   * that blocks module Workers. Slightly less smooth on huge projects
+   * (UI may feel busier), but never silently fails to load the ZIP.
+   */
+  const runOnMainThread = useCallback((buffer: ArrayBuffer, fileName: string, runId: number) => {
+    let cancelledLocal = false;
+    cancelFlagRef.current = () => { cancelledLocal = true; };
+
+    runAnalysisPipeline(buffer, fileName, {
+      onProgress: (pct, label, counts) => {
+        if (runIdRef.current !== runId) return;
+        setState((s) => ({ ...s, pct, label, counts, phase: phasFromPct(pct) }));
+      },
+      isCancelled: () => cancelledLocal,
+    }).then((projectMap) => {
+      if (runIdRef.current !== runId) return;
+      setState((s) => ({ ...s, phase: 'completed', pct: 100, label: 'Concluído', projectMap }));
+    }).catch((err) => {
+      if (runIdRef.current !== runId) return;
+      if (err instanceof AnalysisCancelledError) {
+        setState((s) => ({ ...s, phase: 'cancelled', label: 'Análise cancelada pelo usuário.' }));
+        return;
+      }
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido durante a análise.';
+      setState((s) => ({ ...s, phase: 'failed', label: msg, error: msg }));
+    });
+  }, []);
+
+  const cancelFlagRef = useRef<(() => void) | null>(null);
+
   // ── startAnalysis ─────────────────────────────────────────────────────────
   const startAnalysis = useCallback((
     buffer:   ArrayBuffer,
@@ -56,6 +94,8 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
       workerRef.current.terminate();
       workerRef.current = null;
     }
+    cancelFlagRef.current = null;
+    const runId = ++runIdRef.current;
 
     setState({
       ...INITIAL,
@@ -65,16 +105,38 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
       fileSize,
     });
 
-    // Spawn worker — Vite detects `new URL(...)` and bundles it as a separate chunk
-    const worker = new Worker(
-      new URL('../../workers/analysis.worker.ts', import.meta.url),
-      { type: 'module' },
-    );
+    // A fallback needs its own copy of the bytes — once we hand `buffer` to
+    // postMessage as a Transferable it gets detached, so snapshot first.
+    let bufferForFallback: ArrayBuffer | null = null;
+    try {
+      bufferForFallback = buffer.slice(0);
+    } catch {
+      bufferForFallback = null;
+    }
+
+    let worker: Worker;
+    try {
+      // Spawn worker — Vite detects `new URL(...)` and bundles it as a separate chunk
+      worker = new Worker(
+        new URL('../../workers/analysis.worker.ts', import.meta.url),
+        { type: 'module' },
+      );
+    } catch {
+      // `new Worker(...)` can throw synchronously in restrictive sandboxes
+      // (e.g. CSP `worker-src` blocked inside the preview iframe).
+      if (bufferForFallback) runOnMainThread(bufferForFallback, fileName, runId);
+      else setState((s) => ({ ...s, phase: 'failed', label: 'Não foi possível iniciar a análise.', error: 'Não foi possível iniciar a análise.' }));
+      return;
+    }
     workerRef.current = worker;
+
+    let workerProducedOutput = false;
 
     // ── Message handler ──────────────────────────────────────────────────
     worker.addEventListener('message', (e: MessageEvent<WorkerOutMsg>) => {
+      if (runIdRef.current !== runId) return;
       const msg = e.data;
+      workerProducedOutput = true;
 
       switch (msg.type) {
         case 'progress':
@@ -118,18 +180,26 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // ── Error handler (worker crash) ──────────────────────────────────────
+    // ── Error handler (worker crash / failed to load, e.g. CSP-blocked) ────
     worker.addEventListener('error', (e: ErrorEvent) => {
-      const msg = e.message || 'O worker de análise falhou inesperadamente.';
-      setState((s) => ({ ...s, phase: 'failed', label: msg, error: msg }));
+      if (runIdRef.current !== runId) return;
       worker.terminate();
       workerRef.current = null;
+
+      // If the worker never got to report anything, fall back to running
+      // the same pipeline on the main thread instead of failing silently.
+      if (!workerProducedOutput && bufferForFallback) {
+        runOnMainThread(bufferForFallback, fileName, runId);
+        return;
+      }
+      const msg = e.message || 'O worker de análise falhou inesperadamente.';
+      setState((s) => ({ ...s, phase: 'failed', label: msg, error: msg }));
     });
 
     // ── Transfer buffer (zero-copy — detaches from main thread immediately) ─
     const startMsg: WorkerInMsg = { type: 'start', buffer, fileName };
     worker.postMessage(startMsg, [buffer]);
-  }, []);
+  }, [runOnMainThread]);
 
   // ── cancelAnalysis ────────────────────────────────────────────────────────
   const cancelAnalysis = useCallback(() => {
@@ -137,6 +207,8 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
       const msg: WorkerInMsg = { type: 'cancel' };
       workerRef.current.postMessage(msg);
     }
+    // Also signal the main-thread fallback runner, if that's what's active.
+    cancelFlagRef.current?.();
   }, []);
 
   // ── reset ─────────────────────────────────────────────────────────────────
@@ -145,6 +217,8 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
       workerRef.current.terminate();
       workerRef.current = null;
     }
+    cancelFlagRef.current = null;
+    runIdRef.current += 1; // invalidate any in-flight main-thread run
     setState(INITIAL);
   }, []);
 
