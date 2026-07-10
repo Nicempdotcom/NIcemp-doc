@@ -9,6 +9,7 @@ import Topbar from '@/app/layouts/Topbar';
 
 import Dashboard    from '@/app/pages/Dashboard';
 import Upload       from '@/app/pages/Upload';
+import Project      from '@/app/pages/Project';
 import Comparison   from '@/app/pages/Comparison';
 import History      from '@/app/pages/History';
 import Impact       from '@/app/pages/Impact';
@@ -16,6 +17,10 @@ import Architecture from '@/app/pages/Architecture';
 import Frontend     from '@/app/pages/Frontend';
 import Backend      from '@/app/pages/Backend';
 import Database     from '@/app/pages/Database';
+import Components   from '@/app/pages/Components';
+import Hooks        from '@/app/pages/Hooks';
+import Apis         from '@/app/pages/Apis';
+import Dependencies from '@/app/pages/Dependencies';
 import Modules      from '@/app/pages/Modules';
 import Prompts      from '@/app/pages/Prompts';
 import Settings     from '@/app/pages/Settings';
@@ -65,6 +70,7 @@ function Layout() {
             <Routes>
               <Route path={ROUTES.dashboard}    element={<Dashboard />}    />
               <Route path={ROUTES.upload}       element={<Upload />}       />
+              <Route path={ROUTES.project}      element={<Project />}      />
               <Route path={ROUTES.history}      element={<History />}      />
               <Route path={ROUTES.comparison}   element={<Comparison />}   />
               <Route path={ROUTES.impact}       element={<Impact />}       />
@@ -72,6 +78,10 @@ function Layout() {
               <Route path={ROUTES.frontend}     element={<Frontend />}     />
               <Route path={ROUTES.backend}      element={<Backend />}      />
               <Route path={ROUTES.database}     element={<Database />}     />
+              <Route path={ROUTES.components}   element={<Components />}   />
+              <Route path={ROUTES.hooks}        element={<Hooks />}        />
+              <Route path={ROUTES.apis}         element={<Apis />}         />
+              <Route path={ROUTES.dependencies} element={<Dependencies />} />
               <Route path={ROUTES.modules}      element={<Modules />}      />
               <Route path={ROUTES.prompts}      element={<Prompts />}      />
               <Route path={ROUTES.settings}     element={<Settings />}     />

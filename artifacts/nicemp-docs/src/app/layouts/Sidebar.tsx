@@ -14,6 +14,10 @@ import {
   Bot,
   Settings,
   X,
+  FolderKanban,
+  Layers,
+  Zap,
+  Globe,
 } from 'lucide-react';
 import { ROUTES } from '@/routes';
 
@@ -23,6 +27,7 @@ const NAV_GROUPS = [
     items: [
       { label: 'Dashboard',      icon: LayoutDashboard, href: ROUTES.dashboard  },
       { label: 'Upload',         icon: UploadCloud,     href: ROUTES.upload     },
+      { label: 'Projeto',        icon: FolderKanban,    href: ROUTES.project    },
       { label: 'Histórico',      icon: History,         href: ROUTES.history    },
       { label: 'Comparação',     icon: GitCompare,      href: ROUTES.comparison },
       { label: 'Impacto',        icon: AlertTriangle,   href: ROUTES.impact     },
@@ -35,6 +40,10 @@ const NAV_GROUPS = [
       { label: 'Frontend',       icon: Monitor,         href: ROUTES.frontend     },
       { label: 'Backend',        icon: Server,          href: ROUTES.backend      },
       { label: 'Banco de Dados', icon: Database,        href: ROUTES.database     },
+      { label: 'Componentes',    icon: Layers,          href: ROUTES.components   },
+      { label: 'Hooks',          icon: Zap,             href: ROUTES.hooks        },
+      { label: 'APIs',           icon: Globe,           href: ROUTES.apis         },
+      { label: 'Dependências',   icon: Package,         href: ROUTES.dependencies },
       { label: 'Módulos',        icon: Package,         href: ROUTES.modules      },
       { label: 'Prompts Replit', icon: Bot,             href: ROUTES.prompts      },
     ],

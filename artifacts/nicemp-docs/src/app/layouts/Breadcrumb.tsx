@@ -6,6 +6,7 @@ const getRouteLabel = (pathname: string) => {
   switch (pathname) {
     case ROUTES.dashboard:    return 'Dashboard';
     case ROUTES.upload:       return 'Upload de Projeto';
+    case ROUTES.project:      return 'Projeto';
     case ROUTES.history:      return 'Histórico Inteligente';
     case ROUTES.comparison:   return 'Comparação de Versões';
     case ROUTES.impact:       return 'Impacto das Alterações';
@@ -13,6 +14,10 @@ const getRouteLabel = (pathname: string) => {
     case ROUTES.frontend:     return 'Frontend';
     case ROUTES.backend:      return 'Backend';
     case ROUTES.database:     return 'Banco de Dados';
+    case ROUTES.components:   return 'Componentes';
+    case ROUTES.hooks:        return 'Hooks';
+    case ROUTES.apis:         return 'APIs';
+    case ROUTES.dependencies: return 'Dependências';
     case ROUTES.modules:      return 'Módulos';
     case ROUTES.prompts:      return 'Prompts Replit';
     case ROUTES.settings:     return 'Configurações';

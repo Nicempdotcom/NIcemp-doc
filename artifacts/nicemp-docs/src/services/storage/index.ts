@@ -13,4 +13,6 @@ export {
   VersionRepository,
   VersionSnapshotRepository,
   HistoryRepository,
+  DependencyRepository,
+  TechnologyRepository,
 } from './repositories';
