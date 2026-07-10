@@ -1,6 +1,7 @@
 export const ROUTES = {
   dashboard:    '/',
   upload:       '/upload',
+  history:      '/history',
   comparison:   '/comparison',
   architecture: '/architecture',
   frontend:     '/frontend',

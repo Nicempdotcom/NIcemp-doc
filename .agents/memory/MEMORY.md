@@ -1,0 +1,1 @@
+- [NicEmp Docs versioning model](nicemp-docs-versioning.md) — entities are upserted in-place per project; version comparison/history requires separate per-version snapshots.

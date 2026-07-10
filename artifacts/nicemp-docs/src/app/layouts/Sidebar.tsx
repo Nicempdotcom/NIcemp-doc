@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   UploadCloud,
   GitCompare,
+  History,
   Network,
   Monitor,
   Server,
@@ -21,6 +22,7 @@ const NAV_GROUPS = [
     items: [
       { label: 'Dashboard',      icon: LayoutDashboard, href: ROUTES.dashboard  },
       { label: 'Upload',         icon: UploadCloud,     href: ROUTES.upload     },
+      { label: 'Histórico',      icon: History,         href: ROUTES.history    },
       { label: 'Comparação',     icon: GitCompare,      href: ROUTES.comparison },
     ],
   },

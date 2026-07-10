@@ -6,6 +6,7 @@ const getRouteLabel = (pathname: string) => {
   switch (pathname) {
     case ROUTES.dashboard:    return 'Dashboard';
     case ROUTES.upload:       return 'Upload de Projeto';
+    case ROUTES.history:      return 'Histórico Inteligente';
     case ROUTES.comparison:   return 'Comparação de Versões';
     case ROUTES.architecture: return 'Arquitetura';
     case ROUTES.frontend:     return 'Frontend';

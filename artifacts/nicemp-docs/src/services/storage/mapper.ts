@@ -152,6 +152,14 @@ function toVersionEntity(map: ProjectMap, projectId: string): VersionEntity {
     status:        'stable',
     snapshotAt:    ts,
     changelog:     '',
+    stats: {
+      totalFiles: map.stats.totalFiles,
+      pages:      map.stats.byCategory['page']      ?? 0,
+      components: map.stats.byCategory['component'] ?? 0,
+      hooks:      map.stats.byCategory['hook']       ?? 0,
+      apis:       map.stats.byCategory['api']        ?? 0,
+      tables:     map.stats.byCategory['database']   ?? 0,
+    },
   };
 }
 

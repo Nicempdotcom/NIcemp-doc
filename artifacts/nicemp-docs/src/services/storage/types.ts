@@ -109,6 +109,15 @@ export interface VersionEntity extends BaseDocEntity {
   status:      DocStatus;
   snapshotAt:  string;    // ISO — when this version snapshot was taken
   changelog:   string;    // Empty initially
+  /** Counts captured at analysis time — powers the Histórico Inteligente timeline (EPIC 06). */
+  stats: {
+    totalFiles:  number;
+    pages:       number;
+    components:  number;
+    hooks:       number;
+    apis:        number;
+    tables:      number;
+  };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
