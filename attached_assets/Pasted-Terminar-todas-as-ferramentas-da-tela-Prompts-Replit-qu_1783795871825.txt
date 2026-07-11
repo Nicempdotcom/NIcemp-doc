@@ -1,0 +1,111 @@
+Terminar todas as ferramentas da tela "Prompts Replit" que hoje mostram "Conteúdo em breve", com foco principal nas de manutenção. Além disso, adicionar uma explicação de como usar a página, e garantir que os prompts de manutenção/documentação sejam sempre baseados nos dados REAIS do projeto analisado mais recentemente (ou seja: se o usuário subir um novo ZIP, os prompts gerados a partir daí já refletem o código novo, sem precisar mexer em código nenhum — porque eles são montados a partir do banco de dados da análise, não de texto fixo).
+
+Contexto importante antes de começar: hoje já existem dois sistemas diferentes de geração de prompt no projeto, e ambos devem ser reaproveitados (não recriados do zero):
+
+1. **Prompts de criação** (`CreatePagePromptDialog.tsx` + `PageCreationPromptGenerator.ts`, e `CreateToolPromptDialog.tsx` + `ToolCreationPromptGenerator.ts`): geram prompt a partir de um formulário preenchido pelo usuário, seguindo convenções FIXAS de um dos dois códigos-fonte conhecidos (NicEmp Docs em si, ou o nicemp.com). Isso é esperado e correto pra criação — uma página nova ainda não existe na análise, então não tem como puxar dado real dela.
+
+2. **Prompts de alteração de algo que já existe** (`GeneratePromptButton.tsx` + `PromptGenerator.ts`, usado hoje em `Explorer/index.tsx` e outras telas de documentação): gera prompt a partir de dados REAIS de uma entidade já detectada na última análise (página, componente, hook, API ou módulo) — nome, local do arquivo, módulo, nível de risco e dependências, tudo lido do banco (`ProjectRepository`, `PageRepository` etc.). Esse é o sistema que precisa virar a base das ferramentas de manutenção, exatamente porque ele já se atualiza sozinho a cada novo upload de ZIP.
+
+## 1. Deixar `PromptGenerator.ts` reutilizável para diferentes tipos de tarefa
+
+Arquivo: `artifacts/nicemp-docs/src/services/prompts/PromptGenerator.ts`
+
+Hoje `buildReplitPrompt(input)` sempre monta o mesmo "Objetivo" genérico ("Realizar uma alteração em..."). Adicionar um segundo parâmetro opcional pra permitir customizar o objetivo e o checklist conforme o tipo de tarefa (refatoração, layout, bug, documentação, spec), mantendo TUDO o resto (arquivos permitidos/proibidos, dependências, risco) exatamente como já funciona hoje, porque essa parte já é 100% baseada em dado real:
+
+```ts
+export interface PromptTaskOptions {
+  /** Rótulo da tarefa, usado no título do prompt (ex.: "Refatoração", "Correção de Bug"). */
+  taskLabel?: string;
+  /** Substitui o texto padrão da seção "Objetivo da alteração". */
+  objectiveOverride?: string;
+  /** Itens extras adicionados ao final do checklist de testes. */
+  extraChecklist?: string[];
+}
+
+export function buildReplitPrompt(input: PromptEntityInput, options: PromptTaskOptions = {}): string {
+  const label = KIND_LABELS[input.kind];
+  const title = options.taskLabel
+    ? `# Prompt para Replit — ${options.taskLabel}: ${input.name}`
+    : `# Prompt para Replit — ${label}: ${input.name}`;
+
+  const checklist = options.extraChecklist?.length
+    ? [buildTestChecklist(input), ...options.extraChecklist.map((item) => `- [ ] ${item}`)].join('\n')
+    : buildTestChecklist(input);
+
+  return [
+    title,
+    '',
+    '## 1. Objetivo da alteração',
+    options.objectiveOverride ?? buildObjective(input),
+    '',
+    '## 2. Arquivos permitidos',
+    buildAllowedFiles(input),
+    '',
+    '## 3. Arquivos proibidos',
+    buildForbiddenFiles(input),
+    '',
+    '## 4. Dependências',
+    buildDependencies(input),
+    '',
+    '## 5. Nível de risco',
+    buildRisk(input),
+    '',
+    '## 6. Checklist de testes',
+    checklist,
+    '',
+    '## 7. Ao concluir',
+    '⚠️ Obrigatório: ao final da tarefa, liste TODOS os arquivos que foram criados, modificados ou removidos — mesmo que a alteração pareça pequena. Não omita nenhum arquivo da lista.',
+  ].join('\n');
+}
+```
+
+Confirmar que `GeneratePromptButton.tsx` e qualquer outro lugar que já chama `buildReplitPrompt(entity)` sem o segundo argumento continuam funcionando normalmente (parâmetro é opcional, com valor padrão `{}`).
+
+## 2. Componente compartilhado: escolher uma entidade real do projeto + gerar prompt de manutenção
+
+Criar `artifacts/nicemp-docs/src/app/components/prompts/EntityPickerPromptDialog.tsx`, reaproveitando o padrão de busca de dados já usado em `Explorer/index.tsx` (mesmos imports: `ProjectRepository`, `PageRepository`, `ComponentRepository`, `HookRepository`, `ApiRepository`, `buildEntityNameIndex`, `resolveNames`, e `DependencyGraph`/`VersionRepository`/`VersionSnapshotRepository` para achar as dependências reais de cada entidade).
+
+Esse componente:
+- Recebe como props: `purpose: 'refactor' | 'layout' | 'bugfix' | 'docs' | 'spec'`, `title` (ex.: "Refatoração"), `description`, `icon` (componente lucide-react), e um `buildObjective` e `extraFields` específicos de cada propósito (ver seção 3).
+- Ao abrir, monta a lista combinada de todas as entidades do projeto mais recente (`ProjectRepository.findLatest()` + as 4 repositories de página/componente/hook/api, mais os módulos derivados — usar a mesma lógica de `moduleDataFor`/agregação já vista em `Explorer/index.tsx` e nas telas de documentação por módulo, se existir uma lista de módulos centralizada).
+- Mostra um campo de busca (`Input`) que filtra essa lista por nome em tempo real, e uma lista rolável abaixo com botões pra selecionar uma entidade (mostrando nome + categoria + local do arquivo).
+- Depois de selecionar uma entidade, mostra os campos extras daquele propósito (ver seção 3) e um botão "Gerar prompt".
+- Ao gerar, monta o `PromptEntityInput` a partir da entidade selecionada (dependências reais via `resolveNames` + `DependencyGraph.getNeighbors`, igual já é feito em `Explorer/index.tsx`) e chama `buildReplitPrompt(entity, { taskLabel, objectiveOverride, extraChecklist })`.
+- O restante (exibir o prompt gerado, botão copiar, reset ao fechar) deve seguir exatamente o mesmo padrão visual/comportamental de `CreatePagePromptDialog.tsx` (dialog com dois estados: formulário vs. prompt gerado com textarea readonly + copiar).
+
+## 3. Configuração de cada propósito
+
+Cada card usa `EntityPickerPromptDialog` com uma configuração diferente:
+
+- **Refatoração** (`purpose: 'refactor'`): campo extra "O que está difícil de manter hoje / motivo da refatoração" (Textarea). Objetivo gerado: `Refatorar o [tipo] "[nome]" em [local], SEM mudar o comportamento observável para quem usa. Motivo: [texto do campo].` Checklist extra: `"O comportamento antes e depois da refatoração é idêntico para quem usa (validado manualmente)."`
+
+- **Atualização de Layout** (`purpose: 'layout'`): campo extra "O que precisa mudar visualmente" (Textarea). Objetivo gerado: `Atualizar o layout/estilo do [tipo] "[nome]" em [local]. Mudança desejada: [texto do campo]. Não alterar lógica, dados ou comportamento — só a aparência.` Checklist extra: `"Nenhuma lógica ou dado foi alterado, só estilo/layout."`, `"Testado em desktop e mobile (responsivo)."`
+
+- **Correção de Bugs** (`purpose: 'bugfix'`): dois campos extras — "O que está acontecendo (comportamento atual/errado)" e "O que deveria acontecer (comportamento esperado)" (ambos Textarea). Objetivo gerado: `Corrigir um bug no [tipo] "[nome]" em [local].\n\nComportamento atual (errado): [campo 1]\nComportamento esperado: [campo 2]\n\nInvestigue a causa raiz antes de aplicar a correção — não aplique um "band-aid" que só esconde o sintoma.` Checklist extra: `"A causa raiz foi identificada e documentada (não só o sintoma)."`, `"O bug relatado não reproduz mais após a correção."`
+
+- **Documentar Código** (`purpose: 'docs'`, na seção "Prompts de Documentação"): sem campos extras (ou opcionalmente um Select "Nível de detalhe: Básico | Completo"). Objetivo gerado: `Adicionar/melhorar a documentação (comentários, JSDoc, README de pasta se fizer sentido) do [tipo] "[nome]" em [local], explicando o que ele faz, por que existe e como as dependências listadas abaixo se encaixam. Não alterar nenhum comportamento de código, só documentação.` Checklist extra: `"Nenhuma linha de código funcional foi alterada, só comentários/documentação."`
+
+- **Gerar Specs** (`purpose: 'spec'`, na seção "Prompts de Documentação"): campo extra Select "Público-alvo da especificação: Time técnico | Stakeholder não-técnico". Objetivo gerado: `Escrever uma especificação técnica (arquivo .md separado, não altera o código) descrevendo o [tipo] "[nome]" em [local]: o que faz, como se encaixa no módulo "[módulo]", e suas dependências. Público-alvo: [campo selecionado] — ajuste o nível de detalhe técnico conforme isso.` Checklist extra: `"O arquivo de spec foi criado na pasta de documentação do projeto (perguntar ao usuário onde, se não houver convenção clara), sem alterar nenhum arquivo de código."`
+
+## 4. Criar Componentes e Criar Módulos (seção "Prompts de Criação")
+
+Seguir exatamente o mesmo padrão de `CreatePagePromptDialog.tsx`/`PageCreationPromptGenerator.ts` (formulário → prompt fixo, sem depender de dado da análise, já que são coisas novas que ainda não existem).
+
+Adicionar um campo "Projeto de destino" (Select: "NicEmp Docs" | "nicemp.com") em ambos, já que os dois códigos têm convenções de arquivo diferentes (ver `PageCreationPromptGenerator.ts` vs `ToolCreationPromptGenerator.ts` como referência de como cada convenção é montada).
+
+- **Criar Componentes** → novo `ComponentCreationPromptGenerator.ts` + `CreateComponentPromptDialog.tsx`. Campos: nome do componente, projeto de destino, categoria (ui | layout | forms | outro), descreve props/comportamento esperado. Prompt final segue a mesma estrutura de seções (Objetivo, Passo a passo, Arquivos permitidos/proibidos, Checklist) adaptando os caminhos de pasta conforme o projeto de destino escolhido (ex.: `src/app/components/` no NicEmp Docs, `src/components/` no nicemp.com).
+
+- **Criar Módulos** → novo `ModuleCreationPromptGenerator.ts` + `CreateModulePromptDialog.tsx`. Campos: nome do módulo/domínio, projeto de destino, objetivo, checkboxes "inclui página própria" / "inclui endpoint de API própria". Prompt final orienta a criar a pasta do novo módulo seguindo a convenção de módulo já usada no projeto de destino (ver `inferModule()` em `mapper.ts` pra entender como módulos são hoje inferidos por pasta, e manter consistência com isso).
+
+## 5. Atualizar `Prompts/index.tsx`
+
+Arquivo: `artifacts/nicemp-docs/src/app/pages/Prompts/index.tsx`
+
+- Trocar cada `DocCard` com "Conteúdo em breve" pelo respectivo dialog novo (`CreateComponentPromptDialog`, `CreateModulePromptDialog`, e `EntityPickerPromptDialog` configurado para cada propósito de manutenção/documentação).
+- Remover o badge "Em construção" do `PageHeader` (ou trocar para algo como "Completo", já que todas as ferramentas estarão funcionais).
+- Adicionar uma seção "Como usar" no topo (acima de "Prompts de Criação"), como um `InfoBox` (ou uma nova `Section`), explicando em português simples:
+  - Prompts de Criação seguem convenções fixas de cada projeto (NicEmp Docs ou nicemp.com) porque a coisa ainda não existe.
+  - Prompts de Manutenção e Documentação são gerados a partir dos dados da ÚLTIMA análise feita (Dashboard → Upload) — ou seja, se você subir um novo ZIP do projeto, da próxima vez que gerar um desses prompts ele já vai refletir o código atualizado automaticamente, sem precisar mexer em nada aqui.
+  - Todo prompt gerado é só texto — nada aqui cria, edita ou apaga arquivos sozinho; é sempre você quem cola no Replit Agent.
+
+Ao final, testar: gerar pelo menos um prompt de cada card (Refatoração, Atualização de Layout, Correção de Bugs, Documentar Código, Gerar Specs, Criar Componentes, Criar Módulos), conferindo que os de manutenção/documentação mostram nome/local/dependências reais de uma entidade existente no projeto atualmente analisado, e que nenhum card continua mostrando "Conteúdo em breve".

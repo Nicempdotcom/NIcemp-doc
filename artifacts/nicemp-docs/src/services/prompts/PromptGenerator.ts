@@ -136,18 +136,34 @@ function buildTestChecklist(input: PromptEntityInput): string {
   return lines.join('\n');
 }
 
+export interface PromptTaskOptions {
+  /** Rótulo da tarefa, usado no título do prompt (ex.: "Refatoração", "Correção de Bug"). */
+  taskLabel?: string;
+  /** Substitui o texto padrão da seção "Objetivo da alteração". */
+  objectiveOverride?: string;
+  /** Itens extras adicionados ao final do checklist de testes. */
+  extraChecklist?: string[];
+}
+
 /**
  * Builds the full prompt text for a given entity. The result is meant to be
  * pasted directly into the Replit Agent chat.
  */
-export function buildReplitPrompt(input: PromptEntityInput): string {
+export function buildReplitPrompt(input: PromptEntityInput, options: PromptTaskOptions = {}): string {
   const label = KIND_LABELS[input.kind];
+  const title = options.taskLabel
+    ? `# Prompt para Replit — ${options.taskLabel}: ${input.name}`
+    : `# Prompt para Replit — ${label}: ${input.name}`;
+
+  const checklist = options.extraChecklist?.length
+    ? [buildTestChecklist(input), ...options.extraChecklist.map((item) => `- [ ] ${item}`)].join('\n')
+    : buildTestChecklist(input);
 
   return [
-    `# Prompt para Replit — ${label}: ${input.name}`,
+    title,
     '',
     '## 1. Objetivo da alteração',
-    buildObjective(input),
+    options.objectiveOverride ?? buildObjective(input),
     '',
     '## 2. Arquivos permitidos',
     buildAllowedFiles(input),
@@ -162,7 +178,7 @@ export function buildReplitPrompt(input: PromptEntityInput): string {
     buildRisk(input),
     '',
     '## 6. Checklist de testes',
-    buildTestChecklist(input),
+    checklist,
     '',
     '## 7. Ao concluir',
     '⚠️ Obrigatório: ao final da tarefa, liste TODOS os arquivos que foram criados, modificados ou removidos — mesmo que a alteração pareça pequena. Não omita nenhum arquivo da lista.',
