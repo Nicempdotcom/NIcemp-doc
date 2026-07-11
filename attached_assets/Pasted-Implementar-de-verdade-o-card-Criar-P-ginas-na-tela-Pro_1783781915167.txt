@@ -1,0 +1,73 @@
+Implementar de verdade o card "Criar Páginas" na tela Prompts Replit (src/app/pages/Prompts/index.tsx),
+que hoje só mostra "Conteúdo em breve".
+
+CONTEXTO (convenções já existentes no projeto — seguir exatamente)
+- Toda rota é declarada em src/routes.tsx, no objeto ROUTES (chave: caminho).
+- Toda rota precisa de <Route path={ROUTES.chave} element={<Componente />} /> em src/App.tsx.
+- Todo item de menu vai em NAV_GROUPS dentro de src/app/layouts/Sidebar.tsx, dentro de um dos
+  3 grupos existentes: "Plataforma", "Documentação" ou "Sistema".
+- Toda página fica em src/app/pages/<NomePascalCase>/index.tsx e usa o layout padrão:
+  <PageHeader title="..." description="..." /> seguido do conteúdo (ver Glossario/index.tsx como
+  exemplo mínimo de referência).
+- Existe o script pnpm --filter @workspace/nicemp-docs run check:routes que falha se alguma rota
+  do routes.tsx não estiver registrada em App.tsx. Ele existe porque App.tsx e Sidebar.tsx já foram
+  reescritos por engano e perderam rotas existentes (Overview, Explorer, Glossário) mais de uma vez.
+
+O QUE FAZER
+
+1. Criar src/services/prompts/PageCreationPromptGenerator.ts com uma função:
+     buildPageCreationPrompt(input: {
+       pageName: string;       // ex: "Relatórios"
+       routeKey: string;       // ex: "relatorios" (chave em ROUTES, sem acento, kebab/camel simples)
+       routePath: string;      // ex: "/relatorios"
+       navGroup: 'Plataforma' | 'Documentação' | 'Sistema';
+       iconName: string;       // nome de um ícone lucide-react, ex: "FileText"
+       objective: string;      // descrição livre do que a página deve mostrar/fazer
+     }): string
+   O prompt gerado deve ter estas seções (mesmo estilo do buildReplitPrompt existente):
+   - "1. Objetivo" — nome da página + objective (texto livre do usuário).
+   - "2. Passo a passo obrigatório" — nessa ordem:
+       a) Adicionar a chave em ROUTES (src/routes.tsx): `routeKey: '${routePath}',`
+       b) Criar src/app/pages/${PascalCase}/index.tsx com PageHeader + conteúdo mínimo
+          (pode usar placeholder "Conteúdo em construção" se o objetivo não detalhar o conteúdo).
+       c) Importar o componente e adicionar UMA linha <Route path={ROUTES.routeKey} element={<X />} />
+          em App.tsx, SEM remover ou reordenar nenhuma das rotas já existentes.
+       d) Adicionar UM item em NAV_GROUPS, no grupo "${navGroup}", com o ícone lucide-react "${iconName}"
+          (importar do pacote lucide-react), SEM remover nem reordenar os itens já existentes do grupo.
+   - "3. Arquivos permitidos" — src/routes.tsx, src/App.tsx, src/app/layouts/Sidebar.tsx,
+     e a nova pasta src/app/pages/${PascalCase}/ — nada além disso.
+   - "4. Arquivos proibidos" — qualquer outro arquivo; e um aviso em destaque:
+     "⚠️ App.tsx e Sidebar.tsx já perderam rotas/itens de menu existentes quando reescritos por
+     inteiro. Adicione APENAS a linha nova — não reescreva o arquivo, não reordene, não resuma."
+   - "5. Checklist final" —
+       [ ] pnpm --filter @workspace/nicemp-docs run check:routes passa sem erro
+       [ ] A nova rota abre no navegador sem erro de console
+       [ ] O item aparece no grupo "${navGroup}" do menu, na posição em que foi adicionado
+       [ ] TODAS as rotas e itens de menu que já existiam antes continuam presentes (conferir a
+           lista completa, um por um, não só "parece que sim")
+   - "6. Ao concluir" — listar todos os arquivos criados/modificados.
+
+2. Criar src/app/components/prompts/CreatePagePromptDialog.tsx:
+   - Botão que abre um Dialog com um formulário (usar componentes shadcn/ui já usados no projeto:
+     Input, Select, Textarea, Label, Button — mesmo padrão do GeneratePromptButton.tsx):
+       - Nome da página (Input)
+       - Rota (Input, pré-preenchida automaticamente a partir do nome em kebab-case sem acento,
+         mas editável)
+       - Grupo do menu (Select com as 3 opções: Plataforma / Documentação / Sistema)
+       - Ícone (Input texto livre, com nota "nome de um ícone de lucide-react, ex: FileText")
+       - Objetivo da página (Textarea)
+   - Um botão "Gerar prompt" que chama buildPageCreationPrompt e mostra o resultado num
+     <Textarea readOnly> com botão "Copiar prompt" — igual ao fluxo do GeneratePromptButton.tsx
+     (reaproveitar o mesmo padrão visual, inclusive o toast de "copiado").
+
+3. Em src/app/pages/Prompts/index.tsx: trocar o DocCard "Criar Páginas" (que hoje só tem
+   description="Conteúdo em breve") para renderizar o CreatePagePromptDialog no lugar do texto
+   placeholder. Os outros dois cards da seção "Prompts de Criação" (Criar Componentes, Criar Módulos)
+   continuam como estão por enquanto — não mexer neles.
+
+RESTRIÇÕES
+- Não alterar PromptGenerator.ts nem GeneratePromptButton.tsx (fluxo de edição já funciona e não deve
+  ser tocado) — este é um gerador NOVO e separado, específico pra criação de página.
+- Não criar página nenhuma de verdade automaticamente — a ferramenta só GERA O TEXTO do prompt pro
+  usuário copiar e colar no Replit Agent; ela não cria arquivos nem edita rotas sozinha.
+- Manter tudo em português, no mesmo tom dos outros prompts já gerados no sistema.
