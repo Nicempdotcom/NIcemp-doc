@@ -299,6 +299,8 @@ export interface HistoryEntry {
   projectId:   string;
   entityId:    string;    // The entity this event relates to, or ''
   metadata:    Record<string, unknown>;
+  /** The authenticated user who triggered this event, or null/undefined when Supabase auth is not configured/used. */
+  uploadedBy?: { id: string; email: string } | null;
 }
 
 // ─── Version snapshot (for comparison / diffing) ─────────────────────────────

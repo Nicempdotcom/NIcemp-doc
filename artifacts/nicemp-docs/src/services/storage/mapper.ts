@@ -539,6 +539,7 @@ export function buildAnalysisHistoryEntry(
   projectId: string,
   projectName: string,
   counts: Record<string, number>,
+  uploadedBy?: HistoryEntry['uploadedBy'],
 ): HistoryEntry {
   return {
     id:          makeHistoryId(),
@@ -552,6 +553,7 @@ export function buildAnalysisHistoryEntry(
     projectId,
     entityId:    projectId,
     metadata:    counts,
+    uploadedBy:  uploadedBy ?? null,
   };
 }
 
@@ -573,7 +575,10 @@ export interface MappedEntities {
 }
 
 /** Convert a full ProjectMap into all documentation entities. */
-export function mapProjectMapToEntities(projectMap: ProjectMap): MappedEntities {
+export function mapProjectMapToEntities(
+  projectMap: ProjectMap,
+  uploadedBy?: HistoryEntry['uploadedBy'],
+): MappedEntities {
   const project      = toProjectEntity(projectMap);
   const projectId    = project.id;
   const version      = toVersionEntity(projectMap, projectId);
@@ -596,7 +601,7 @@ export function mapProjectMapToEntities(projectMap: ProjectMap): MappedEntities 
     dependências:  dependencies.length,
     tecnologias:   technologies.length,
     interações:    interactions.length,
-  });
+  }, uploadedBy);
 
   return {
     project, version, pages, components,

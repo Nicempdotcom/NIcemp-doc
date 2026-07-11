@@ -1,0 +1,43 @@
+Preciso de duas implementações no projeto NicEmp Docs, usando exclusivamente os padrões e arquivos que já existem no código (não criar sistema novo de dados, usar os repositórios/localStorage já existentes).
+
+## 1) Registrar o usuário logado em cada envio de ZIP
+
+Arquivos envolvidos:
+- src/services/storage/types.ts (interface HistoryEntry)
+- src/services/storage/mapper.ts (buildAnalysisHistoryEntry e mapProjectMapToEntities)
+- src/app/components/upload/UploadProject.tsx
+- src/app/providers/AuthProvider.tsx (já existe, expõe useAuth() com `session`)
+
+Passos:
+1. Em `types.ts`, adicionar ao `HistoryEntry` um campo opcional:
+   uploadedBy?: { id: string; email: string } | null;
+
+2. Em `mapper.ts`:
+   - Alterar `buildAnalysisHistoryEntry(projectId, projectName, counts, uploadedBy?)` para aceitar um quarto parâmetro opcional `uploadedBy: HistoryEntry['uploadedBy']` e incluí-lo no objeto retornado.
+   - Alterar `mapProjectMapToEntities(projectMap, uploadedBy?)` para receber esse mesmo parâmetro opcional e repassá-lo para `buildAnalysisHistoryEntry`.
+
+3. Em `UploadProject.tsx`:
+   - Importar `useAuth` de `@/app/providers/AuthProvider` e chamar `const { session } = useAuth();` no topo do componente.
+   - No useEffect que salva no banco (onde chama `mapProjectMapToEntities(projectMap)`), passar o segundo argumento:
+     mapProjectMapToEntities(projectMap, session ? { id: session.user.id, email: session.user.email ?? '' } : null)
+   - Isso deve entrar como dependência do useEffect (adicionar `session?.user?.id` ao array de dependências) para não quebrar o guard `didSave`.
+
+4. No card de sucesso do upload (`DbSaveStatus` dentro de UploadProject.tsx), exibir, se `session` existir, uma linha extra: "Enviado por {session.user.email}".
+
+## 2) Tornar o Dashboard funcional com dados reais
+
+Arquivo: src/app/pages/Dashboard/index.tsx
+
+Seguir exatamente o mesmo padrão de consumo de dados usado em src/app/pages/Frontend/index.tsx (useMemo + repositórios de src/services/storage), removendo TODOS os dados mockados (coverageData, moduleData, recentUpdates fixos, InfoBox "dados de demonstração").
+
+Passos:
+1. Buscar o projeto mais recente: `const project = useMemo(() => ProjectRepository.findLatest(), []);`
+2. Se não houver projeto, mostrar o mesmo InfoBox de "Nenhum projeto analisado ainda" usado em Frontend/index.tsx, apontando para a tela de Upload.
+3. Cards de "Métricas do Projeto": usar `project.stats` (pages, components, hooks, apis, tables, dependencies, technologies) em vez dos números fixos (38, 124, 17, 42, 19, 73%).
+4. Cabeçalho com Nome/Versão/Status/Última Atualização: usar `project.rootName`, `VersionRepository.findLatest(project.id)?.semver`, `project.lastChanged` formatado com `toLocaleDateString('pt-BR', {...})`.
+5. Gráfico "Evolução da documentação": substituir `coverageData` fixo por dados reais vindos de `VersionRepository.findByProject(project.id)` — usar `version.stats` (total de entidades documentadas) ao longo das versões, ordenado do mais antigo para o mais recente, com o rótulo sendo a data (`snapshotAt`) formatada.
+6. Gráfico "Distribuição por módulo": substituir `moduleData` fixo por agrupamento real das páginas (`PageRepository.findByProject`) por `module`, do mesmo jeito que a função `groupByModule` em Frontend/index.tsx.
+7. Tabela "Atualizações Recentes": substituir o array fixo `recentUpdates` por `HistoryRepository.findByProject(project.id)` (ou `findRecent(10)` filtrado por projeto), mostrando: data (`timestamp` formatado), `label`/`description` como "Alteração", e uma nova coluna "Enviado por" usando o campo `uploadedBy?.email` do HistoryEntry (implementado no item 1) — se não houver `uploadedBy`, mostrar "—".
+8. Manter os componentes visuais existentes (Section, StatusBadge, InfoBox, cards, ResponsiveContainer/LineChart/BarChart) — só trocar a origem dos dados, sem redesenhar o layout.
+
+Importante: não alterar nada relacionado a autenticação além de consumir `useAuth()`, e não remover o modo "sem Supabase configurado" (quando `session` é null, tudo deve continuar funcionando normalmente, só sem a coluna "Enviado por" preenchida).

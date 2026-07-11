@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, RefreshCcw, Loader2, CheckCircle2, Database, Save } from 'lucide-react';
 import { useUpload }   from '@/features/upload';
 import { useAnalyzer } from '@/features/analyzer';
+import { useAuth }     from '@/app/providers/AuthProvider';
 import {
   mapProjectMapToEntities,
   buildVersionSnapshot,
@@ -60,8 +61,8 @@ interface SavedCounts {
   Interações:   number;
 }
 
-function DbSaveStatus({ dbPhase, counts, error }: {
-  dbPhase: DbPhase; counts: SavedCounts | null; error: string | null;
+function DbSaveStatus({ dbPhase, counts, error, uploaderEmail }: {
+  dbPhase: DbPhase; counts: SavedCounts | null; error: string | null; uploaderEmail?: string | null;
 }) {
   if (dbPhase === 'idle')   return null;
   if (dbPhase === 'saving') return (
@@ -101,6 +102,9 @@ function DbSaveStatus({ dbPhase, counts, error }: {
         <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">localStorage</code>
         {' '}— nenhum código-fonte foi armazenado.
       </p>
+      {uploaderEmail && (
+        <p className="text-xs text-muted-foreground">Enviado por {uploaderEmail}</p>
+      )}
     </div>
   );
 }
@@ -110,6 +114,7 @@ function DbSaveStatus({ dbPhase, counts, error }: {
 export default function UploadProject() {
   const upload   = useUpload();
   const analyzer = useAnalyzer();
+  const { session } = useAuth();
 
   const {
     stage, readProgress, fileName, fileSize, error: uploadError,
@@ -193,7 +198,10 @@ export default function UploadProject() {
 
     Promise.resolve().then(() => {
       try {
-        const entities  = mapProjectMapToEntities(projectMap);
+        const uploadedBy = session
+          ? { id: session.user.id, email: session.user.email ?? '' }
+          : null;
+        const entities  = mapProjectMapToEntities(projectMap, uploadedBy);
         const projectId = entities.project.id;
 
         // Capture the previous latest version + its snapshot BEFORE overwriting,
@@ -239,7 +247,7 @@ export default function UploadProject() {
         setDbPhase('error');
       }
     });
-  }, [phase, projectMap]);
+  }, [phase, projectMap, session?.user?.id]);
 
   const handleReset = () => {
     resetUpload();
@@ -292,7 +300,7 @@ export default function UploadProject() {
             Novo projeto
           </Button>
         </div>
-        <DbSaveStatus dbPhase={dbPhase} counts={savedCounts} error={dbError} />
+        <DbSaveStatus dbPhase={dbPhase} counts={savedCounts} error={dbError} uploaderEmail={session?.user?.email} />
         {comparison && (
           <ComparisonSummary result={comparison} onViewDetails={handleViewComparison} />
         )}
