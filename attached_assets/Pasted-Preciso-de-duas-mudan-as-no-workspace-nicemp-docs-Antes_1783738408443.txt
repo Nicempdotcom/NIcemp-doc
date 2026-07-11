@@ -1,0 +1,65 @@
+Preciso de duas mudanças no workspace `nicemp-docs`. Antes de criar qualquer
+arquivo, verifique se ele já existe e ajuste/complete em vez de duplicar.
+
+## PARTE A — Glossário de termos técnicos
+
+1. Confirme (ou crie) `src/app/components/docs/glossary.ts`: um dicionário
+   central `GLOSSARY: Record<string, string>` com termo → explicação curta,
+   em português simples, sem jargão. Deve incluir pelo menos: Página,
+   Componente, Hook, API, Banco de Dados, Tabela, Módulo, Dependência,
+   Interação, Rota, Arquitetura, Frontend, Backend, "Fluxo de Navegação" e
+   "Arquitetura por trás". Exporte também `GLOSSARY_TERMS` (lista ordenada
+   alfabeticamente, pt-BR) pra popular a página de glossário.
+
+2. Confirme (ou crie) `src/app/components/docs/TermHint.tsx`: componente que
+   recebe `termo` e mostra um ícone "?" (`HelpCircle` do lucide-react) que
+   abre um Tooltip (reaproveitando `src/app/components/ui/tooltip.tsx`) com a
+   explicação do glossary.ts. Deve abrir tanto no hover (desktop) quanto no
+   toque (mobile) — não deve depender só de :hover.
+
+3. Garanta que existe `<TermHint termo="..." />` ao lado do título de cada
+   uma destas páginas: Overview (Organograma), Components, Hooks, Apis,
+   Frontend, Backend, Database, Modules e Architecture. Pode ser direto no
+   componente da página ou via prop `termHint` no `PageHeader` (verifique
+   `src/app/layouts/PageHeader.tsx` — se já aceita essa prop, reaproveite).
+   Não reestruture o resto do conteúdo dessas páginas.
+
+4. Confirme (ou crie) a rota `/glossario` (registrada em `src/routes.tsx`,
+   `src/App.tsx`, `Sidebar.tsx` com ícone `BookOpen`, e `Breadcrumb.tsx`)
+   listando TODOS os termos do glossary.ts em cards simples.
+
+## PARTE B — Resetar histórico em Configurações
+
+Em `src/app/pages/Settings/index.tsx`, garanta que existe uma seção "Dados &
+Privacidade" com:
+1. Card mostrando as contagens de `StorageService.countAll()`.
+2. Botão "Resetar histórico" que abre um AlertDialog de confirmação
+   (reaproveite `src/app/components/ui/alert-dialog.tsx`) avisando: "Isso vai
+   apagar TODOS os projetos, versões e documentação salvos neste navegador.
+   Essa ação não pode ser desfeita."
+3. Só após confirmar, chame `StorageService.clearAll()`, mostre toast de
+   sucesso e atualize os números pra zero.
+4. Não mexa nas seções Geral, Integrações, Usuários & Permissões (continuam
+   placeholder).
+
+## CORREÇÃO IMPORTANTE em StorageService.ts
+Em `src/services/storage/StorageService.ts`, verifique se `clearAll()`,
+`countAll()` e `exportSnapshot()` usam uma lista de stores hardcoded (array
+literal tipo `['projects', 'versions', 'pages', ...]`). Se sim, isso é um bug:
+o store `versionSnapshots` (que existe em `StoreKey` e `STORE_FILE_NAMES` em
+`src/services/storage/types.ts`) fica de fora — o botão de reset não apaga os
+snapshots de versão de verdade, e o contador de "Fotos de versões" sempre
+mostra 0. Corrija derivando a lista de stores diretamente de
+`Object.keys(STORE_FILE_NAMES)` (tipado como `StoreKey[]`), assim ela nunca
+mais fica dessincronizada se um novo store for adicionado.
+
+## Regras gerais
+- Não reintroduza limite de tamanho de ZIP em nenhuma etapa.
+- Não quebre a página Overview (Organograma).
+- Ao final, rode `pnpm run typecheck` e `pnpm --filter nicemp-docs build` e
+  corrija qualquer erro antes de considerar concluído.
+- Teste manualmente: salvar um projeto, clicar em "Resetar histórico",
+  confirmar, e verificar que TODAS as contagens (incluindo "Fotos de
+  versões") ficam em zero e a lista de projetos fica vazia.
+- Me diga ao final: todos os arquivos criados/modificados, e confirme que o
+  typecheck/build passaram e que o reset funciona de ponta a ponta.

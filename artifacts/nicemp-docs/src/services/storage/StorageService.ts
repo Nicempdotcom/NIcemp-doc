@@ -8,11 +8,17 @@
  * Rule: NEVER store source code — only serialisable entity objects.
  */
 
-import type { StoreKey, STORE_FILE_NAMES } from './types';
+import { STORE_FILE_NAMES, type StoreKey } from './types';
 
 const NAMESPACE = 'nicemp:db:';
 
-type ReadonlyStoreFileNames = typeof STORE_FILE_NAMES;
+/**
+ * Single source of truth for "all stores" — derived from STORE_FILE_NAMES
+ * instead of a hand-maintained array literal, so a newly added StoreKey
+ * (e.g. `versionSnapshots`) is automatically included in clearAll/countAll/
+ * exportSnapshot without needing to remember to update three separate lists.
+ */
+const ALL_STORES = Object.keys(STORE_FILE_NAMES) as StoreKey[];
 
 function key(store: StoreKey): string {
   return NAMESPACE + store;
@@ -45,12 +51,7 @@ function clearStore(store: StoreKey): void {
 }
 
 function clearAll(): void {
-  const stores: StoreKey[] = [
-    'projects', 'versions', 'pages', 'components', 'hooks',
-    'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
-    'importEdges',
-  ];
-  stores.forEach(clearStore);
+  ALL_STORES.forEach(clearStore);
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────
@@ -113,13 +114,8 @@ export const StorageService = {
    * Returns total number of records across all documentation stores.
    */
   countAll(): Record<StoreKey, number> {
-    const stores: StoreKey[] = [
-      'projects', 'versions', 'pages', 'components', 'hooks',
-      'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
-      'importEdges',
-    ];
     return Object.fromEntries(
-      stores.map((s) => [s, read(s).length]),
+      ALL_STORES.map((s) => [s, read(s).length]),
     ) as Record<StoreKey, number>;
   },
 
@@ -128,13 +124,8 @@ export const StorageService = {
    * Useful for debugging — never expose this to end users without review.
    */
   exportSnapshot(): Record<StoreKey, unknown[]> {
-    const stores: StoreKey[] = [
-      'projects', 'versions', 'pages', 'components', 'hooks',
-      'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
-      'importEdges',
-    ];
     return Object.fromEntries(
-      stores.map((s) => [s, read(s)]),
+      ALL_STORES.map((s) => [s, read(s)]),
     ) as Record<StoreKey, unknown[]>;
   },
 } as const;
