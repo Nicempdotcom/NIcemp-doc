@@ -1,0 +1,54 @@
+O deploy no Cloudflare passou da etapa "Installing" (lockfile corrigido, obrigado),
+mas agora falha na etapa "Building" com este erro:
+
+artifacts/mockup-sandbox build: failed to load config from
+/opt/buildhome/repo/artifacts/mockup-sandbox/vite.config.ts
+artifacts/mockup-sandbox build: Error: PORT environment variable is required
+but was not provided.
+ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL @workspace/mockup-sandbox@2.0.0 build:
+`vite build`
+
+O comando de build configurado no Cloudflare Pages é `pnpm run build`, que
+por sua vez roda `pnpm -r --if-present run build` — isso builda TODOS os 9
+workspaces do monorepo, incluindo `mockup-sandbox` e `api-server`, mesmo que
+o deploy do Cloudflare (`npx wrangler deploy`) só publique o artifact
+`nicemp-docs`.
+
+Preciso que você:
+
+1. Confirme se `mockup-sandbox` (e `api-server`, se aplicável) são
+   realmente necessários pra gerar o build de produção de `nicemp-docs`, ou
+   se são apenas ferramentas de desenvolvimento/sandbox usadas dentro do
+   Replit e não fazem parte do que é publicado no Cloudflare.
+
+2a. Se NÃO forem necessários para o deploy do nicemp-docs: ajuste o comando
+    de build usado pelo Cloudflare pra construir apenas o `nicemp-docs` e
+    suas dependências reais dentro do monorepo (ex.: usando
+    `pnpm --filter nicemp-docs... run build`, ou um script novo tipo
+    `build:cloudflare` no package.json raiz que faça isso), em vez de rodar
+    o build recursivo em todos os 9 workspaces. Não altere o comportamento
+    do `pnpm run build` usado localmente/no Replit para desenvolvimento —
+    crie um comando/script separado específico pra esse deploy, se for mais
+    seguro.
+
+2b. Se FOREM necessários (por exemplo, se `nicemp-docs` importa algo desses
+    workspaces em tempo de build): então em vez de mudar o escopo do build,
+    configure a variável de ambiente `PORT` (e `BASE_PATH`, se também for
+    exigida — a validação local já usa PORT/BASE_PATH) como "Build
+    variable" nas configurações do projeto no painel do Cloudflare Pages, e
+    me diga exatamente quais variáveis e valores configurar lá (não consigo
+    acessar o painel do Cloudflare por aqui).
+
+3. Depois de aplicar a correção escolhida, rode localmente o mesmo comando
+   de build que o Cloudflare vai executar (ajustando PORT/BASE_PATH como
+   fizer localmente) e confirme que passa sem erros, sem quebrar o build
+   normal do Replit.
+
+4. Faça commit e push das mudanças pra `main` (só do que for estritamente
+   necessário pra essa correção).
+
+5. Me diga ao final: qual das duas opções (2a ou 2b) você aplicou e por
+   quê, quais arquivos mudaram, o resultado do build local, e — se a opção
+   escolhida foi 2b — quais variáveis exatas eu preciso configurar
+   manualmente no painel do Cloudflare Pages (nome e valor), já que essa
+   parte eu preciso fazer eu mesmo.
