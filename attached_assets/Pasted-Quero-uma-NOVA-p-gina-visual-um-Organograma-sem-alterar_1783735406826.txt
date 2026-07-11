@@ -1,0 +1,57 @@
+Quero uma NOVA página visual — um "Organograma" — sem alterar nenhuma página
+já existente (Arquitetura, Componentes, Frontend, etc. continuam exatamente
+como estão). É pra ser um diagrama de verdade (caixas conectadas por setas),
+não mais uma tabela, porque tabela não é didático pra sócios não-técnicos.
+
+## Onde entra
+
+1. Nova rota `/overview` em `src/routes.tsx`, nova entrada no menu lateral
+   (`Sidebar.tsx`) chamada "Organograma", ícone `Network` ou `Workflow` do
+   lucide-react, posicionada perto de "Arquitetura".
+2. Nova página em `src/app/pages/Overview/index.tsx`.
+
+## O que ela mostra — duas abas (tabs), cada uma um diagrama diferente
+
+### Aba 1 — "Fluxo de Navegação" (o que o usuário vê)
+Mostra as telas (Pages) como caixas, ligadas por setas rotuladas com o botão/
+ação que leva de uma pra outra. Fonte de dados: `ProjectMap.interactions`
+(já existe, EPIC 10) — usar os registros onde `apiHint` contém um padrão de
+navegação (ex.: "navega para /rota"). Ligue a página de origem (pelo
+`filePath` da interação) à página de destino (casando o caminho da rota com
+o `filePath`/`route` da PageEntity mais próxima). Se uma interação não tiver
+navegação detectável (ex.: só chama API), não desenhe seta de navegação pra
+ela nessa aba — ela pertence à aba 2.
+
+### Aba 2 — "Arquitetura por trás" (como as partes se conectam)
+Diagrama em camadas/colunas, da esquerda pra direita:
+`Páginas → Componentes → Hooks/APIs → Banco de Dados`
+Fonte de dados: `ProjectMap.dependencies.imports` (filtrar `kind === 'internal'`)
+para saber quem importa quem, cruzando com a categoria de cada arquivo
+(`CategorizedFile.category`) pra posicionar a caixa na coluna certa. Agrupe
+visualmente por `module` (o mesmo campo já usado na página Arquitetura) —
+cada módulo pode ser uma "seção" ou cor diferente no diagrama.
+
+## Requisitos de UX (pensando nos sócios, não em programadores)
+
+- Cada caixa mostra só o NOME em linguagem simples (nome da página/componente/
+  API), nunca caminho de arquivo completo ou código — ao clicar/passar o
+  mouse, aí sim mostra o caminho técnico como detalhe secundário, opcional.
+- Zoom e pan (arrastar pra navegar), porque projetos grandes vão ter muitas
+  caixas — considere usar a biblioteca `reactflow` (ou `@xyflow/react`, nome
+  atual do pacote) para isso, que já resolve layout, zoom, pan e é comum pra
+  esse tipo de diagrama; adicione como nova dependência do workspace
+  `nicemp-docs` se optar por ela.
+- Filtro por módulo (dropdown) pra esconder o resto e focar numa parte do
+  sistema por vez.
+- Se não houver projeto analisado ainda, mostrar o mesmo tipo de aviso que as
+  outras páginas já mostram ("Envie um ZIP na tela de Upload...").
+- Um botão "Exportar como imagem" (PNG) seria um bônus bem-vindo pra eles
+  colocarem em apresentação, mas não é obrigatório na primeira versão.
+
+## Importante
+- NÃO modifique as páginas Architecture, Frontend, Components, Modules,
+  Explorer ou qualquer outra já existente — isso é 100% aditivo.
+- NÃO reintroduza limite de tamanho de ZIP em nenhuma etapa.
+- Ao final, me diga: quais arquivos foram criados, se precisou adicionar
+  alguma dependência nova (nome e motivo), e uma explicação simples de como
+  interpretar cada uma das duas abas do diagrama.

@@ -10,6 +10,7 @@ export {
   ApiRepository,
   TableRepository,
   InteractionRepository,
+  ImportEdgeRepository,
   ProjectRepository,
   VersionRepository,
   VersionSnapshotRepository,

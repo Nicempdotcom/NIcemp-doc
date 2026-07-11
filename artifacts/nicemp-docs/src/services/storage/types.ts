@@ -43,7 +43,8 @@ export type StoreKey =
   | 'dependencies'
   | 'technologies'
   | 'history'
-  | 'interactions';
+  | 'interactions'
+  | 'importEdges';
 
 /** Maps StoreKey → the logical JSON filename it corresponds to. */
 export const STORE_FILE_NAMES: Record<StoreKey, string> = {
@@ -59,6 +60,7 @@ export const STORE_FILE_NAMES: Record<StoreKey, string> = {
   technologies:     'technologies.json',
   history:          'history.json',
   interactions:     'interactions.json',
+  importEdges:      'import-edges.json',
 };
 
 // ─── Base entity ──────────────────────────────────────────────────────────────
@@ -254,6 +256,29 @@ export interface InteractionEntity extends BaseDocEntity {
   callsApi:    boolean;
   apiHint:     string;    // e.g. "POST /api/pedidos", "navega para /login", or ''
 }
+
+// ─── Import edge (EPIC 11 — "Organograma" / arquitetura por trás) ────────────
+//
+// A resolved internal `import` relationship between two files, used to draw
+// the "Páginas → Componentes → Hooks/APIs → Banco de Dados" layered diagram.
+// Only edges whose target resolves to a known file AND a layer-relevant
+// category (page/component/hook/api/database) are kept — anything else is
+// omitted rather than guessed, matching the InteractionAnalyzer convention.
+// Does not extend BaseDocEntity: it is a relation record, not a doc entity.
+
+export interface ImportEdgeEntity {
+  id:           string;   // stable id derived from from+to paths
+  projectId:    string;
+  fromPath:     string;
+  fromModule:   string;
+  fromCategory: FileCategoryForGraph;
+  toPath:       string;
+  toModule:     string;
+  toCategory:   FileCategoryForGraph;
+}
+
+/** The subset of FileCategory values relevant to the layered architecture diagram. */
+export type FileCategoryForGraph = 'page' | 'component' | 'hook' | 'api' | 'database';
 
 // ─── History entry ────────────────────────────────────────────────────────────
 

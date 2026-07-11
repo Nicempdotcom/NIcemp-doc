@@ -211,6 +211,7 @@ export default function UploadProject() {
         DocumentationRepository.apis.saveMany(entities.apis);
         DocumentationRepository.tables.saveMany(entities.tables);
         DocumentationRepository.interactions.saveMany(entities.interactions);
+        DocumentationRepository.importEdges.saveMany(entities.importEdges);
         StorageService.upsertMany('dependencies', entities.dependencies);
         StorageService.upsertMany('technologies', entities.technologies);
         HistoryRepository.append(entities.historyEntry);

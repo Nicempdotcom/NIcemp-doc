@@ -15,6 +15,7 @@ import type {
   ApiEntity,
   TableEntity,
   InteractionEntity,
+  ImportEdgeEntity,
 } from '../types';
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -315,6 +316,26 @@ export const InteractionRepository = {
   },
 } as const;
 
+// ─── Import edge (EPIC 11 — "Organograma" layered architecture diagram) ──────
+
+export const ImportEdgeRepository = {
+  findAll(): ImportEdgeEntity[] {
+    return StorageService.read<ImportEdgeEntity>('importEdges');
+  },
+
+  findByProject(projectId: string): ImportEdgeEntity[] {
+    return this.findAll().filter((e) => e.projectId === projectId);
+  },
+
+  saveMany(entities: ImportEdgeEntity[]): void {
+    StorageService.upsertMany<ImportEdgeEntity>('importEdges', entities);
+  },
+
+  clear(): void {
+    StorageService.clearStore('importEdges');
+  },
+} as const;
+
 // ─── Convenience: DocumentationRepository (façade) ────────────────────────────
 
 /**
@@ -328,10 +349,11 @@ export const DocumentationRepository = {
   apis:         ApiRepository,
   tables:       TableRepository,
   interactions: InteractionRepository,
+  importEdges:  ImportEdgeRepository,
 
   /** Remove all documentation entities for a given project. */
   clearByProject(projectId: string): void {
-    const stores = ['pages', 'components', 'hooks', 'apis', 'tables', 'interactions'] as const;
+    const stores = ['pages', 'components', 'hooks', 'apis', 'tables', 'interactions', 'importEdges'] as const;
     for (const store of stores) {
       const remaining = StorageService.read<{ id: string; projectId: string }>(store)
         .filter((e) => e.projectId !== projectId);
@@ -348,6 +370,7 @@ export const DocumentationRepository = {
       apis:         ApiRepository.findByProject(projectId).length,
       tables:       TableRepository.findByProject(projectId).length,
       interactions: InteractionRepository.findByProject(projectId).length,
+      importEdges:  ImportEdgeRepository.findByProject(projectId).length,
     };
   },
 } as const;

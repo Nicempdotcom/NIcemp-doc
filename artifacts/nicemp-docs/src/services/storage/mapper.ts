@@ -19,6 +19,8 @@ import type {
   DependencyEntity,
   TechnologyEntity,
   InteractionEntity,
+  ImportEdgeEntity,
+  FileCategoryForGraph,
   HistoryEntry,
   RiskLevel,
   DocStatus,
@@ -305,6 +307,94 @@ function toInteractionEntities(interactions: InteractionEntry[], projectId: stri
   }));
 }
 
+// ─── Import edges (EPIC 11 — "Organograma" layered architecture diagram) ─────
+//
+// Resolves each internal `import`'s specifier to an actual project file so
+// we know which layer (page/component/hook/api/database) it points at.
+// Heuristic, best-effort — aliases other than `@/` and `~/` (tsconfig custom
+// paths, monorepo package references, etc.) are not resolvable without
+// reading tsconfig.json, so those edges are simply omitted.
+
+const GRAPH_CATEGORIES = new Set<FileCategoryForGraph>(['page', 'component', 'hook', 'api', 'database']);
+
+function normalizePath(path: string): string {
+  const parts = path.split('/');
+  const stack: string[] = [];
+  for (const part of parts) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') { stack.pop(); continue; }
+    stack.push(part);
+  }
+  return stack.join('/');
+}
+
+function dirnameOf(path: string): string {
+  const idx = path.lastIndexOf('/');
+  return idx === -1 ? '' : path.slice(0, idx);
+}
+
+/** Resolve an import specifier from `fromPath` to a candidate file path, trying common extensions/index files. */
+function resolveImportSpecifier(fromPath: string, specifier: string, fileSet: Set<string>): string | null {
+  let base: string;
+  if (specifier.startsWith('.')) {
+    base = normalizePath(dirnameOf(fromPath) + '/' + specifier);
+  } else if (specifier.startsWith('@/')) {
+    base = normalizePath('src/' + specifier.slice(2));
+  } else if (specifier.startsWith('~/')) {
+    base = normalizePath(specifier.slice(2));
+  } else {
+    // Bare specifier that still slipped through as "internal" (e.g. subpath
+    // import via package.json #imports) — nothing to resolve it against.
+    return null;
+  }
+
+  const candidates = [
+    base,
+    `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.jsx`,
+    `${base}/index.ts`, `${base}/index.tsx`, `${base}/index.js`, `${base}/index.jsx`,
+  ];
+  for (const c of candidates) {
+    if (fileSet.has(c)) return c;
+  }
+  return null;
+}
+
+function toImportEdgeEntities(files: CategorizedFile[], imports: ImportEntry[], projectId: string): ImportEdgeEntity[] {
+  const byPath = new Map(files.map((f) => [f.path, f]));
+  const fileSet = new Set(files.map((f) => f.path));
+  const seen = new Set<string>();
+  const edges: ImportEdgeEntity[] = [];
+
+  for (const entry of imports) {
+    if (entry.kind !== 'internal') continue;
+    const fromFile = byPath.get(entry.from);
+    if (!fromFile) continue;
+
+    const resolved = resolveImportSpecifier(entry.from, entry.module, fileSet);
+    if (!resolved) continue;
+    const toFile = byPath.get(resolved);
+    if (!toFile) continue;
+    if (!GRAPH_CATEGORIES.has(fromFile.category as FileCategoryForGraph)) continue;
+    if (!GRAPH_CATEGORIES.has(toFile.category as FileCategoryForGraph)) continue;
+
+    const dedupeKey = `${entry.from}=>${resolved}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    edges.push({
+      id:           stableId('importedge', dedupeKey),
+      projectId,
+      fromPath:     fromFile.path,
+      fromModule:   inferModule(fromFile.path),
+      fromCategory: fromFile.category as FileCategoryForGraph,
+      toPath:       toFile.path,
+      toModule:     inferModule(toFile.path),
+      toCategory:   toFile.category as FileCategoryForGraph,
+    });
+  }
+  return edges;
+}
+
 function toDependencyEntities(deps: DependencyMap, projectId: string): DependencyEntity[] {
   const ts = now();
   const seen = new Set<string>();
@@ -460,6 +550,7 @@ export interface MappedEntities {
   dependencies: DependencyEntity[];
   technologies: TechnologyEntity[];
   interactions: InteractionEntity[];
+  importEdges:  ImportEdgeEntity[];
   historyEntry: HistoryEntry;
 }
 
@@ -476,6 +567,7 @@ export function mapProjectMapToEntities(projectMap: ProjectMap): MappedEntities 
   const dependencies = toDependencyEntities(projectMap.dependencies, projectId);
   const technologies = toTechnologyEntities(projectMap.technology, projectId);
   const interactions = toInteractionEntities(projectMap.interactions, projectId);
+  const importEdges  = toImportEdgeEntities(projectMap.files, projectMap.dependencies.imports, projectId);
 
   const historyEntry = buildAnalysisHistoryEntry(projectId, project.rootName, {
     páginas:       pages.length,
@@ -490,7 +582,7 @@ export function mapProjectMapToEntities(projectMap: ProjectMap): MappedEntities 
 
   return {
     project, version, pages, components,
-    hooks, apis, tables, dependencies, technologies, interactions,
+    hooks, apis, tables, dependencies, technologies, interactions, importEdges,
     historyEntry,
   };
 }

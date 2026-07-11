@@ -48,6 +48,7 @@ function clearAll(): void {
   const stores: StoreKey[] = [
     'projects', 'versions', 'pages', 'components', 'hooks',
     'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
+    'importEdges',
   ];
   stores.forEach(clearStore);
 }
@@ -115,6 +116,7 @@ export const StorageService = {
     const stores: StoreKey[] = [
       'projects', 'versions', 'pages', 'components', 'hooks',
       'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
+      'importEdges',
     ];
     return Object.fromEntries(
       stores.map((s) => [s, read(s).length]),
@@ -129,6 +131,7 @@ export const StorageService = {
     const stores: StoreKey[] = [
       'projects', 'versions', 'pages', 'components', 'hooks',
       'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
+      'importEdges',
     ];
     return Object.fromEntries(
       stores.map((s) => [s, read(s)]),
