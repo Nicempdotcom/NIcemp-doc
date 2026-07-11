@@ -8,6 +8,7 @@
  */
 
 import type { ProjectMap, CategorizedFile, DependencyMap, TechnologyProfile, InteractionEntry, ImportEntry } from '@/services/engine';
+import { resolveRealRoutes } from '@/services/engine';
 import type {
   ProjectEntity,
   VersionEntity,
@@ -168,26 +169,34 @@ function toVersionEntity(map: ProjectMap, projectId: string): VersionEntity {
 
 function toPageEntities(files: CategorizedFile[], projectId: string): PageEntity[] {
   const ts = now();
+  // Prefer the project's own real route declarations (routes.ts + <Route>
+  // usages) over the path-based guess — see RouteResolver.ts. Falls back to
+  // inferRoute() for projects that route by folder structure (e.g. this app,
+  // or Next.js-style projects), where no such declarations exist/apply.
+  const realRoutes = resolveRealRoutes(files);
   return files
     .filter((f) => f.category === 'page')
-    .map((f) => ({
-      id:            stableId('page', f.path),
-      kind:          'page' as const,
-      name:          f.name.replace(/\.(tsx?|jsx?)$/, ''),
-      description:   '',
-      location:      f.path,
-      relationships: [],
-      riskLevel:     'low' as RiskLevel,
-      lastChanged:   ts,
-      createdAt:     ts,
-      projectId,
-      route:         inferRoute(f.path),
-      module:        inferModule(f.path),
-      status:        STABLE_STATUS,
-      components:    [],
-      hooks:         [],
-      apis:          [],
-    }));
+    .map((f) => {
+      const componentName = f.name.replace(/\.(tsx?|jsx?)$/, '');
+      return {
+        id:            stableId('page', f.path),
+        kind:          'page' as const,
+        name:          componentName,
+        description:   '',
+        location:      f.path,
+        relationships: [],
+        riskLevel:     'low' as RiskLevel,
+        lastChanged:   ts,
+        createdAt:     ts,
+        projectId,
+        route:         realRoutes.get(componentName) ?? inferRoute(f.path),
+        module:        inferModule(f.path),
+        status:        STABLE_STATUS,
+        components:    [],
+        hooks:         [],
+        apis:          [],
+      };
+    });
 }
 
 function toComponentEntities(files: CategorizedFile[], projectId: string): ComponentEntity[] {

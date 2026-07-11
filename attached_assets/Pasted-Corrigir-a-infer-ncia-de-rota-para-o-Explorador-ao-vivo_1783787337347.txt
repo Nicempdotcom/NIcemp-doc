@@ -1,0 +1,51 @@
+Corrigir a inferência de rota para o Explorador ao vivo e para o campo "Rota" das páginas, que hoje
+é só um chute baseado no caminho do arquivo (função inferRoute em src/services/storage/mapper.ts).
+
+CONTEXTO
+- inferRoute(path) hoje só manipula a string do caminho do arquivo (remove "pages/", extensão,
+  etc.) — nunca lê o arquivo de rotas real do projeto analisado.
+- Para o nicemp.com, isso está errado: as ferramentas ficam soltas em src/pages/, sem pastas por
+  rota, e a rota real vem de dois arquivos separados: src/constants/routes.ts (mapa chave->caminho)
+  e src/App.tsx (registro <Route path={routes.chave ou "/literal"} component={NomeDoComponente} />).
+- Detalhe importante: no projeto nicemp.com, o nome do arquivo de cada página SEMPRE é igual ao
+  nome do componente exportado (ex.: ROICalculator.tsx exporta ROICalculator). Isso permite casar
+  página <-> rota real pelo nome do arquivo, sem precisar fazer parsing de AST completo.
+
+O QUE FAZER
+
+1. Criar src/services/engine/RouteResolver.ts com uma função:
+     resolveRealRoutes(files: CategorizedFile[]): Map<string, string>
+   que retorna um mapa "nome do arquivo sem extensão" -> "rota real", construído assim:
+   a) Achar o(s) arquivo(s) de configuração de rotas (nome bate com routes.ts, routes.tsx,
+      constants/routes.ts, ou o ROUTE_NAMES já usado em StructureAnalyzer.ts) e, por regex,
+      extrair pares chave/valor no formato `chave: "valor"` ou `chave: 'valor'` — igual ao
+      check-routes.mjs já faz para o próprio NicEmp Docs, mas genérico o bastante pra pegar
+      objetos com qualquer nome de variável exportada.
+   b) Achar toda ocorrência de `<Route` em qualquer arquivo do projeto (não só nos categorizados
+      como "route" — App.tsx normalmente não cai nessa categoria) e extrair, por regex, os pares
+      (caminho, nome do componente) nos formatos:
+        <Route path="/literal" component={Nome} .../>
+        <Route path={algumaCoisa.chave} component={Nome} .../>
+        <Route path="/literal" element={<Nome .../>} .../>
+        <Route path={algumaCoisa.chave} element={<Nome .../>} .../>
+      Quando o path for uma referência tipo `algumaCoisa.chave`, resolver `chave` no mapa do
+      passo (a). Quando for uma string literal, usar direto.
+   c) Retornar Map<Nome, rotaResolvida>.
+
+2. Em src/services/storage/mapper.ts, na função toPageEntities: antes de cair no fallback
+   inferRoute(f.path), tentar resolveRealRoutes(...).get(nome do arquivo sem extensão). Se
+   encontrar, usar essa rota real; só usar inferRoute como fallback quando não achar
+   correspondência (projetos com roteamento por pasta, tipo o próprio NicEmp Docs ou Next.js,
+   continuam funcionando como já funcionam hoje).
+
+3. Isso não precisa de nenhuma mudança na UI — tanto o Explorador ao vivo (Explorer/index.tsx)
+   quanto as telas de Frontend/Páginas já leem PageEntity.route e vão automaticamente passar a
+   mostrar a rota certa assim que o dado estiver certo.
+
+RESTRIÇÕES
+- Não alterar inferRoute nem o comportamento para projetos que já funcionam bem com ela (roteamento
+  por pasta) — isso é só um passo adicional ANTES do fallback, não uma substituição.
+- Isso só tem efeito na PRÓXIMA vez que um ZIP for analisado — não corrige projetos já analisados
+  anteriormente. Depois de aplicado, é preciso subir o ZIP do nicemp.com de novo pra ver o efeito.
+
+Ao concluir, rode git status e git diff --stat e cole o resultado aqui antes de dizer que terminou.

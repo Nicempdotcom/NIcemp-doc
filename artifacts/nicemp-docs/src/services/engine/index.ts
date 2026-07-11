@@ -21,3 +21,4 @@ export { DependencyAnalyzer } from './DependencyAnalyzer';
 export { TechnologyAnalyzer } from './TechnologyAnalyzer';
 export { InteractionAnalyzer } from './InteractionAnalyzer';
 export { ProjectAnalyzer }   from './ProjectAnalyzer';
+export { resolveRealRoutes } from './RouteResolver';
