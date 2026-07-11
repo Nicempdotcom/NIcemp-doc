@@ -164,7 +164,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   type="button"
                   onClick={() => toggleGroup(group.label)}
                   aria-expanded={isGroupOpen}
-                  className="w-full flex items-center justify-between gap-2 px-3 mb-1 mt-2 text-[10px] uppercase tracking-widest text-muted-foreground font-semibold hover:text-foreground transition-colors"
+                  className="w-full flex items-center justify-between gap-2 px-3 mb-1 mt-2 text-[11px] uppercase tracking-wider text-foreground/60 font-bold hover:text-foreground transition-colors"
                 >
                   <span>{group.label}</span>
                   {isGroupOpen ? (
