@@ -10,6 +10,8 @@ import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '@/app/components/ui/table';
 import { ProjectRepository, ComponentRepository } from '@/services/storage';
+import GeneratePromptButton from '@/app/components/prompts/GeneratePromptButton';
+import { buildEntityNameIndex, resolveNames } from '@/services/prompts/resolveDependencyNames';
 
 /**
  * Full listing of every ComponentEntity in the documentation database —
@@ -19,6 +21,7 @@ export default function Components() {
   const [searchParams] = useSearchParams();
   const project = useMemo(() => ProjectRepository.findLatest(), []);
   const components = useMemo(() => (project ? ComponentRepository.findByProject(project.id) : []), [project]);
+  const nameIndex = useMemo(() => (project ? buildEntityNameIndex(project.id) : new Map<string, string>()), [project]);
 
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   useEffect(() => { setQuery(searchParams.get('q') ?? ''); }, [searchParams]);
@@ -56,6 +59,7 @@ export default function Components() {
                   <TableHead>Status</TableHead>
                   <TableHead>Props</TableHead>
                   <TableHead>Usado em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -75,6 +79,22 @@ export default function Components() {
                     <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-muted-foreground">{c.props.length}</TableCell>
                     <TableCell className="text-muted-foreground">{c.usedIn.length}</TableCell>
+                    <TableCell className="text-right">
+                      <GeneratePromptButton
+                        iconOnly
+                        kind="component"
+                        name={c.name}
+                        location={c.location}
+                        module={c.module}
+                        riskLevel={c.riskLevel}
+                        dependencies={resolveNames([...c.relationships, ...c.usedIn], nameIndex)}
+                        details={{
+                          Categoria: c.category || '—',
+                          Status: c.status,
+                          Props: String(c.props.length),
+                        }}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

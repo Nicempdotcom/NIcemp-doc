@@ -1,14 +1,21 @@
-import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FileText, Layers, Zap, ArrowRight } from 'lucide-react';
 import PageHeader from '@/app/layouts/PageHeader';
 import Section from '@/app/components/docs/Section';
 import InfoBox from '@/app/components/docs/InfoBox';
+import StatusBadge from '@/app/components/docs/StatusBadge';
+import EntityTableToolbar from '@/app/components/docs/EntityTableToolbar';
 import { Badge } from '@/app/components/ui/badge';
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from '@/app/components/ui/table';
 import {
   ProjectRepository, PageRepository, ComponentRepository, HookRepository,
 } from '@/services/storage';
 import { ROUTES } from '@/routes';
+import GeneratePromptButton from '@/app/components/prompts/GeneratePromptButton';
+import { buildEntityNameIndex, resolveNames } from '@/services/prompts/resolveDependencyNames';
 
 function groupByModule<T extends { module: string }>(items: T[]): [string, number][] {
   const counts = new Map<string, number>();
@@ -25,10 +32,22 @@ function groupByModule<T extends { module: string }>(items: T[]): [string, numbe
  * on the dedicated Componentes/Hooks pages.
  */
 export default function Frontend() {
+  const [searchParams] = useSearchParams();
   const project = useMemo(() => ProjectRepository.findLatest(), []);
   const pages      = useMemo(() => (project ? PageRepository.findByProject(project.id) : []), [project]);
   const components = useMemo(() => (project ? ComponentRepository.findByProject(project.id) : []), [project]);
   const hooks       = useMemo(() => (project ? HookRepository.findByProject(project.id) : []), [project]);
+  const nameIndex   = useMemo(() => (project ? buildEntityNameIndex(project.id) : new Map<string, string>()), [project]);
+
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
+  useEffect(() => { setQuery(searchParams.get('q') ?? ''); }, [searchParams]);
+
+  const filteredPages = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return pages;
+    return pages.filter((p) =>
+      p.name.toLowerCase().includes(q) || p.module.toLowerCase().includes(q) || p.route.toLowerCase().includes(q));
+  }, [pages, query]);
 
   const pageModules = useMemo(() => groupByModule(pages), [pages]);
   const componentCategories = useMemo(() => {
@@ -87,6 +106,59 @@ export default function Frontend() {
               <Badge key={mod} variant="outline" className="text-xs font-normal">{mod} · {count}</Badge>
             ))}
           </div>
+        )}
+      </Section>
+
+      <Section title="Todas as Páginas" description="Listagem completa de páginas detectadas, com prompt pronto para pedir alterações ao Replit.">
+        {pages.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma página detectada ainda.</p>
+        ) : (
+          <>
+            <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar página..." resultCount={filteredPages.length} totalCount={pages.length} />
+            <div className="rounded-lg border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Rota</TableHead>
+                    <TableHead>Módulo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPages.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <div>
+                            <div className="font-medium text-foreground">{p.name}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{p.location}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{p.route || '—'}</TableCell>
+                      <TableCell>{p.module ? <Badge variant="outline" className="text-[10px] font-normal">{p.module}</Badge> : '—'}</TableCell>
+                      <TableCell><StatusBadge status={p.status} /></TableCell>
+                      <TableCell className="text-right">
+                        <GeneratePromptButton
+                          iconOnly
+                          kind="page"
+                          name={p.name}
+                          location={p.location}
+                          module={p.module}
+                          riskLevel={p.riskLevel}
+                          dependencies={resolveNames([...p.relationships, ...p.components, ...p.hooks, ...p.apis], nameIndex)}
+                          details={{ Rota: p.route || '—', Status: p.status }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </Section>
 

@@ -10,12 +10,15 @@ import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '@/app/components/ui/table';
 import { ProjectRepository, HookRepository } from '@/services/storage';
+import GeneratePromptButton from '@/app/components/prompts/GeneratePromptButton';
+import { buildEntityNameIndex, resolveNames } from '@/services/prompts/resolveDependencyNames';
 
 /** Full listing of every HookEntity — auto-generated (EPIC 08 Portal Oficial). */
 export default function Hooks() {
   const [searchParams] = useSearchParams();
   const project = useMemo(() => ProjectRepository.findLatest(), []);
   const hooks = useMemo(() => (project ? HookRepository.findByProject(project.id) : []), [project]);
+  const nameIndex = useMemo(() => (project ? buildEntityNameIndex(project.id) : new Map<string, string>()), [project]);
 
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   useEffect(() => { setQuery(searchParams.get('q') ?? ''); }, [searchParams]);
@@ -53,6 +56,7 @@ export default function Hooks() {
                   <TableHead>Parâmetros</TableHead>
                   <TableHead>Retorno</TableHead>
                   <TableHead>Usado em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -72,6 +76,22 @@ export default function Hooks() {
                     <TableCell className="text-muted-foreground">{h.params.length}</TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">{h.returns || '—'}</TableCell>
                     <TableCell className="text-muted-foreground">{h.usedIn.length}</TableCell>
+                    <TableCell className="text-right">
+                      <GeneratePromptButton
+                        iconOnly
+                        kind="hook"
+                        name={h.name}
+                        location={h.location}
+                        module={h.module}
+                        riskLevel={h.riskLevel}
+                        dependencies={resolveNames([...h.relationships, ...h.usedIn], nameIndex)}
+                        details={{
+                          Status: h.status,
+                          Parâmetros: String(h.params.length),
+                          Retorno: h.returns || '—',
+                        }}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

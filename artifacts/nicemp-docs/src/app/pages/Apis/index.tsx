@@ -12,6 +12,8 @@ import {
 import { cn } from '@/utils';
 import { ProjectRepository, ApiRepository } from '@/services/storage';
 import type { HttpMethod } from '@/services/storage/types';
+import GeneratePromptButton from '@/app/components/prompts/GeneratePromptButton';
+import { buildEntityNameIndex, resolveNames } from '@/services/prompts/resolveDependencyNames';
 
 const METHOD_COLOR: Record<HttpMethod, string> = {
   GET:    'text-emerald-700 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
@@ -26,6 +28,7 @@ export default function Apis() {
   const [searchParams] = useSearchParams();
   const project = useMemo(() => ProjectRepository.findLatest(), []);
   const apis = useMemo(() => (project ? ApiRepository.findByProject(project.id) : []), [project]);
+  const nameIndex = useMemo(() => (project ? buildEntityNameIndex(project.id) : new Map<string, string>()), [project]);
 
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   useEffect(() => { setQuery(searchParams.get('q') ?? ''); }, [searchParams]);
@@ -63,6 +66,7 @@ export default function Apis() {
                   <TableHead>Status</TableHead>
                   <TableHead>Autenticação</TableHead>
                   <TableHead>Papéis</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -89,6 +93,23 @@ export default function Apis() {
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">{a.roles.length > 0 ? a.roles.join(', ') : '—'}</TableCell>
+                    <TableCell className="text-right">
+                      <GeneratePromptButton
+                        iconOnly
+                        kind="api"
+                        name={a.name}
+                        location={a.location}
+                        module={a.module}
+                        riskLevel={a.riskLevel}
+                        dependencies={resolveNames(a.relationships, nameIndex)}
+                        details={{
+                          Método: a.method,
+                          Rota: a.path || a.location,
+                          Status: a.status,
+                          Autenticação: a.auth ? `Protegida (${a.roles.join(', ') || 'sem papéis definidos'})` : 'Pública',
+                        }}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
