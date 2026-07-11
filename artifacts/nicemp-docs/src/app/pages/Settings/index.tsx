@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageHeader from '@/app/layouts/PageHeader';
 import { Section, InfoBox, DocCard } from '@/app/components/docs';
 import { Button } from '@/app/components/ui/button';
@@ -15,61 +15,97 @@ import {
 } from '@/app/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { StorageService } from '@/services/storage';
-import { SlidersHorizontal, Globe, Palette, Link2, Key, Webhook, Users, ShieldCheck, DatabaseZap, Trash2 } from 'lucide-react';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { SlidersHorizontal, Globe, Palette, Link2, Key, Webhook, Users, ShieldCheck, DatabaseZap, Trash2, Cloud, HardDrive, Loader2 } from 'lucide-react';
+import type { StoreKey } from '@/services/storage/types';
 
 const COUNT_LABELS: Record<string, string> = {
-  projects: 'Projetos',
-  versions: 'Versões',
+  projects:         'Projetos',
+  versions:         'Versões',
   versionSnapshots: 'Fotos de versões',
-  pages: 'Páginas',
-  components: 'Componentes',
-  hooks: 'Hooks',
-  apis: 'APIs',
-  tables: 'Tabelas',
-  dependencies: 'Dependências',
-  technologies: 'Tecnologias',
-  history: 'Itens do histórico',
-  interactions: 'Interações',
-  importEdges: 'Ligações de arquitetura',
+  pages:            'Páginas',
+  components:       'Componentes',
+  hooks:            'Hooks',
+  apis:             'APIs',
+  tables:           'Tabelas',
+  dependencies:     'Dependências',
+  technologies:     'Tecnologias',
+  history:          'Itens do histórico',
+  interactions:     'Interações',
+  importEdges:      'Ligações de arquitetura',
 };
 
 function DataPrivacySection() {
   const { toast } = useToast();
-  const [counts, setCounts] = useState(() => StorageService.countAll());
+  const [counts, setCounts] = useState<Record<StoreKey, number>>(() => StorageService.countAll());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  // Refresh counts on mount (data may have changed since last render)
+  useEffect(() => {
+    setCounts(StorageService.countAll());
+  }, []);
 
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
 
-  function handleReset() {
-    StorageService.clearAll();
+  async function handleReset() {
+    setResetting(true);
+    StorageService.clearAll();   // sync clear (localStorage) + async clear (Supabase)
     setCounts(StorageService.countAll());
     setDialogOpen(false);
-    toast({ title: 'Histórico resetado', description: 'Todos os projetos, versões e documentação salvos foram apagados.' });
+    setResetting(false);
+    toast({
+      title: 'Histórico resetado',
+      description: isSupabaseConfigured
+        ? 'Todos os registros foram apagados do banco compartilhado (Supabase) e do cache local.'
+        : 'Todos os projetos, versões e documentação salvos neste navegador foram apagados.',
+    });
   }
 
   return (
     <Section
       title="Dados & Privacidade"
-      description="O que está salvo neste navegador e como apagar tudo, se precisar."
+      description={isSupabaseConfigured
+        ? 'Dados armazenados no banco compartilhado Supabase — visíveis para todos os sócios.'
+        : 'O que está salvo neste navegador e como apagar tudo, se precisar.'}
       className="mt-8"
     >
+      {/* Storage backend indicator */}
+      <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
+        {isSupabaseConfigured ? (
+          <>
+            <Cloud className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Backend: <span className="font-medium text-foreground">Supabase (banco compartilhado)</span> — dados sincronizados entre todos os sócios</span>
+          </>
+        ) : (
+          <>
+            <HardDrive className="h-3.5 w-3.5 text-amber-500" />
+            <span>Backend: <span className="font-medium text-foreground">localStorage</span> — dados visíveis apenas neste navegador</span>
+          </>
+        )}
+      </div>
+
       <div className="bg-card border border-card-border rounded-lg p-5 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <DatabaseZap className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Dados salvos neste navegador</h3>
+            <h3 className="text-sm font-semibold text-foreground">
+              {isSupabaseConfigured ? 'Dados salvos no banco compartilhado' : 'Dados salvos neste navegador'}
+            </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Tudo que o NicEmp Docs guardou localmente ao analisar seus projetos.
+              {isSupabaseConfigured
+                ? 'Todos os resumos e metadados extraídos ao analisar projetos. Código-fonte nunca é armazenado.'
+                : 'Tudo que o NicEmp Docs guardou localmente ao analisar seus projetos.'}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {Object.entries(COUNT_LABELS).map(([key, label]) => (
-            <div key={key} className="rounded-md border border-border bg-muted/30 px-3 py-2.5">
-              <div className="text-xl font-bold text-foreground">{counts[key as keyof typeof counts] ?? 0}</div>
+          {Object.entries(COUNT_LABELS).map(([k, label]) => (
+            <div key={k} className="rounded-md border border-border bg-muted/30 px-3 py-2.5">
+              <div className="text-xl font-bold text-foreground">{counts[k as StoreKey] ?? 0}</div>
               <div className="text-[11px] text-muted-foreground">{label}</div>
             </div>
           ))}
@@ -77,13 +113,14 @@ function DataPrivacySection() {
 
         <div className="flex items-center justify-between border-t border-border pt-4">
           <div className="text-sm text-muted-foreground">
-            Total salvo: <span className="font-semibold text-foreground">{total}</span> {total === 1 ? 'registro' : 'registros'}
+            Total salvo: <span className="font-semibold text-foreground">{total}</span>{' '}
+            {total === 1 ? 'registro' : 'registros'}
           </div>
 
           <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="h-3.5 w-3.5" />
+              <Button variant="destructive" size="sm" disabled={resetting}>
+                {resetting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 Resetar histórico
               </Button>
             </AlertDialogTrigger>
@@ -91,8 +128,9 @@ function DataPrivacySection() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Resetar todo o histórico?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Isso vai apagar TODOS os projetos, versões e documentação salvos neste navegador.
-                  Essa ação não pode ser desfeita.
+                  {isSupabaseConfigured
+                    ? 'Isso vai apagar TODOS os projetos, versões e documentação do banco compartilhado (Supabase). Todos os sócios perderão os dados. Essa ação não pode ser desfeita.'
+                    : 'Isso vai apagar TODOS os projetos, versões e documentação salvos neste navegador. Essa ação não pode ser desfeita.'}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -112,15 +150,15 @@ function DataPrivacySection() {
 export default function Settings() {
   return (
     <div className="w-full">
-      <PageHeader 
+      <PageHeader
         title="Configurações"
         description="Preferências, integrações e configurações gerais do portal NicEmp Docs."
-        badge="Em construção"
-        badgeVariant="warning"
       />
-      
-      <InfoBox variant="warning" title="Área restrita">
-        As configurações aqui documentadas afetam o comportamento global do sistema. Alterações devem ser revisadas antes de aplicadas.
+
+      <InfoBox variant={isSupabaseConfigured ? 'tip' : 'warning'} title={isSupabaseConfigured ? 'Banco compartilhado ativo' : 'Modo localStorage'}>
+        {isSupabaseConfigured
+          ? 'O NicEmp Docs está conectado ao Supabase. Todos os sócios compartilham os mesmos dados.'
+          : 'Supabase não configurado. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY para ativar o banco compartilhado.'}
       </InfoBox>
 
       <DataPrivacySection />

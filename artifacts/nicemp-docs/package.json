@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.2",
     "@xyflow/react": "^12.11.2",
     "html-to-image": "^1.11.13",
     "jszip": "^3.10.1",

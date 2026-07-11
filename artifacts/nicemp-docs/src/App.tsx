@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/app/components/ui/toaster';
 import { TooltipProvider } from '@/app/components/ui/tooltip';
+import { Loader2 } from 'lucide-react';
 
 import Sidebar from '@/app/layouts/Sidebar';
 import Topbar from '@/app/layouts/Topbar';
@@ -13,7 +14,6 @@ import Project      from '@/app/pages/Project';
 import Comparison   from '@/app/pages/Comparison';
 import History      from '@/app/pages/History';
 import Impact       from '@/app/pages/Impact';
-import Overview     from '@/app/pages/Overview';
 import Architecture from '@/app/pages/Architecture';
 import Frontend     from '@/app/pages/Frontend';
 import Backend      from '@/app/pages/Backend';
@@ -23,10 +23,9 @@ import Hooks        from '@/app/pages/Hooks';
 import Apis         from '@/app/pages/Apis';
 import Dependencies from '@/app/pages/Dependencies';
 import Modules      from '@/app/pages/Modules';
-import Glossario    from '@/app/pages/Glossario';
-import Explorer     from '@/app/pages/Explorer';
 import Prompts      from '@/app/pages/Prompts';
 import Settings     from '@/app/pages/Settings';
+import Login        from '@/app/pages/Login';
 import NotFound     from '@/app/pages/not-found';
 import { ROUTES }   from '@/routes';
 
@@ -34,6 +33,9 @@ import { AnalyzerProvider }       from '@/features/analyzer';
 import { DocumentationProvider }  from '@/features/documentation';
 import { HistoryProvider }        from '@/features/history';
 import { ImpactProvider }         from '@/features/impact';
+import { AuthProvider, useAuth }  from '@/app/providers/AuthProvider';
+import { HydrationService }       from '@/services/storage/HydrationService';
+import { isSupabaseConfigured }   from '@/lib/supabase';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +58,55 @@ export function useTheme() {
 
 const queryClient = new QueryClient();
 
+// ─── Hydration gate ───────────────────────────────────────────────────────────
+
+/**
+ * After successful auth (or in localStorage-only mode), hydrate the local
+ * cache from Supabase before rendering the app. Shows a centered spinner while
+ * in progress so users never see stale/empty pages on first load.
+ */
+function HydrationGate({ children }: { children: React.ReactNode }) {
+  const { session, loading: authLoading } = useAuth();
+  const [hydrated, setHydrated] = useState(!isSupabaseConfigured); // skip when not configured
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isSupabaseConfigured) { setHydrated(true); return; }
+    if (!session) { setHydrated(true); return; } // login screen will handle auth
+    HydrationService.hydrate().finally(() => setHydrated(true));
+  }, [authLoading, session]);
+
+  if (authLoading || !hydrated) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+          <span className="text-sm">Carregando dados…</span>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+// ─── Auth gate ────────────────────────────────────────────────────────────────
+
+/**
+ * Blocks the app behind the Login page when Supabase is configured but
+ * there is no valid session. In localStorage-only mode (Supabase not
+ * configured), the app renders freely.
+ */
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth();
+
+  if (isSupabaseConfigured && !session) {
+    return <Login />;
+  }
+
+  return <>{children}</>;
+}
+
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 function Layout() {
@@ -77,7 +128,6 @@ function Layout() {
               <Route path={ROUTES.history}      element={<History />}      />
               <Route path={ROUTES.comparison}   element={<Comparison />}   />
               <Route path={ROUTES.impact}       element={<Impact />}       />
-              <Route path={ROUTES.overview}     element={<Overview />}     />
               <Route path={ROUTES.architecture} element={<Architecture />} />
               <Route path={ROUTES.frontend}     element={<Frontend />}     />
               <Route path={ROUTES.backend}      element={<Backend />}      />
@@ -87,8 +137,6 @@ function Layout() {
               <Route path={ROUTES.apis}         element={<Apis />}         />
               <Route path={ROUTES.dependencies} element={<Dependencies />} />
               <Route path={ROUTES.modules}      element={<Modules />}      />
-              <Route path={ROUTES.glossario}    element={<Glossario />}    />
-              <Route path={ROUTES.explorer}     element={<Explorer />}     />
               <Route path={ROUTES.prompts}      element={<Prompts />}      />
               <Route path={ROUTES.settings}     element={<Settings />}     />
               <Route path="*"                   element={<NotFound />}     />
@@ -117,20 +165,26 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeContext.Provider value={{ theme, setTheme: setThemeState }}>
-        <AnalyzerProvider>
-          <DocumentationProvider>
-            <HistoryProvider>
-              <ImpactProvider>
-                <TooltipProvider>
-                  <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-                    <Layout />
-                  </BrowserRouter>
-                  <Toaster />
-                </TooltipProvider>
-              </ImpactProvider>
-            </HistoryProvider>
-          </DocumentationProvider>
-        </AnalyzerProvider>
+        <AuthProvider>
+          <HydrationGate>
+            <AuthGate>
+              <AnalyzerProvider>
+                <DocumentationProvider>
+                  <HistoryProvider>
+                    <ImpactProvider>
+                      <TooltipProvider>
+                        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+                          <Layout />
+                        </BrowserRouter>
+                        <Toaster />
+                      </TooltipProvider>
+                    </ImpactProvider>
+                  </HistoryProvider>
+                </DocumentationProvider>
+              </AnalyzerProvider>
+            </AuthGate>
+          </HydrationGate>
+        </AuthProvider>
       </ThemeContext.Provider>
     </QueryClientProvider>
   );

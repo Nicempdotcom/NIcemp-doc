@@ -7,7 +7,6 @@ import {
   History,
   AlertTriangle,
   Network,
-  Workflow,
   Monitor,
   Server,
   Database,
@@ -19,10 +18,11 @@ import {
   Layers,
   Zap,
   Globe,
-  Compass,
-  BookOpen,
+  LogOut,
 } from 'lucide-react';
 import { ROUTES } from '@/routes';
+import { useAuth } from '@/app/providers/AuthProvider';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 const NAV_GROUPS = [
   {
@@ -34,8 +34,6 @@ const NAV_GROUPS = [
       { label: 'Histórico',      icon: History,         href: ROUTES.history    },
       { label: 'Comparação',     icon: GitCompare,      href: ROUTES.comparison },
       { label: 'Impacto',        icon: AlertTriangle,   href: ROUTES.impact     },
-      { label: 'Explorador ao vivo', icon: Compass,     href: ROUTES.explorer   },
-      { label: 'Organograma',    icon: Workflow,        href: ROUTES.overview   },
     ],
   },
   {
@@ -50,7 +48,6 @@ const NAV_GROUPS = [
       { label: 'APIs',           icon: Globe,           href: ROUTES.apis         },
       { label: 'Dependências',   icon: Package,         href: ROUTES.dependencies },
       { label: 'Módulos',        icon: Package,         href: ROUTES.modules      },
-      { label: 'Glossário',      icon: BookOpen,        href: ROUTES.glossario    },
       { label: 'Prompts Replit', icon: Bot,             href: ROUTES.prompts      },
     ],
   },
@@ -68,6 +65,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { session, signOut } = useAuth();
+
   return (
     <>
       {/* Mobile overlay */}
@@ -133,7 +132,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="shrink-0 border-t border-sidebar-border px-4 py-4">
+        {/* Footer — user session + logout */}
+        <div className="shrink-0 border-t border-sidebar-border px-4 py-4 space-y-2">
+          {isSupabaseConfigured && session && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground truncate max-w-[140px]" title={session.user.email}>
+                {session.user.email}
+              </span>
+              <button
+                onClick={signOut}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md p-1"
+                title="Sair"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sair
+              </button>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">NicEmp © 2025</p>
         </div>
       </aside>

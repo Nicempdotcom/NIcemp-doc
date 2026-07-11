@@ -1,30 +1,33 @@
 /**
  * StorageService
  *
- * Low-level JSON persistence layer backed by localStorage.
- * Each logical "file" (pages.json, components.json, …) maps to
- * a distinct localStorage key prefixed with NAMESPACE.
+ * Low-level JSON persistence layer.
  *
- * Rule: NEVER store source code — only serialisable entity objects.
+ * PRIMARY store: localStorage (synchronous — all reads are instant).
+ * SECONDARY store: Supabase (async write-through — keeps shared data in sync).
+ *
+ * Strategy:
+ *  • Reads always come from localStorage (cache).
+ *  • Writes go to localStorage immediately (sync) and then fire an async
+ *    write-through to Supabase in the background (no await needed at call site).
+ *  • On app startup, HydrationService pulls Supabase data into localStorage so
+ *    the cache is fresh before any read runs.
+ *
+ * Rule: NEVER store source code — only serialisable entity metadata objects.
  */
 
 import { STORE_FILE_NAMES, type StoreKey } from './types';
+import { SupabaseBackend } from './SupabaseBackend';
 
 const NAMESPACE = 'nicemp:db:';
 
-/**
- * Single source of truth for "all stores" — derived from STORE_FILE_NAMES
- * instead of a hand-maintained array literal, so a newly added StoreKey
- * (e.g. `versionSnapshots`) is automatically included in clearAll/countAll/
- * exportSnapshot without needing to remember to update three separate lists.
- */
 const ALL_STORES = Object.keys(STORE_FILE_NAMES) as StoreKey[];
 
 function key(store: StoreKey): string {
   return NAMESPACE + store;
 }
 
-// ─── Core operations ─────────────────────────────────────────────────────────
+// ─── Core sync operations (localStorage) ─────────────────────────────────────
 
 function read<T>(store: StoreKey): T[] {
   try {
@@ -41,13 +44,16 @@ function write<T>(store: StoreKey, data: T[]): void {
   try {
     localStorage.setItem(key(store), JSON.stringify(data));
   } catch (err) {
-    // Quota exceeded or security error — fail silently in prod
     console.warn('[StorageService] Write failed for store:', store, err);
+    return;   // don't fire Supabase if localStorage itself failed
   }
+  // Async write-through — fire-and-forget; errors are logged inside SupabaseBackend
+  SupabaseBackend.replaceStore(store, data as Array<{ id: string }>).catch(console.warn);
 }
 
 function clearStore(store: StoreKey): void {
   localStorage.removeItem(key(store));
+  SupabaseBackend.clearStore(store).catch(console.warn);
 }
 
 function clearAll(): void {
@@ -56,18 +62,11 @@ function clearAll(): void {
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 
-/**
- * StorageService — static methods only; no instantiation needed.
- *
- * @example
- * const pages = StorageService.read<PageEntity>('pages');
- * StorageService.write<PageEntity>('pages', [...pages, newPage]);
- */
 export const StorageService = {
   /** Return all records from a store, or [] if empty/missing. */
   read,
 
-  /** Overwrite an entire store with the given array. */
+  /** Overwrite an entire store with the given array (localStorage + Supabase). */
   write,
 
   /**
@@ -82,7 +81,15 @@ export const StorageService = {
     } else {
       all.push(item);
     }
-    write(store, all);
+    // Write full store to localStorage; also directly upsert the single item
+    // to Supabase (cheaper than replace-all for large stores).
+    try {
+      localStorage.setItem(key(store), JSON.stringify(all));
+    } catch (err) {
+      console.warn('[StorageService] upsert write failed', store, err);
+      return;
+    }
+    SupabaseBackend.upsertOne(store, item).catch(console.warn);
   },
 
   /**
@@ -95,19 +102,29 @@ export const StorageService = {
     for (const item of items) {
       map.set(item.id, item);
     }
-    write(store, [...map.values()]);
+    const next = [...map.values()];
+    try {
+      localStorage.setItem(key(store), JSON.stringify(next));
+    } catch (err) {
+      console.warn('[StorageService] upsertMany write failed', store, err);
+      return;
+    }
+    SupabaseBackend.upsertMany(store, items).catch(console.warn);
   },
 
   /** Remove a record by id. No-op if not found. */
   remove(store: StoreKey, id: string): void {
     const all = read<{ id: string }>(store).filter((r) => r.id !== id);
-    write(store, all);
+    try {
+      localStorage.setItem(key(store), JSON.stringify(all));
+    } catch { /* ignore */ }
+    SupabaseBackend.deleteOne(store, id).catch(console.warn);
   },
 
-  /** Clear a single store. */
+  /** Clear a single store (localStorage + Supabase). */
   clearStore,
 
-  /** Clear ALL stores (full database wipe). */
+  /** Clear ALL stores (full database wipe — localStorage + Supabase). */
   clearAll,
 
   /**

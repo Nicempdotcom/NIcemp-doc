@@ -1,0 +1,127 @@
+Preciso migrar a persistência de dados do NicEmp Docs (workspace
+`nicemp-docs`) de localStorage para um banco Supabase compartilhado, com
+login por email/senha. Objetivo: vários sócios acessando o mesmo site (já
+publicado no Cloudflare Pages) devem ver e editar os MESMOS dados, em vez de
+cada um ter seus próprios dados isolados no navegador.
+
+## REGRA CRÍTICA — o que pode e o que NÃO pode ser salvo
+
+O Supabase deve armazenar APENAS o resumo/conhecimento extraído dos
+projetos analisados (nomes de páginas, componentes, hooks, endpoints,
+tabelas, módulos, dependências, interações, etc. — os mesmos objetos que já
+existem hoje em `src/services/storage/types.ts`) — ou seja, exatamente o que
+já é salvo hoje no localStorage, nada além disso.
+
+NUNCA salve, envie ou faça upload do código-fonte real dos projetos
+analisados (arquivos .ts/.tsx/.js originais, conteúdo bruto do ZIP, etc.)
+para o Supabase ou para qualquer lugar fora do navegador do usuário durante
+a análise. O ZIP é processado e resumido inteiramente no client (browser);
+só o resultado da análise (metadados/resumo estruturado) deve viajar pra
+fora do navegador, na forma dos objetos de entidade já definidos no projeto
+(PageEntity, ComponentEntity, HookEntity, ApiEntity, etc.) — nunca snippets
+de código, nunca o conteúdo dos arquivos originais. Se algum campo dessas
+entidades hoje guarda trechos de código-fonte ao invés de metadados sobre
+ele, sinalize isso antes de continuar em vez de simplesmente persistir tal
+como está.
+
+## 1. Provisionar o Supabase
+
+Ainda não tenho projeto Supabase criado. Use a integração de Supabase
+disponível no Replit pra criar/conectar um projeto novo. Se a integração
+não conseguir criar o projeto automaticamente, me diga exatamente o que
+preciso fazer manualmente em supabase.com (criar organização, criar
+projeto, e onde pegar a Project URL e a anon key) pra colar aqui.
+
+## 2. Schema do banco (Postgres)
+
+Crie uma tabela por store, espelhando o que já existe em
+`src/services/storage/types.ts` (StoreKey/STORE_FILE_NAMES): projects,
+versions, version_snapshots, pages, components, hooks, apis,
+database_tables (cuidado: "tables" é palavra reservada, use um nome que não
+conflite), dependencies, technologies, history, interactions, import_edges.
+
+Para migração rápida e de baixo risco, cada tabela pode ter apenas:
+- `id` (text, primary key) — mesmo id que a entidade já usa hoje
+- `data` (jsonb, not null) — o objeto de resumo/metadado inteiro da
+  entidade, serializado (NUNCA código-fonte, ver regra crítica acima)
+- `updated_at` (timestamptz, default now())
+
+Manter histórico: a tabela `version_snapshots` já existe hoje justamente
+pra guardar o "retrato" de cada versão analisada (ver
+`.agents/memory/nicemp-docs-versioning.md` se existir, pra entender o
+modelo). Preserve esse comportamento — cada nova versão analisada deve
+continuar criando um novo snapshot em vez de sobrescrever o anterior, pra
+manter o histórico de versões acessível a todos os sócios pelo Supabase.
+
+Ative Row Level Security (RLS) em todas as tabelas. Políticas: qualquer
+usuário AUTENTICADO (`auth.role() = 'authenticated'`) pode fazer
+select/insert/update/delete em todas as linhas — não precisamos de dono por
+registro, é um banco compartilhado entre os sócios.
+
+## 3. Autenticação
+
+Use Supabase Auth com email/senha. Implemente:
+- Uma tela de login simples (email + senha) que bloqueia o acesso ao resto
+  do app enquanto não há sessão válida.
+- NÃO implemente cadastro público (sem tela de "criar conta" acessível a
+  qualquer visitante) — as contas dos sócios serão criadas manualmente por
+  mim depois, direto no painel do Supabase (Authentication > Users > Invite
+  user).
+- Um botão de logout visível em algum lugar do layout (ex.: Sidebar ou
+  Settings).
+- Enquanto a sessão carrega, mostre um loading simples, não uma tela em
+  branco.
+
+## 4. Refatorar StorageService
+
+Esse é o ponto mais delicado: `src/services/storage/StorageService.ts` hoje
+é síncrono (`read`, `write`, `upsert`, `clearAll`, `countAll` retornam
+direto, sem Promise). Trocar o backend pra Supabase exige que essas funções
+virem assíncronas (retornem Promise). Portanto:
+
+1. Refatore StorageService pra uma versão assíncrona usando
+   `@supabase/supabase-js`, mantendo os MESMOS nomes de método
+   (read/write/upsert/upsertMany/remove/clearStore/clearAll/countAll/
+   exportSnapshot) pra minimizar a mudança de superfície, mas agora todos
+   retornando Promise.
+2. Audite TODOS os lugares do app que chamam StorageService hoje (pages,
+   repositories em src/services/storage/repositories, features, etc.) e
+   ajuste cada um pra lidar com o novo comportamento assíncrono (useEffect +
+   estado de loading, em vez de leitura direta no render). Isso inclui a
+   seção "Dados & Privacidade" em Settings que fizemos recentemente
+   (contagem via countAll e o botão de reset via clearAll) — ajuste pra
+   aguardar a Promise e mostrar loading enquanto isso.
+3. Confirme especificamente que o fluxo de análise de ZIP (parser/scanner)
+   nunca serializa e envia o conteúdo bruto dos arquivos pro Supabase —
+   apenas os objetos de entidade resumidos, como reforçado na regra crítica
+   acima.
+4. Onde fizer sentido, pode usar React Query (já é dependência do projeto,
+   se disponível) pra simplificar o gerenciamento de loading/cache — use
+   seu critério, mas priorize não quebrar a UX existente das páginas.
+
+## 5. Variáveis de ambiente
+
+Adicione `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (ou os nomes
+equivalentes que o setup do Vite do projeto já usa pra env vars públicas)
+como variáveis de build/runtime. Me diga exatamente quais variáveis e
+valores preciso configurar no painel do Cloudflare Pages (Settings >
+Environment variables) além do que já configuramos (PORT, BASE_PATH),
+já que essa parte eu preciso fazer manualmente lá.
+
+## 6. Regras gerais
+- Não quebre o fluxo de upload de ZIP e análise de projeto — ele deve
+  continuar funcionando, só que agora persistindo o RESUMO (nunca o
+  código-fonte) no Supabase em vez de localStorage.
+- Não precisa migrar dados antigos do localStorage — pode começar vazio no
+  Supabase, os sócios vão gerar a documentação de novo.
+- Rode `pnpm run typecheck` e `pnpm run build:cloudflare` no final e
+  corrija qualquer erro.
+- Teste localmente: login com um usuário de teste, gerar/subir um projeto,
+  e confirmar no painel do Supabase (Table Editor) que só aparecem campos
+  de metadado/resumo — nenhum trecho de código-fonte gravado.
+
+Me diga ao final: (1) os passos exatos que preciso fazer no Supabase Studio
+pra criar as contas dos sócios, (2) as variáveis de ambiente exatas pra
+configurar no Cloudflare, (3) lista de arquivos criados/modificados, (4)
+confirmação de que typecheck e build passaram, e (5) confirmação explícita
+de que nenhum código-fonte é enviado ao Supabase — só resumo/metadado.
