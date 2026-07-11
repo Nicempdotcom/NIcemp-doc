@@ -67,13 +67,25 @@ export default function Explorer() {
   const [urlInput, setUrlInput] = useState('');
   const [result, setResult] = useState<UrlMatchResult | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const handleExplore = () => {
     if (!urlInput.trim()) return;
-    const matched = matchPageByPath(urlInput, pages);
+    const raw = urlInput.trim();
+    const matched = matchPageByPath(raw, pages);
     setResult(matched);
-    const withProtocol = /^https?:\/\//i.test(urlInput.trim()) ? urlInput.trim() : `https://${urlInput.trim()}`;
-    setPreviewUrl(withProtocol);
+
+    const hasProtocol = /^https?:\/\//i.test(raw);
+    const looksLikeBarePath = raw.startsWith('/') && !hasProtocol;
+
+    if (looksLikeBarePath) {
+      // Só um caminho, sem domínio — não dá para montar uma URL de preview válida.
+      setPreviewUrl(null);
+      setPreviewError('Cole a URL completa (com domínio) para ver a pré-visualização, ex.: https://seusite.com/admin');
+    } else {
+      setPreviewError(null);
+      setPreviewUrl(hasProtocol ? raw : `https://${raw}`);
+    }
   };
 
   const moduleDataFor = (page: PageEntity) => ({
@@ -229,6 +241,11 @@ export default function Explorer() {
             <InfoBox variant="warning" title="Aviso permanente">
               Esta pré-visualização não rastreia cliques nem interações de origem cruzada (cross-origin), por design — é apenas uma janela visual best-effort.
             </InfoBox>
+            {previewError && (
+              <InfoBox variant="warning" title="URL incompleta">
+                {previewError}
+              </InfoBox>
+            )}
             {previewUrl && (
               <div className="rounded-lg border border-border overflow-hidden h-[480px] bg-muted/20">
                 <iframe

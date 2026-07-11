@@ -52,14 +52,23 @@ const now = () => new Date().toISOString();
 
 /** Infer a URL-like route from a file path. */
 function inferRoute(path: string): string {
-  return '/' + path
+  let route = path
     .replace(/^src\//, '')
-    .replace(/\/index\.(tsx?|jsx?)$/, '')
-    .replace(/\.(tsx?|jsx?)$/, '')
+    .replace(/\.(tsx?|jsx?)$/, '')        // remove extensão primeiro
+    .replace(/\/index$/, '')              // Pages Router: arquivo index
+    .replace(/\/page$/, '')               // App Router: arquivo page.tsx
+    .replace(/\/layout$/, '')             // App Router: arquivo layout.tsx (não deveria virar rota própria)
     .replace(/^pages\//, '')
     .replace(/^app\/pages\//, '')
+    .replace(/^app(\/|$)/, '')             // App Router: prefixo genérico "app/" (ou apenas "app" após strip de page/layout)
     .replace(/^screens\//, '')
-    .replace(/^views\//, '');
+    .replace(/^views\//, '')
+    .replace(/\/\([^/]+\)/g, '')          // remove route groups "(admin)", "(marketing)" etc.
+    .replace(/^\([^/]+\)\/?/, '');        // remove route group se vier logo no início
+
+  route = '/' + route;
+  route = route.replace(/\/+$/, '');      // sem barra final
+  return route === '' ? '/' : route;
 }
 
 /** Derive the top-level module name from a file path. */

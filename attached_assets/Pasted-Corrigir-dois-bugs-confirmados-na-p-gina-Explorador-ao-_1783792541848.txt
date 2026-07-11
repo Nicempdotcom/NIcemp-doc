@@ -1,0 +1,90 @@
+Corrigir dois bugs confirmados na página "Explorador ao vivo" (EPIC 10).
+
+## BUG 1 — Rota inferida errada para páginas do Next.js App Router
+
+Arquivo: `artifacts/nicemp-docs/src/services/storage/mapper.ts`
+
+A função `inferRoute()` remove o sufixo `index.tsx` mas não sabe lidar com a convenção do Next.js App Router, onde o arquivo se chama `page.tsx`, nem com "route groups" entre parênteses (ex.: `(admin)`). Isso faz um arquivo real como `app/admin/page.tsx` virar a rota inferida `/app/admin/page` em vez de `/admin` — por isso o Explorador ao vivo não encontra correspondência para páginas que na verdade existem no projeto.
+
+Substituir a função atual:
+
+```ts
+function inferRoute(path: string): string {
+  return '/' + path
+    .replace(/^src\//, '')
+    .replace(/\/index\.(tsx?|jsx?)$/, '')
+    .replace(/\.(tsx?|jsx?)$/, '')
+    .replace(/^pages\//, '')
+    .replace(/^app\/pages\//, '')
+    .replace(/^screens\//, '')
+    .replace(/^views\//, '');
+}
+```
+
+Por esta versão, que trata App Router (`page.tsx`, `layout.tsx`, route groups `(nome)`) além dos casos que já funcionavam:
+
+```ts
+function inferRoute(path: string): string {
+  let route = path
+    .replace(/^src\//, '')
+    .replace(/\.(tsx?|jsx?)$/, '')        // remove extensão primeiro
+    .replace(/\/index$/, '')              // Pages Router: arquivo index
+    .replace(/\/page$/, '')               // App Router: arquivo page.tsx
+    .replace(/\/layout$/, '')             // App Router: arquivo layout.tsx (não deveria virar rota própria)
+    .replace(/^pages\//, '')
+    .replace(/^app\/pages\//, '')
+    .replace(/^app\//, '')                // App Router: prefixo genérico "app/"
+    .replace(/^screens\//, '')
+    .replace(/^views\//, '')
+    .replace(/\/\([^/]+\)/g, '')          // remove route groups "(admin)", "(marketing)" etc.
+    .replace(/^\([^/]+\)\/?/, '');        // remove route group se vier logo no início
+
+  route = '/' + route;
+  route = route.replace(/\/+$/, '');      // sem barra final
+  return route === '' ? '/' : route;
+}
+```
+
+Verificar depois da mudança que os testes/exemplos existentes de `pages/`, `screens/`, `views/` e `src/` continuam gerando a mesma rota de antes (não deve haver regressão nesses casos), e que agora `app/admin/page.tsx` vira `/admin` e `app/(admin)/configuracoes/page.tsx` vira `/configuracoes`.
+
+## BUG 2 — Preview quebra ao colar apenas um caminho sem domínio
+
+Arquivo: `artifacts/nicemp-docs/src/app/pages/Explorer/index.tsx`
+
+Na função `handleExplore`, quando o usuário cola só um caminho (ex.: `/admin`, sem domínio), o código monta a URL de preview assim:
+
+```ts
+const withProtocol = /^https?:\/\//i.test(urlInput.trim()) ? urlInput.trim() : `https://${urlInput.trim()}`;
+setPreviewUrl(withProtocol);
+```
+
+Isso gera `https:///admin` (sem host), uma URL inválida, e o iframe quebra mostrando um ícone de recurso não encontrado — mesmo sem nenhum bloqueio de CSP/X-Frame-Options envolvido.
+
+Corrigir para: só tentar montar/mostrar o preview quando o texto colado já tiver um domínio reconhecível. Se o usuário colar apenas um caminho (começando com `/` e sem domínio), não gerar `previewUrl` — em vez disso, mostrar um aviso pedindo a URL completa.
+
+Sugestão de implementação:
+
+```ts
+const handleExplore = () => {
+  if (!urlInput.trim()) return;
+  const raw = urlInput.trim();
+  const matched = matchPageByPath(raw, pages);
+  setResult(matched);
+
+  const hasProtocol = /^https?:\/\//i.test(raw);
+  const looksLikeBarePath = raw.startsWith('/') && !hasProtocol;
+
+  if (looksLikeBarePath) {
+    // Só um caminho, sem domínio — não dá para montar uma URL de preview válida.
+    setPreviewUrl(null);
+    setPreviewError('Cole a URL completa (com domínio) para ver a pré-visualização, ex.: https://seusite.com/admin');
+  } else {
+    setPreviewError(null);
+    setPreviewUrl(hasProtocol ? raw : `https://${raw}`);
+  }
+};
+```
+
+Adicionar um novo estado `previewError` (`useState<string | null>(null)`) e, na seção "Pré-visualização (melhor esforço)", renderizar esse aviso (ex.: usando o componente `InfoBox` já usado na página, variante `warning`) quando `previewError` estiver preenchido, no lugar do iframe.
+
+Depois de aplicar os dois fixes, testar manualmente: colar `/admin` sozinho (deve mostrar aviso, sem iframe quebrado) e colar a URL completa de uma página real do projeto analisado (deve encontrar a correspondência e mostrar o preview normalmente).
