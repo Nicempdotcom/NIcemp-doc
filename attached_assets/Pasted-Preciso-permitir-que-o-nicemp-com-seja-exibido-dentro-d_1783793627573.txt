@@ -1,0 +1,53 @@
+Preciso permitir que o nicemp.com seja exibido dentro de um <iframe> hospedado em outro domínio nosso — o NicEmp Docs, publicado em:
+
+  <DOMINIO_DO_DOCS>   ← SUBSTITUA pelo domínio real do Cloudflare Pages do NicEmp Docs
+                        (pegue em: painel do Cloudflare Pages > projeto do nicemp-docs >
+                        aba "Custom domains", ou o subdomínio padrão tipo
+                        algum-nome.pages.dev se ainda não tiver domínio próprio configurado)
+
+Hoje, ao tentar embutir uma página do nicemp.com num iframe desse outro domínio, o navegador bloqueia silenciosamente por segurança (X-Frame-Options e/ou Content-Security-Policy sem permissão explícita para esse domínio).
+
+## O que fazer
+
+1. Descobrir como o nicemp.com está servindo os headers HTTP hoje (verificar se existe `X-Frame-Options: DENY` ou `SAMEORIGIN`, e/ou uma diretiva `Content-Security-Policy` com `frame-ancestors`, em qualquer um destes lugares possíveis, dependendo de como o projeto está estruturado):
+   - Se for Next.js: função `headers()` em `next.config.js` / `next.config.ts`, ou middleware (`middleware.ts`).
+   - Se for hospedado direto no Cloudflare Pages (sem framework de servidor): arquivo `_headers` na raiz do build de saída (ex.: `public/_headers` ou `dist/_headers`, dependendo do projeto).
+   - Se for uma API/servidor Express (ou similar) na frente: middleware tipo `helmet` configurando `frameguard` / `contentSecurityPolicy`.
+   - Se nada disso existir explicitamente, os navegadores modernos hoje em dia costumam bloquear framing por padrão só se houver alguma dessas diretivas OU se a plataforma de hospedagem adicionar um `X-Frame-Options` automático — confirme se o Cloudflare Pages está adicionando algum header automático de segurança nas configurações do projeto.
+
+2. Ajustar para permitir explicitamente o domínio do NicEmp Docs como "frame-ancestor", mantendo tudo mais bloqueado (não remover proteção nenhuma além dessa exceção pontual). Exemplo do header final desejado:
+
+   ```
+   Content-Security-Policy: frame-ancestors 'self' https://<DOMINIO_DO_DOCS>;
+   ```
+
+   Se hoje existir um `X-Frame-Options: DENY` ou `SAMEORIGIN` sem CSP nenhuma, ele precisa ser substituído (ou complementado) pela diretiva `frame-ancestors` acima, porque `X-Frame-Options` não suporta listar múltiplos domínios específicos — só `DENY`, `SAMEORIGIN`, ou (em alguns navegadores) um único `ALLOW-FROM`, que já está obsoleto. `frame-ancestors` do CSP é o jeito atual e correto de fazer isso.
+
+3. Exemplo de implementação caso seja Next.js (`next.config.js`), aplicando só nas rotas específicas ou globalmente, como preferir:
+
+   ```js
+   async headers() {
+     return [
+       {
+         source: '/(.*)',
+         headers: [
+           {
+             key: 'Content-Security-Policy',
+             value: "frame-ancestors 'self' https://<DOMINIO_DO_DOCS>;",
+           },
+         ],
+       },
+     ];
+   }
+   ```
+
+4. Exemplo de implementação caso seja um arquivo `_headers` do Cloudflare Pages:
+
+   ```
+   /*
+     Content-Security-Policy: frame-ancestors 'self' https://<DOMINIO_DO_DOCS>;
+   ```
+
+5. Depois de aplicar, fazer deploy e testar: abrir o nicemp.com dentro de um iframe de teste hospedado no domínio do NicEmp Docs e confirmar que carrega normalmente (sem tela branca/bloqueio). Testar também que o nicemp.com continua funcionando normalmente fora de iframe e que nenhum outro domínio não autorizado consegue embutir a página (validar com um teste rápido de iframe a partir de um domínio qualquer diferente do docs — deve continuar bloqueado).
+
+6. Me reportar ao final: qual mecanismo de headers o projeto realmente usava antes (Next.js / `_headers` / middleware / nenhum), o que foi mudado, e confirmar se o teste de iframe passou.
