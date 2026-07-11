@@ -1,0 +1,18 @@
+Corrigir um bug de layout no modal "Gerar prompt" (componente src/app/components/prompts/EntityPickerPromptDialog.tsx), usado pelos botões Refatoração, Atualização de Layout, Correção de Bugs, Documentar Código e Gerar Specs na página de Prompts.
+
+Comportamento atual (errado): na lista de entidades do projeto dentro do modal (span com o nome da entidade, dentro de um botão com "flex items-center justify-between"), o texto do nome não tem a propriedade CSS min-width: 0. Em um item flex, o valor padrão de min-width é "auto", o que impede o elemento de encolher abaixo do tamanho do seu próprio conteúdo — mesmo com a classe "truncate" aplicada. Como resultado, nomes ou caminhos de arquivo longos empurram o resto da linha (o caminho do arquivo) para fora da largura do modal, e como o container da lista não corta overflow horizontal, o texto vaza visualmente para fora da caixa do diálogo em vez de ser cortado com reticências.
+
+Comportamento esperado: cada linha da lista de entidades deve caber inteira dentro da largura do modal. O nome da entidade deve truncar com "…" quando for muito longo, e o caminho do arquivo ao lado também deve truncar, mostrando o valor completo em um tooltip (title) ao passar o mouse — nada deve vazar para fora do modal.
+
+Correção esperada:
+1. No item da lista de entidades (botão que renderiza cada resultado da busca), adicionar min-w-0 tanto no próprio botão quanto no <span> do nome da entidade, além de manter/adicionar flex-1 nesse span, para que ele realmente encolha dentro do flex container antes do caminho do arquivo.
+2. Adicionar overflow-x-hidden no container que envolve a lista (a div com overflow-y-auto e max-h-52), como proteção adicional contra qualquer vazamento horizontal.
+3. Repetir a mesma verificação (min-w-0 no nome) no bloco de "entidade selecionada" logo acima da lista, caso ainda não tenha essa propriedade, para manter consistência.
+
+Investigue a causa raiz (ausência de min-w-0 em item flex, que impede o truncate de funcionar) antes de aplicar qualquer correção — não aplique um band-aid que apenas esconda o sintoma (por exemplo, não reduza o tamanho da fonte ou aumente a largura do modal sem resolver a causa).
+
+Checklist:
+- A causa raiz (min-w-0 ausente em item flex, impedindo truncate) foi identificada e documentada.
+- O nome e o caminho do arquivo de cada entidade na lista truncam corretamente com "…" e mostram o valor completo via tooltip, sem vazar para fora do modal, em qualquer resolução de tela normal de desktop.
+- O bug relatado (texto vazando para fora do modal "Gerar prompt") não reproduz mais após a correção.
+- Nenhuma lógica, dado ou comportamento funcional foi alterado — só CSS/layout.

@@ -435,7 +435,7 @@ export default function EntityPickerPromptDialog({
                 )}
 
                 {!selected && (
-                  <div className="rounded-md border border-border divide-y divide-border max-h-52 overflow-y-auto">
+                  <div className="rounded-md border border-border divide-y divide-border max-h-52 overflow-y-auto overflow-x-hidden">
                     {filtered.length === 0 ? (
                       <p className="text-sm text-muted-foreground p-3">Nenhuma entidade encontrada.</p>
                     ) : (
@@ -444,11 +444,11 @@ export default function EntityPickerPromptDialog({
                           key={e.id}
                           type="button"
                           onClick={() => setSelected(e)}
-                          className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent/50 transition-colors"
+                          className="w-full min-w-0 flex items-center gap-3 px-3 py-2 text-left hover:bg-accent/50 transition-colors"
                         >
                           <Badge variant="outline" className="text-[10px] shrink-0">{KIND_CATEGORY_LABELS[e.kind]}</Badge>
                           <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-                            <span className="text-sm font-medium text-foreground truncate">{e.name}</span>
+                            <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0" title={e.name}>{e.name}</span>
                             <span className="text-xs text-muted-foreground font-mono truncate max-w-[45%] shrink-0 hidden sm:block" title={e.location}>{e.location}</span>
                           </div>
                         </button>
