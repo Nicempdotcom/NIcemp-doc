@@ -418,15 +418,15 @@ export default function EntityPickerPromptDialog({
                 </div>
 
                 {selected && (
-                  <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2">
+                  <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2 min-w-0 gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <Badge variant="outline" className="text-[10px] shrink-0">{KIND_CATEGORY_LABELS[selected.kind]}</Badge>
-                      <span className="text-sm font-medium text-foreground truncate">{selected.name}</span>
-                      <span className="text-xs text-muted-foreground font-mono truncate hidden sm:block" title={selected.location}>{selected.location}</span>
+                      <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{selected.name}</span>
+                      <span className="text-xs text-muted-foreground font-mono truncate max-w-[40%] hidden sm:block" title={selected.location}>{selected.location}</span>
                     </div>
                     <button
                       type="button"
-                      className="text-xs text-muted-foreground hover:text-foreground shrink-0 ml-2"
+                      className="text-xs text-muted-foreground hover:text-foreground shrink-0 ml-1"
                       onClick={() => setSelected(null)}
                     >
                       Trocar
@@ -444,11 +444,13 @@ export default function EntityPickerPromptDialog({
                           key={e.id}
                           type="button"
                           onClick={() => setSelected(e)}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-accent/50 transition-colors min-w-0"
+                          className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent/50 transition-colors"
                         >
                           <Badge variant="outline" className="text-[10px] shrink-0">{KIND_CATEGORY_LABELS[e.kind]}</Badge>
-                          <span className="text-sm font-medium text-foreground truncate">{e.name}</span>
-                          <span className="text-xs text-muted-foreground font-mono truncate flex-1 text-right hidden sm:block" title={e.location}>{e.location}</span>
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                            <span className="text-sm font-medium text-foreground truncate">{e.name}</span>
+                            <span className="text-xs text-muted-foreground font-mono truncate max-w-[45%] shrink-0 hidden sm:block" title={e.location}>{e.location}</span>
+                          </div>
                         </button>
                       ))
                     )}

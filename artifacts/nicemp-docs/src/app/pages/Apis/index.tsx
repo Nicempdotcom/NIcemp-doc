@@ -79,9 +79,9 @@ export default function Apis() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2">
                         <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span className="font-mono text-sm text-foreground truncate" title={a.path || a.location}>{a.path || a.location}</span>
+                        <span className="font-mono text-sm text-foreground truncate flex-1 min-w-0" title={a.path || a.location}>{a.path || a.location}</span>
                       </div>
                     </TableCell>
                     <TableCell>{a.module ? <Badge variant="outline" className="text-[10px] font-normal">{a.module}</Badge> : '—'}</TableCell>

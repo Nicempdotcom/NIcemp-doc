@@ -1,0 +1,53 @@
+Continuação do fix de layout anterior (overflow horizontal). O `overflow-x-hidden` que foi adicionado no `<main>` e no `DialogContent` resolveu a barra de rolagem, mas só escondeu o sintoma: agora o conteúdo que era largo demais simplesmente é CORTADO sem reticências (sem "..."), e o rodapé do diálogo "Gerar prompt — Atualização de Layout" (botões "Cancelar"/"Gerar prompt") também está sendo cortado na borda direita — o botão "Gerar prompt" aparece incompleto.
+
+## Causa raiz
+
+O `overflow-x-hidden` só esconde visualmente o que passa da borda — ele não faz o conteúdo se ajustar. A lista de entidades dentro de `EntityPickerPromptDialog.tsx` (a busca "Selecione uma entidade do projeto") ainda está deixando o caminho do arquivo (`artifacts/nicemp/src/pages/CapitalDeGiroCalculator.tsx`) em um elemento sem `min-w-0`/`truncate` de verdade, então ele continua pedindo mais largura do que existe — só que agora, em vez de gerar uma barra de rolagem, esse pedido de largura extra também está deformando o diálogo inteiro (por isso até o rodapé, que é um elemento irmão, fica cortado).
+
+## O que corrigir
+
+Arquivo: `artifacts/nicemp-docs/src/app/components/prompts/EntityPickerPromptDialog.tsx`
+
+Cada linha da lista de resultados precisa virar um flex row onde:
+- O container geral da linha tem `min-w-0` e `w-full`.
+- O bloco "nome" fica num `<div className="flex-1 min-w-0">` (cresce, mas pode encolher).
+- O nome (`<span>`) e o caminho (`<span>`) dentro dele têm a classe `truncate` (Tailwind — isso já inclui `text-overflow: ellipsis`, então o corte passa a mostrar "...").
+- O badge de categoria ("Página", "Componente" etc.) tem `shrink-0` (nunca encolhe, fica sempre visível por inteiro).
+- Adicionar `title={location}` no elemento do caminho, pra mostrar o caminho completo ao passar o mouse (já que agora ele aparece cortado com "...").
+
+Exemplo de estrutura correta pra cada linha (ajustar nomes de variáveis conforme o componente real, mas manter exatamente essa lógica de classes):
+
+```tsx
+<button
+  type="button"
+  onClick={() => handleSelect(entity)}
+  className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent/50 transition-colors text-left"
+>
+  <Badge variant="outline" className="text-[10px] font-normal shrink-0">
+    {KIND_LABELS[entity.kind]}
+  </Badge>
+  <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+    <span className="text-sm font-medium text-foreground truncate">{entity.name}</span>
+    <span
+      className="text-xs text-muted-foreground font-mono truncate max-w-[45%] shrink-0"
+      title={entity.location}
+    >
+      {entity.location}
+    </span>
+  </div>
+</button>
+```
+
+Reparar em dois detalhes importantes:
+- O caminho tem `max-w-[45%]` além de `truncate` — sem um limite de largura explícito, `truncate` sozinho não corta um `<span>` que está livre para crescer dentro de um flex row com `justify-between`. Precisa das duas coisas juntas (limite de largura + truncate).
+- O container da lista rolável em si (o `<div>` que envolve todas as linhas, com scroll vertical) deve ter `overflow-y-auto` mas **não** precisa de `overflow-x-hidden` próprio — se o item acima estiver certo, não vai sobrar largura nenhuma pra vazar.
+
+## Conferir também o rodapé do diálogo
+
+Confirmar que `DialogFooter` (com os botões "Cancelar"/"Gerar prompt") está fora de qualquer container que tenha `overflow-x-hidden` aplicado incorretamente por engano, e que ele sempre aparece 100% visível, com os dois botões inteiros, independentemente do conteúdo da lista de busca acima.
+
+## Aplicar a mesma correção nos outros lugares já listados no fix anterior
+
+Reforçando: essa mesma lógica (`flex-1 min-w-0` + `truncate` + `max-w-[...]` no elemento do caminho + `title`) precisa estar em TODOS os lugares que foram citados no prompt anterior — as tabelas "Todas as Páginas/Componentes/Hooks/APIs/etc." em `Frontend`, `Backend`, `Database`, `Components`, `Hooks`, `Apis`, `Dependencies`, `Modules`, `Project`, e a lista "Dependências reais" do `Explorer`. Rever cada um: se hoje o texto está sendo cortado sem "...", significa que só tem `truncate` sem um limite de largura definido (ou nem tem `truncate` — só está sendo cortado pelo `overflow-x-hidden` do `<main>`/`Dialog`). Adicionar o limite de largura que faltar em cada caso (`max-w-[...]` proporcional à coluna, ou `w-0 flex-1` quando for uma célula de tabela).
+
+Ao final, testar: abrir cada diálogo "Gerar prompt" de manutenção/documentação e confirmar que os caminhos longos aparecem com "..." (não cortados abruptamente), que passar o mouse mostra o caminho completo, e que os botões do rodapé sempre aparecem inteiros. Repetir a checagem nas tabelas de documentação também.
