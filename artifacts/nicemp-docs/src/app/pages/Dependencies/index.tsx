@@ -65,7 +65,7 @@ export default function Dependencies() {
           </div>
 
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar pacote..." resultCount={filtered.length} totalCount={dependencies.length} />
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-lg border border-border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">

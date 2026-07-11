@@ -122,7 +122,7 @@ function Layout() {
       <div className="flex-1 flex flex-col md:pl-60 min-w-0">
         <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto max-w-4xl px-8 py-8">
             <Routes>
               <Route path={ROUTES.dashboard}    element={<Dashboard />}    />

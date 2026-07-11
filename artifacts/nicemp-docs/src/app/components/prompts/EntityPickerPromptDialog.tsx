@@ -422,7 +422,7 @@ export default function EntityPickerPromptDialog({
                     <div className="flex items-center gap-2 min-w-0">
                       <Badge variant="outline" className="text-[10px] shrink-0">{KIND_CATEGORY_LABELS[selected.kind]}</Badge>
                       <span className="text-sm font-medium text-foreground truncate">{selected.name}</span>
-                      <span className="text-xs text-muted-foreground font-mono truncate hidden sm:block">{selected.location}</span>
+                      <span className="text-xs text-muted-foreground font-mono truncate hidden sm:block" title={selected.location}>{selected.location}</span>
                     </div>
                     <button
                       type="button"
@@ -444,11 +444,11 @@ export default function EntityPickerPromptDialog({
                           key={e.id}
                           type="button"
                           onClick={() => setSelected(e)}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-accent/50 transition-colors"
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-accent/50 transition-colors min-w-0"
                         >
                           <Badge variant="outline" className="text-[10px] shrink-0">{KIND_CATEGORY_LABELS[e.kind]}</Badge>
                           <span className="text-sm font-medium text-foreground truncate">{e.name}</span>
-                          <span className="text-xs text-muted-foreground font-mono truncate flex-1 text-right hidden sm:block">{e.location}</span>
+                          <span className="text-xs text-muted-foreground font-mono truncate flex-1 text-right hidden sm:block" title={e.location}>{e.location}</span>
                         </button>
                       ))
                     )}

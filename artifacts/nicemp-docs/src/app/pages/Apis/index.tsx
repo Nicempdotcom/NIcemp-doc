@@ -57,7 +57,7 @@ export default function Apis() {
       ) : (
         <>
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar por nome ou rota..." resultCount={filtered.length} totalCount={apis.length} />
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-lg border border-border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
@@ -79,9 +79,9 @@ export default function Apis() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span className="font-mono text-sm text-foreground">{a.path || a.location}</span>
+                        <span className="font-mono text-sm text-foreground truncate" title={a.path || a.location}>{a.path || a.location}</span>
                       </div>
                     </TableCell>
                     <TableCell>{a.module ? <Badge variant="outline" className="text-[10px] font-normal">{a.module}</Badge> : '—'}</TableCell>

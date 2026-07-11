@@ -52,7 +52,7 @@ export default function Components() {
       ) : (
         <>
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar componente..." resultCount={filtered.length} totalCount={components.length} />
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-lg border border-border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
@@ -70,11 +70,11 @@ export default function Components() {
                 {filtered.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <div>
-                          <div className="font-medium text-foreground">{c.name}</div>
-                          <div className="text-xs text-muted-foreground font-mono">{c.location}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-foreground truncate">{c.name}</div>
+                          <div className="text-xs text-muted-foreground font-mono truncate" title={c.location}>{c.location}</div>
                         </div>
                       </div>
                     </TableCell>

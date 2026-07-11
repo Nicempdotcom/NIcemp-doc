@@ -93,7 +93,7 @@ export default function Modules() {
       ) : (
         <Section title="Módulos Detectados" description="Cada módulo agrega tudo que foi identificado sob o mesmo nome de pasta/feature.">
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar módulo..." resultCount={filtered.length} totalCount={modules.length} />
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-lg border border-border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
