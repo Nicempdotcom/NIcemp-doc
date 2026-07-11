@@ -1,20 +1,22 @@
-# [Project name]
+# NicEmp Docs
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+NicEmp Docs analyzes an uploaded project ZIP and generates/maintains living technical documentation (architecture, frontend, backend, DB, components, hooks, APIs, dependencies) for it, with versioning and comparison between analyses.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/nicemp-docs run dev` — run the docs web app (artifact preview path `/`)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000, preview path `/api`)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL` — Postgres connection string (already configured)
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
+- Frontend: React + Vite (`artifacts/nicemp-docs`), Radix UI, Tailwind
+- API: Express 5 (`artifacts/api-server`)
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
@@ -22,7 +24,10 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/nicemp-docs` — frontend (upload flow, docs viewer, comparison/history views)
+- `artifacts/api-server` — Express API (ZIP upload/analysis endpoints)
+- `lib/db` — Drizzle schema/migrations (source of truth for DB shape)
+- `lib/api-spec` — OpenAPI spec (source of truth for API contracts)
 
 ## Architecture decisions
 
@@ -30,7 +35,7 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+NicEmp Docs lets a user upload a project as a ZIP, analyzes it, and produces browsable technical documentation (dashboard, architecture, frontend/backend/DB breakdowns, components, hooks, APIs, dependencies), plus version history and comparison between uploads.
 
 ## User preferences
 
