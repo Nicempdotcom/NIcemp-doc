@@ -132,9 +132,37 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
 
     let workerProducedOutput = false;
 
+    // ── Stall watchdog ──────────────────────────────────────────────────────
+    // Some sandboxed preview environments let `new Worker(...)` construct
+    // successfully and accept postMessage, but then silently never execute
+    // the module (blocked script load, no 'error' event ever fires). Without
+    // this, that looks exactly like the UI "stopping in the middle" forever.
+    // If we go too long without hearing anything back, assume the worker is
+    // dead and fall back to the main thread.
+    let lastActivity = Date.now();
+    const STALL_TIMEOUT_MS = 6000;
+    const watchdog = window.setInterval(() => {
+      if (runIdRef.current !== runId) { window.clearInterval(watchdog); return; }
+      if (Date.now() - lastActivity > STALL_TIMEOUT_MS) {
+        window.clearInterval(watchdog);
+        worker.terminate();
+        workerRef.current = null;
+        if (!workerProducedOutput && bufferForFallback) {
+          runOnMainThread(bufferForFallback, fileName, runId);
+        } else if (!workerProducedOutput) {
+          setState((s) => ({
+            ...s, phase: 'failed',
+            label: 'A análise travou (worker não respondeu). Tente novamente.',
+            error: 'A análise travou (worker não respondeu). Tente novamente.',
+          }));
+        }
+      }
+    }, 1000);
+
     // ── Message handler ──────────────────────────────────────────────────
     worker.addEventListener('message', (e: MessageEvent<WorkerOutMsg>) => {
       if (runIdRef.current !== runId) return;
+      lastActivity = Date.now();
       const msg = e.data;
       workerProducedOutput = true;
 
@@ -150,6 +178,7 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
           break;
 
         case 'completed':
+          window.clearInterval(watchdog);
           setState((s) => ({
             ...s,
             phase:      'completed',
@@ -162,12 +191,14 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
           break;
 
         case 'cancelled':
+          window.clearInterval(watchdog);
           setState((s) => ({ ...s, phase: 'cancelled', label: 'Análise cancelada pelo usuário.' }));
           worker.terminate();
           workerRef.current = null;
           break;
 
         case 'error':
+          window.clearInterval(watchdog);
           setState((s) => ({
             ...s,
             phase: 'failed',
@@ -183,6 +214,7 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
     // ── Error handler (worker crash / failed to load, e.g. CSP-blocked) ────
     worker.addEventListener('error', (e: ErrorEvent) => {
       if (runIdRef.current !== runId) return;
+      window.clearInterval(watchdog);
       worker.terminate();
       workerRef.current = null;
 
