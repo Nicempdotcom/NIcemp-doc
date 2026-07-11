@@ -6,17 +6,24 @@ import { UPLOAD_CONFIG } from '@/features/upload';
 interface FileDropZoneProps {
   onFile: (file: File) => void;
   disabled?: boolean;
+  /** Surfaces unexpected exceptions on-screen instead of failing silently. */
+  onError?: (message: string) => void;
 }
 
-export default function FileDropZone({ onFile, disabled = false }: FileDropZoneProps) {
+export default function FileDropZone({ onFile, disabled = false, onError }: FileDropZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFile = useCallback(
     (file: File | undefined) => {
-      if (file && !disabled) onFile(file);
+      if (!file || disabled) return;
+      try {
+        onFile(file);
+      } catch (err) {
+        onError?.(err instanceof Error ? err.message : 'Erro inesperado ao processar o arquivo.');
+      }
     },
-    [onFile, disabled],
+    [onFile, disabled, onError],
   );
 
   // ── Drag events ────────────────────────────────────────────────────────────

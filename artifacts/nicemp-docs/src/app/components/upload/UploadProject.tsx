@@ -149,6 +149,28 @@ export default function UploadProject() {
   // ── Version comparison (EPIC 05) ──────────────────────────────────────────
   const [comparison, setComparison] = useState<VersionComparisonResult | null>(null);
 
+  // ── On-screen error surfacing ──────────────────────────────────────────────
+  // Catches anything that would otherwise fail silently (uncaught exceptions,
+  // unhandled promise rejections) so the user always sees *something*
+  // instead of a drop zone that appears to do nothing.
+  const [pageError, setPageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onWindowError = (e: ErrorEvent) => {
+      setPageError(e.message || 'Erro inesperado.');
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const reason = e.reason;
+      setPageError(reason instanceof Error ? reason.message : String(reason ?? 'Erro inesperado.'));
+    };
+    window.addEventListener('error', onWindowError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onWindowError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, []);
+
   useEffect(() => {
     if (phase !== 'completed' || !projectMap || didSave.current) return;
     didSave.current = true;
@@ -264,7 +286,24 @@ export default function UploadProject() {
   // ── Render: idle / upload error ────────────────────────────────────────────
   return (
     <div className="space-y-5">
-      <FileDropZone onFile={processFile} disabled={stage === 'reading'} />
+      {pageError && (
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3.5">
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-destructive">Algo deu errado ao processar o arquivo</p>
+            <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed break-words">{pageError}</p>
+          </div>
+          <Button
+            variant="ghost" size="sm" onClick={() => setPageError(null)}
+            className="shrink-0 text-muted-foreground hover:text-foreground gap-1.5"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" />
+            Fechar
+          </Button>
+        </div>
+      )}
+
+      <FileDropZone onFile={processFile} disabled={stage === 'reading'} onError={setPageError} />
 
       {stage === 'error' && uploadError && (
         <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3.5">
