@@ -34,7 +34,7 @@ export default function Backend() {
   if (!project) {
     return (
       <div className="w-full">
-        <PageHeader title="Backend" description="Endpoints, autenticação e tecnologias de servidor, gerados automaticamente." badge="EPIC 08" badgeVariant="info" />
+        <PageHeader title="Backend" description="Endpoints, autenticação e tecnologias de servidor, gerados automaticamente." badge="EPIC 08" badgeVariant="info" termHint="Backend" />
         <InfoBox variant="tip" title="Nenhum projeto analisado ainda">
           Envie um arquivo ZIP na tela de Upload para popular esta página automaticamente.
         </InfoBox>
@@ -49,6 +49,7 @@ export default function Backend() {
         description="Endpoints, autenticação e tecnologias de servidor, gerados automaticamente a partir do banco de documentação."
         badge="EPIC 08"
         badgeVariant="info"
+        termHint="Backend"
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">

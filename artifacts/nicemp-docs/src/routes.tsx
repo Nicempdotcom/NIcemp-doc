@@ -17,5 +17,6 @@ export const ROUTES = {
   modules:      '/modules',
   prompts:      '/prompts',
   explorer:     '/explorer',
+  glossario:    '/glossario',
   settings:     '/settings',
 };

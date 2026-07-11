@@ -1,0 +1,79 @@
+Dois pedidos separados, ambos importantes pros sócios não-técnicos que vão
+usar o site:
+
+## PARTE A — Explicações em linguagem simples pros termos técnicos
+
+Hoje o site usa palavras como "API", "Componente", "Hook", "Módulo", "Rota",
+"Dependência", "Interação" sem nunca explicar o que cada uma significa —
+quem não é programador fica perdido. Preciso disso resolvido DIRETO no site,
+não só numa conversa.
+
+1. Crie um dicionário central de termos em
+   `src/app/components/docs/glossary.ts`, cada termo com uma explicação
+   curta, em português simples, sem jargão, tipo:
+   - "Página": "Uma tela do site — o que a pessoa vê quando acessa um
+     endereço, como /login ou /dashboard."
+   - "Componente": "Um pedaço reutilizável de tela, como um botão, um card ou
+     um formulário, que pode aparecer em várias páginas diferentes."
+   - "Hook": "Um pedaço de lógica reutilizável que várias telas usam por trás
+     dos panos — não aparece visualmente, só faz o sistema funcionar."
+   - "API": "A 'ponte' entre o site e o servidor — é por onde o site pede ou
+     envia informações (ex.: salvar um pedido, buscar dados de um cliente)."
+   - "Banco de Dados / Tabela": "Onde as informações ficam guardadas de forma
+     permanente (clientes, pedidos, produtos etc.)."
+   - "Módulo": "Um grupo de páginas/componentes/APIs que trabalham juntos
+     numa mesma parte do sistema (ex.: tudo relacionado a 'Pedidos')."
+   - "Dependência": "Uma ferramenta pronta, feita por outra empresa/pessoa,
+     que o projeto usa em vez de reinventar (ex.: uma biblioteca de
+     calendário)."
+   - "Interação": "Uma ação que o usuário faz clicando em algo (um botão, um
+     link) e o que acontece como consequência."
+   Inclua também os termos que já usamos no Organograma: "Fluxo de
+   Navegação" e "Arquitetura por trás".
+
+2. Crie um componente reutilizável `src/app/components/docs/TermHint.tsx` que
+   recebe o nome do termo e mostra um pequeno ícone "?" ao lado (ex.: ícone
+   `HelpCircle` do lucide-react) — ao passar o mouse/tocar, abre um Tooltip
+   (já existe `src/app/components/ui/tooltip.tsx`, reaproveite) mostrando a
+   explicação do glossary.ts correspondente. Em telas de toque (mobile), deve
+   abrir ao tocar, não só no hover.
+
+3. Adicione esse `<TermHint termo="..." />` ao lado do TÍTULO de cada seção/
+   coluna que usa um termo técnico nas páginas: Components, Hooks, Apis,
+   Frontend, Backend, Database, Modules, Architecture e Overview (Organograma).
+   Isso é uma adição pequena e pontual em cada página — não reestruture o
+   resto do conteúdo dessas páginas, só acrescente o ícone de ajuda ao lado
+   dos títulos/cabeçalhos que usam jargão.
+
+4. Crie também uma página nova "Glossário" (rota `/glossario`, entrada no
+   menu lateral, ícone `BookOpen`) listando TODOS os termos do glossary.ts de
+   uma vez, em cards simples — pra quem quiser ler tudo de uma vez, sem
+   precisar caçar os ícones de "?" pela dela site.
+
+## PARTE B — Botão de resetar histórico em Configurações
+
+Em `src/app/pages/Settings/index.tsx`: a página hoje é só um placeholder
+("Conteúdo em breve" em tudo). Adicione uma seção NOVA e funcional, "Dados &
+Privacidade" (ou similar), com:
+
+1. Um card mostrando quantos projetos/versões/páginas/componentes/etc. estão
+   salvos agora (reaproveite `StorageService.countAll()`, já existe).
+2. Um botão "Resetar histórico" que, ao clicar, abre um diálogo de
+   confirmação (reaproveite o componente de alert-dialog já existente em
+   `src/app/components/ui`, se houver — se não houver, use um dialog simples)
+   avisando claramente: "Isso vai apagar TODOS os projetos, versões e
+   documentação salvos neste navegador. Essa ação não pode ser desfeita."
+3. Só após confirmar, chame `StorageService.clearAll()` (já existe e já limpa
+   tudo) e mostre uma mensagem de sucesso, atualizando os números na tela pra
+   zero.
+4. Não mexa nas outras seções da página de Configurações (Geral, Integrações,
+   Usuários & Permissões) — essas continuam como placeholder por enquanto.
+
+## Regras gerais
+- Não reintroduza limite de tamanho de ZIP em nenhuma etapa.
+- Não quebre a página Organograma (Overview) que acabamos de terminar.
+- Ao final, rode o typecheck/build do workspace nicemp-docs e corrija
+  qualquer erro antes de considerar concluído.
+- Me diga: todos os arquivos criados/modificados, e confirme que o botão de
+  resetar histórico realmente limpa os dados (teste manual: salvar um
+  projeto, resetar, confirmar que a lista fica vazia).

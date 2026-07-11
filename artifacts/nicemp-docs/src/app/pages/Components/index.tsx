@@ -42,6 +42,7 @@ export default function Components() {
         description="Todos os componentes de UI detectados no projeto, gerados automaticamente a partir do banco de documentação."
         badge="EPIC 08"
         badgeVariant="info"
+        termHint="Componente"
       />
 
       {components.length === 0 ? (

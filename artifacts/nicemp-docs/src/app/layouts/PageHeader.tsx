@@ -1,4 +1,5 @@
 import React from 'react';
+import TermHint from '@/app/components/docs/TermHint';
 
 type BadgeVariant = 'default' | 'info' | 'warning' | 'success' | 'danger';
 
@@ -7,13 +8,16 @@ interface PageHeaderProps {
   description?: string;
   badge?: string;
   badgeVariant?: BadgeVariant;
+  /** Term key from glossary.ts — shows a "?" hint next to the title explaining the jargon. */
+  termHint?: string;
 }
 
 export default function PageHeader({ 
   title, 
   description, 
   badge,
-  badgeVariant = 'default'
+  badgeVariant = 'default',
+  termHint,
 }: PageHeaderProps) {
   
   const getBadgeColors = () => {
@@ -37,6 +41,7 @@ export default function PageHeader({
         <h1 className="text-[2rem] font-bold tracking-tight text-foreground leading-tight">
           {title}
         </h1>
+        {termHint && <TermHint termo={termHint} className="mt-1.5 h-5 w-5" />}
         {badge && (
           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold mt-1 ${getBadgeColors()}`}>
             {badge}

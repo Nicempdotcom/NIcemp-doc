@@ -4,7 +4,7 @@ import { ReactFlow, ReactFlowProvider, Background, Controls, MiniMap, type NodeT
 import '@xyflow/react/dist/style.css';
 
 import PageHeader from '@/app/layouts/PageHeader';
-import { InfoBox } from '@/app/components/docs';
+import { InfoBox, TermHint } from '@/app/components/docs';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
 import {
   Select,
@@ -102,8 +102,14 @@ export default function Overview() {
 
       <Tabs defaultValue="navigation">
         <TabsList>
-          <TabsTrigger value="navigation">Fluxo de Navegação</TabsTrigger>
-          <TabsTrigger value="architecture">Arquitetura por trás</TabsTrigger>
+          <TabsTrigger value="navigation" className="gap-1.5">
+            Fluxo de Navegação
+            <TermHint termo="Fluxo de Navegação" />
+          </TabsTrigger>
+          <TabsTrigger value="architecture" className="gap-1.5">
+            Arquitetura por trás
+            <TermHint termo="Arquitetura por trás" />
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="navigation">

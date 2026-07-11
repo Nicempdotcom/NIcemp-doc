@@ -64,7 +64,7 @@ export default function Frontend() {
   if (!project) {
     return (
       <div className="w-full">
-        <PageHeader title="Frontend" description="Componentes, páginas e hooks do projeto, gerados automaticamente." badge="EPIC 08" badgeVariant="info" />
+        <PageHeader title="Frontend" description="Componentes, páginas e hooks do projeto, gerados automaticamente." badge="EPIC 08" badgeVariant="info" termHint="Frontend" />
         <InfoBox variant="tip" title="Nenhum projeto analisado ainda">
           Envie um arquivo ZIP na tela de Upload para popular esta página automaticamente.
         </InfoBox>
@@ -79,6 +79,7 @@ export default function Frontend() {
         description="Componentes, páginas e hooks do projeto, gerados automaticamente a partir do banco de documentação."
         badge="EPIC 08"
         badgeVariant="info"
+        termHint="Frontend"
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">

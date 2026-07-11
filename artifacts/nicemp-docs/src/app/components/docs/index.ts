@@ -4,3 +4,6 @@ export { default as InfoBox } from './InfoBox';
 export { default as StatusBadge } from './StatusBadge';
 export { default as RiskBadge } from './RiskBadge';
 export { default as InteractionsDisclosure } from './InteractionsDisclosure';
+export { default as TermHint } from './TermHint';
+export { GLOSSARY, GLOSSARY_TERMS } from './glossary';
+export type { GlossaryEntry } from './glossary';

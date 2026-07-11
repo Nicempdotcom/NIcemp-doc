@@ -37,6 +37,7 @@ export default function Hooks() {
         description="Todos os hooks customizados detectados no projeto, gerados automaticamente a partir do banco de documentação."
         badge="EPIC 08"
         badgeVariant="info"
+        termHint="Hook"
       />
 
       {hooks.length === 0 ? (

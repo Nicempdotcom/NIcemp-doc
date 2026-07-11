@@ -83,6 +83,7 @@ export default function Modules() {
         description="Módulos funcionais do sistema, agrupados automaticamente a partir das páginas, componentes, hooks, APIs e tabelas detectadas."
         badge="EPIC 09"
         badgeVariant="info"
+        termHint="Módulo"
       />
 
       {modules.length === 0 ? (

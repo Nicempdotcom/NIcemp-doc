@@ -46,6 +46,7 @@ export default function Database() {
         description="Tabelas, colunas e relacionamentos detectados no projeto, gerados automaticamente a partir do banco de documentação."
         badge="EPIC 08"
         badgeVariant="info"
+        termHint="Banco de Dados"
       />
 
       {tables.length === 0 ? (

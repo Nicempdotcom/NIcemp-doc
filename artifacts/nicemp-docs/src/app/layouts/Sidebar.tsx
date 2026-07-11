@@ -20,6 +20,7 @@ import {
   Zap,
   Globe,
   Compass,
+  BookOpen,
 } from 'lucide-react';
 import { ROUTES } from '@/routes';
 
@@ -49,6 +50,7 @@ const NAV_GROUPS = [
       { label: 'APIs',           icon: Globe,           href: ROUTES.apis         },
       { label: 'Dependências',   icon: Package,         href: ROUTES.dependencies },
       { label: 'Módulos',        icon: Package,         href: ROUTES.modules      },
+      { label: 'Glossário',      icon: BookOpen,        href: ROUTES.glossario    },
       { label: 'Prompts Replit', icon: Bot,             href: ROUTES.prompts      },
     ],
   },

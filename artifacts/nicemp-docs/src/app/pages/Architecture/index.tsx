@@ -70,7 +70,7 @@ export default function Architecture() {
   if (!project) {
     return (
       <div className="w-full">
-        <PageHeader title="Arquitetura" description="Stack tecnológica e estrutura de módulos, gerados automaticamente." badge="EPIC 08" badgeVariant="info" />
+        <PageHeader title="Arquitetura" description="Stack tecnológica e estrutura de módulos, gerados automaticamente." badge="EPIC 08" badgeVariant="info" termHint="Arquitetura" />
         <InfoBox variant="tip" title="Nenhum projeto analisado ainda">
           Envie um arquivo ZIP na tela de Upload para popular esta página automaticamente.
         </InfoBox>
@@ -85,6 +85,7 @@ export default function Architecture() {
         description="Stack tecnológica e estrutura de módulos, gerados automaticamente a partir do banco de documentação."
         badge="EPIC 08"
         badgeVariant="info"
+        termHint="Arquitetura"
       />
 
       <Section title="Stack Tecnológica" description="Agrupada por categoria, extraída das dependências do projeto.">

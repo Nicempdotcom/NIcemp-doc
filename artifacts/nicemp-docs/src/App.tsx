@@ -23,6 +23,7 @@ import Hooks        from '@/app/pages/Hooks';
 import Apis         from '@/app/pages/Apis';
 import Dependencies from '@/app/pages/Dependencies';
 import Modules      from '@/app/pages/Modules';
+import Glossario    from '@/app/pages/Glossario';
 import Explorer     from '@/app/pages/Explorer';
 import Prompts      from '@/app/pages/Prompts';
 import Settings     from '@/app/pages/Settings';
@@ -86,6 +87,7 @@ function Layout() {
               <Route path={ROUTES.apis}         element={<Apis />}         />
               <Route path={ROUTES.dependencies} element={<Dependencies />} />
               <Route path={ROUTES.modules}      element={<Modules />}      />
+              <Route path={ROUTES.glossario}    element={<Glossario />}    />
               <Route path={ROUTES.explorer}     element={<Explorer />}     />
               <Route path={ROUTES.prompts}      element={<Prompts />}      />
               <Route path={ROUTES.settings}     element={<Settings />}     />

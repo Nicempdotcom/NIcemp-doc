@@ -20,6 +20,7 @@ const getRouteLabel = (pathname: string) => {
     case ROUTES.apis:         return 'APIs';
     case ROUTES.dependencies: return 'Dependências';
     case ROUTES.modules:      return 'Módulos';
+    case ROUTES.glossario:    return 'Glossário';
     case ROUTES.prompts:      return 'Prompts Replit';
     case ROUTES.settings:     return 'Configurações';
     default: return 'Página não encontrada';

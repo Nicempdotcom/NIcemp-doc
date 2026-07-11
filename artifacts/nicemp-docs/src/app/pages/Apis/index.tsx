@@ -47,6 +47,7 @@ export default function Apis() {
         description="Todos os endpoints detectados no projeto, gerados automaticamente a partir do banco de documentação."
         badge="EPIC 08"
         badgeVariant="info"
+        termHint="API"
       />
 
       {apis.length === 0 ? (
