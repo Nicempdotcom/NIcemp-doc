@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, FileText, Layers, Zap, Globe2 } from 'lucide-react';
+import { Search, FileText, Layers, Zap, Globe2, Database, Share2 } from 'lucide-react';
 import PageHeader from '@/app/layouts/PageHeader';
 import { Section, InfoBox, InteractionsDisclosure } from '@/app/components/docs';
 import StatusBadge from '@/app/components/docs/StatusBadge';
@@ -13,9 +13,30 @@ import {
   HookRepository,
   ApiRepository,
   InteractionRepository,
+  VersionRepository,
+  VersionSnapshotRepository,
 } from '@/services/storage';
 import { matchPageByPath, type UrlMatchResult } from '@/services/exploration/urlMatch';
 import type { PageEntity } from '@/services/storage/types';
+import { DependencyGraph, type NodeCategory } from '@/services/graph/DependencyGraph';
+import GeneratePromptButton from '@/app/components/prompts/GeneratePromptButton';
+import { buildEntityNameIndex, resolveNames } from '@/services/prompts/resolveDependencyNames';
+
+const CATEGORY_ICON: Record<NodeCategory, React.ComponentType<{ className?: string }>> = {
+  page:      FileText,
+  component: Layers,
+  hook:      Zap,
+  api:       Globe2,
+  table:     Database,
+};
+
+const CATEGORY_LABEL: Record<NodeCategory, string> = {
+  page:      'Página',
+  component: 'Componente',
+  hook:      'Hook',
+  api:       'API',
+  table:     'Tabela',
+};
 
 /**
  * Explorador ao vivo — paste a live URL and see what NicEmp Docs knows
@@ -34,6 +55,14 @@ export default function Explorer() {
   const hooks = useMemo(() => (project ? HookRepository.findByProject(project.id) : []), [project]);
   const apis = useMemo(() => (project ? ApiRepository.findByProject(project.id) : []), [project]);
   const interactions = useMemo(() => (project ? InteractionRepository.findByProject(project.id) : []), [project]);
+  const nameIndex = useMemo(() => (project ? buildEntityNameIndex(project.id) : new Map<string, string>()), [project]);
+
+  const latestVersion = useMemo(() => (project ? VersionRepository.findLatest(project.id) : undefined), [project]);
+  const snapshot = useMemo(
+    () => (latestVersion ? VersionSnapshotRepository.findByVersion(latestVersion.id) : undefined),
+    [latestVersion],
+  );
+  const graph = useMemo(() => (snapshot ? DependencyGraph.build(snapshot) : null), [snapshot]);
 
   const [urlInput, setUrlInput] = useState('');
   const [result, setResult] = useState<UrlMatchResult | null>(null);
@@ -72,6 +101,7 @@ export default function Explorer() {
 
   const matched = result?.exact ?? null;
   const matchedData = matched ? moduleDataFor(matched) : null;
+  const matchedNeighbors = matched && graph ? DependencyGraph.getNeighbors(graph, matched.id) : [];
 
   return (
     <div className="w-full">
@@ -108,9 +138,21 @@ export default function Explorer() {
                   <StatusBadge status={matched.status} />
                 </div>
                 <div className="text-xs text-muted-foreground font-mono mb-3">{matched.location}</div>
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
                   <Badge variant="outline" className="text-[10px] font-normal">Módulo: {matched.module}</Badge>
                   <Badge variant="outline" className="text-[10px] font-normal font-mono">Rota: {matched.route || '—'}</Badge>
+                  <GeneratePromptButton
+                    kind="page"
+                    name={matched.name}
+                    location={matched.location}
+                    module={matched.module}
+                    riskLevel={matched.riskLevel}
+                    dependencies={resolveNames(
+                      [...matched.relationships, ...matched.components, ...matched.hooks, ...matched.apis],
+                      nameIndex,
+                    )}
+                    details={{ Rota: matched.route || '—', Status: matched.status }}
+                  />
                 </div>
                 <InteractionsDisclosure interactions={matchedData.interactions} emptyLabel="Nenhuma interação detectada nesta tela." />
               </div>
@@ -131,6 +173,32 @@ export default function Explorer() {
                   <div className="text-2xl font-bold text-foreground">{matchedData.apis.length}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wide">APIs do módulo</div>
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Share2 className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Dependências reais (mesmo módulo)</span>
+                </div>
+                {matchedNeighbors.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma entidade relacionada encontrada no grafo de dependências.</p>
+                ) : (
+                  <div className="rounded-lg border border-border divide-y divide-border">
+                    {matchedNeighbors.map((n) => {
+                      const Icon = CATEGORY_ICON[n.category];
+                      return (
+                        <div key={n.id} className="flex items-center justify-between px-3 py-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <span className="text-sm font-medium text-foreground truncate">{n.name}</span>
+                            <span className="text-xs text-muted-foreground font-mono truncate">{n.location}</span>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] font-normal shrink-0">{CATEGORY_LABEL[n.category]}</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </Section>
           )}
