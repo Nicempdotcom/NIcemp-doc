@@ -1,2 +1,3 @@
 - [NicEmp Docs versioning model](nicemp-docs-versioning.md) — entities are upserted in-place per project; version comparison/history requires separate per-version snapshots.
 - [File input reselect bug](file-input-reselect-bug.md) — `<input type="file">` won't refire 'change' on repeated same-file selection; reset value in onChange.
+- [setState updater return value is stale](setstate-updater-return-value.md) — can't synchronously read a value out of a setState updater callback; it runs async, so the read is always stale.
