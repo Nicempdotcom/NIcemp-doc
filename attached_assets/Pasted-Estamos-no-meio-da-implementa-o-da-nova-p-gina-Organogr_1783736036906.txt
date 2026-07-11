@@ -1,0 +1,60 @@
+Estamos no meio da implementação da nova página "Organograma" (EPIC do
+diagrama visual, aba "Fluxo de Navegação" + aba "Arquitetura por trás").
+O `git status` atual mostra que já foram criados:
+
+  artifacts/nicemp-docs/src/app/pages/Overview/DiagramNode.tsx
+  artifacts/nicemp-docs/src/app/pages/Overview/buildArchitectureFlow.ts
+  artifacts/nicemp-docs/src/app/pages/Overview/buildNavigationFlow.ts
+  artifacts/nicemp-docs/src/app/pages/Overview/diagramUtils.ts
+
+e também há mudanças pendentes em:
+  artifacts/nicemp-docs/package.json
+  artifacts/nicemp-docs/src/app/components/upload/UploadProject.tsx
+  artifacts/nicemp-docs/src/services/storage/StorageService.ts
+  artifacts/nicemp-docs/src/services/storage/index.ts
+  artifacts/nicemp-docs/src/services/storage/mapper.ts
+  artifacts/nicemp-docs/src/services/storage/repositories/DocumentationRepository.ts
+  artifacts/nicemp-docs/src/services/storage/repositories/index.ts
+  artifacts/nicemp-docs/src/services/storage/types.ts
+  pnpm-lock.yaml
+
+Ainda NÃO existe (verifique antes de recriar, pode já ter sido feito e só
+não ter aparecido no git status por algum motivo):
+- artifacts/nicemp-docs/src/app/pages/Overview/index.tsx
+- Registro da rota /overview em src/routes.tsx
+- Entrada "Organograma" no menu lateral em src/app/layouts/Sidebar.tsx
+
+## Preciso que você:
+
+1. Revise o que já está pronto nos 4 arquivos criados (DiagramNode,
+   buildArchitectureFlow, buildNavigationFlow, diagramUtils) e me confirme
+   rapidamente o que cada um faz.
+
+2. Explique por que services/storage/* precisou ser alterado — isso era
+   esperado (ex.: nova entidade pra guardar posição/estado do diagrama) ou é
+   um efeito colateral de outra coisa? Se não for necessário pro Organograma,
+   reverta essas mudanças específicas de storage para não misturar com essa
+   feature.
+
+3. Finalize a implementação:
+   a) Crie/complete src/app/pages/Overview/index.tsx juntando os 4 arquivos
+      já criados numa página com duas abas: "Fluxo de Navegação" e
+      "Arquitetura por trás", como especificado antes (zoom/pan, filtro por
+      módulo, nomes simples nas caixas, detalhe técnico só ao clicar/hover).
+   b) Registre a rota /overview em src/routes.tsx.
+   c) Adicione a entrada "Organograma" no menu lateral em Sidebar.tsx, com
+      ícone Network ou Workflow do lucide-react.
+   d) Se a lib reactflow/@xyflow/react foi adicionada em package.json, confirme
+      que está realmente sendo usada nos arquivos criados.
+
+4. Rode o build/typecheck do workspace nicemp-docs e corrija qualquer erro
+   antes de considerar concluído.
+
+5. Não altere nenhuma página de documentação já existente (Architecture,
+   Frontend, Components, Modules, Explorer, etc.) além do necessário para o
+   link no menu.
+
+6. Ao terminar, rode `git add .` e `git status` de novo e me mostre a lista
+   final de arquivos, além de um resumo do que cada um faz.
+
+Não reintroduza limite de tamanho de ZIP em nenhuma etapa.

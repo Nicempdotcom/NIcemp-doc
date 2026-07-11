@@ -321,7 +321,7 @@ export default function UploadProject() {
         </div>
       )}
 
-      <FileDropZone onFile={processFile} disabled={stage === 'reading'} onError={setPageError} />
+      <FileDropZone onFile={processFile} disabled={false} onError={setPageError} />
 
       {stage === 'error' && uploadError && (
         <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3.5">

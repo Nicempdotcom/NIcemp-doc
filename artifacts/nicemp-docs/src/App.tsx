@@ -13,6 +13,7 @@ import Project      from '@/app/pages/Project';
 import Comparison   from '@/app/pages/Comparison';
 import History      from '@/app/pages/History';
 import Impact       from '@/app/pages/Impact';
+import Overview     from '@/app/pages/Overview';
 import Architecture from '@/app/pages/Architecture';
 import Frontend     from '@/app/pages/Frontend';
 import Backend      from '@/app/pages/Backend';
@@ -75,6 +76,7 @@ function Layout() {
               <Route path={ROUTES.history}      element={<History />}      />
               <Route path={ROUTES.comparison}   element={<Comparison />}   />
               <Route path={ROUTES.impact}       element={<Impact />}       />
+              <Route path={ROUTES.overview}     element={<Overview />}     />
               <Route path={ROUTES.architecture} element={<Architecture />} />
               <Route path={ROUTES.frontend}     element={<Frontend />}     />
               <Route path={ROUTES.backend}      element={<Backend />}      />

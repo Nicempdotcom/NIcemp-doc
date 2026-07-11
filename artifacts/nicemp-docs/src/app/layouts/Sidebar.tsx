@@ -7,6 +7,7 @@ import {
   History,
   AlertTriangle,
   Network,
+  Workflow,
   Monitor,
   Server,
   Database,
@@ -33,6 +34,7 @@ const NAV_GROUPS = [
       { label: 'Comparação',     icon: GitCompare,      href: ROUTES.comparison },
       { label: 'Impacto',        icon: AlertTriangle,   href: ROUTES.impact     },
       { label: 'Explorador ao vivo', icon: Compass,     href: ROUTES.explorer   },
+      { label: 'Organograma',    icon: Workflow,        href: ROUTES.overview   },
     ],
   },
   {

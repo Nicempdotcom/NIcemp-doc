@@ -5,6 +5,7 @@ export const ROUTES = {
   history:      '/history',
   comparison:   '/comparison',
   impact:       '/impact',
+  overview:     '/overview',
   architecture: '/architecture',
   frontend:     '/frontend',
   backend:      '/backend',

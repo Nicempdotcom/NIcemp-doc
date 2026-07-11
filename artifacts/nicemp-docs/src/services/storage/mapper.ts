@@ -7,7 +7,7 @@
  * Rule: Source code content is NEVER stored — only structural metadata.
  */
 
-import type { ProjectMap, CategorizedFile, DependencyMap, TechnologyProfile, InteractionEntry } from '@/services/engine';
+import type { ProjectMap, CategorizedFile, DependencyMap, TechnologyProfile, InteractionEntry, ImportEntry } from '@/services/engine';
 import type {
   ProjectEntity,
   VersionEntity,

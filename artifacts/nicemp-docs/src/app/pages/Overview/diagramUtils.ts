@@ -24,7 +24,7 @@ export function moduleColor(mod: string): string {
   return `hsl(${hue}, 65%, 55%)`;
 }
 
-export interface FlowNodeData {
+export interface FlowNodeData extends Record<string, unknown> {
   name:     string;
   path:     string;
   module:   string;

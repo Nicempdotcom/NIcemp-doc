@@ -38,7 +38,7 @@ export default function FileDropZone({ onFile, disabled = false, onError }: File
 
     // Prefer `files` (works for plain OS file drags); fall back to `items`
     // for browsers/sources that only populate the DataTransferItemList.
-    let file = e.dataTransfer.files?.[0];
+    let file: File | undefined = e.dataTransfer.files?.[0];
     if (!file && e.dataTransfer.items?.length) {
       const item = Array.from(e.dataTransfer.items).find((it) => it.kind === 'file');
       file = item?.getAsFile() ?? undefined;
