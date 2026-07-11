@@ -35,7 +35,22 @@ export default function FileDropZone({ onFile, disabled = false, onError }: File
     e.preventDefault();
     setIsDragging(false);
     if (disabled) return;
-    handleFile(e.dataTransfer.files[0]);
+
+    // Prefer `files` (works for plain OS file drags); fall back to `items`
+    // for browsers/sources that only populate the DataTransferItemList.
+    let file = e.dataTransfer.files?.[0];
+    if (!file && e.dataTransfer.items?.length) {
+      const item = Array.from(e.dataTransfer.items).find((it) => it.kind === 'file');
+      file = item?.getAsFile() ?? undefined;
+    }
+
+    if (!file) {
+      onError?.(
+        'Não foi possível ler o arquivo arrastado. Tente usar o botão "selecione um arquivo" em vez de arrastar.',
+      );
+      return;
+    }
+    handleFile(file);
   };
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
