@@ -214,8 +214,8 @@ function DepList({ map }: { map: ProjectMap }) {
             Produção ({map.dependencies.dependencies.length})
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {prod.map((d) => (
-              <span key={d.name} className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-0.5 text-xs font-mono text-foreground">
+            {prod.map((d, i) => (
+              <span key={`prod-${d.name}-${i}`} className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-0.5 text-xs font-mono text-foreground">
                 {d.name}
                 <span className="text-muted-foreground">{d.version}</span>
               </span>
@@ -234,8 +234,8 @@ function DepList({ map }: { map: ProjectMap }) {
             Dev ({map.dependencies.devDependencies.length})
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {dev.map((d) => (
-              <span key={d.name} className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs font-mono text-muted-foreground">
+            {dev.map((d, i) => (
+              <span key={`dev-${d.name}-${i}`} className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs font-mono text-muted-foreground">
                 {d.name}
                 <span className="opacity-60">{d.version}</span>
               </span>
