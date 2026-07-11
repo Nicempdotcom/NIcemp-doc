@@ -1,0 +1,49 @@
+Preciso tornar TODOS os cards da tela de Configurações (src/app/pages/Settings/index.tsx) funcionais, cada um abrindo um Dialog (usar @/app/components/ui/dialog, já existe no projeto) com conteúdo real, sem inventar backend que não existe. Usar StorageService/localStorage para tudo que for preferência, e o session do useAuth() (@/app/providers/AuthProvider) para tudo que for usuário.
+
+## 1) Preferências do Sistema
+Criar src/services/storage/PreferencesRepository.ts (ou similar), salvando em localStorage (não em StorageService/Supabase, é config de navegador) um objeto:
+{ sidebarDefaultCollapsed: boolean; autoOpenLastProject: boolean; compactTables: boolean }
+No Dialog: 3 switches (usar @/app/components/ui/switch) ligados a esse objeto, salvando a cada mudança. Aplicar de fato `compactTables` nas tabelas existentes (Frontend, Backend, Database etc. — reduzir padding quando true) e `sidebarDefaultCollapsed` no estado inicial da Sidebar.
+
+## 2) Regionalização
+No mesmo PreferencesRepository, adicionar: { dateFormat: 'dd/MM/yyyy' | 'MM/dd/yyyy'; timezone: string }.
+No Dialog: Select de formato de data + Select de timezone (usar Intl.supportedValuesOf('timeZone') ou uma lista curta fixa).
+Criar um helper src/utils/formatDate.ts que lê essa preferência e usar esse helper em TODOS os lugares que hoje formatam datas manualmente (Dashboard, History, VersionCard) — para a mudança ter efeito visível de verdade.
+
+## 3) Temas & Aparência
+Já existe ThemeProvider/useTheme em src/App.tsx com light/dark. Expandir o Dialog para:
+- Toggle claro/escuro reaproveitando useTheme() (mesmo hook do Topbar).
+- Um seletor de "densidade" (compacto/confortável) que reusa o compactTables acima ou controla uma classe CSS global `data-density` no <html>.
+Não inventar sistema de cores customizado — só o que já existe + densidade.
+
+## 4) Chaves de API
+NÃO criar geração fake de chaves (não há backend para consumi-las). Em vez disso, o Dialog deve mostrar o status real da conexão Supabase, usando isSupabaseConfigured e supabase de @/lib/supabase:
+- Se configurado: mostrar a URL do projeto (VITE_SUPABASE_URL, com domínio visível mas path mascarado se necessário) e um botão "Copiar URL". A anon key NUNCA deve ser exibida em texto puro — mostrar só os 6 primeiros e 4 últimos caracteres.
+- Se não configurado: mostrar instrução de como configurar VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nos Secrets do Replit.
+
+## 5) Integrações Ativas
+Dialog mostrando uma lista real de integrações do projeto (não inventadas):
+- Supabase: status conectado/desconectado (isSupabaseConfigured), com bolinha verde/cinza.
+- localStorage: sempre "ativo" (fallback).
+Deixar claro no texto que essa lista reflete o que o app realmente usa hoje — sem checkboxes de integrações que não existem (tipo Slack, WhatsApp etc.), a menos que eu peça explicitamente para adicionar uma nova.
+
+## 6) Webhooks Configurados
+Não existe servidor para disparar webhooks. Implementar apenas a camada de CONFIGURAÇÃO (para uso futuro quando houver backend):
+- CRUD local (localStorage) de "endpoints planejados": nome, URL, evento (ex: "novo upload analisado").
+- No Dialog, listar/adicionar/remover esses registros, mas com um InfoBox (usar @/app/components/docs InfoBox) avisando: "Estes webhooks ainda não disparam automaticamente — é necessário um servidor de backend para ativá-los." Isso evita a pessoa achar que já está funcionando.
+
+## 7) Gestão de Usuários
+Sem Service Role Key não dá para listar/criar usuários do Supabase pelo frontend. O Dialog deve mostrar:
+- Dados do usuário logado agora: session.user.email, session.user.id, data de criação da conta (session.user.created_at), tudo vindo de useAuth().
+- Um botão "Sair" reaproveitando o signOut() do AuthProvider.
+- Um InfoBox explicando que a criação de novos usuários/sócios hoje é feita direto no painel do Supabase (Authentication > Users), com um link (usar <a> normal) para https://supabase.com/dashboard.
+
+## 8) Papéis & Permissões
+Como não há tabela de roles ainda (verifiquei lib/db/src/schema — não existe), o Dialog deve deixar isso explícito:
+- Mostrar um InfoBox: "Todos os usuários autenticados têm acesso total ao portal. Um sistema de papéis (admin/leitor/editor) ainda não foi implementado."
+- Se eu quiser um sistema de papéis de verdade depois, isso vai exigir uma tabela `user_roles` no schema (lib/db/src/schema) + policies de RLS no Supabase — não implementar agora, só deixar esse texto como aviso.
+
+## Regras gerais
+- Reaproveitar componentes já existentes (Dialog, Switch, Select, InfoBox, Button) — não criar UI kit novo.
+- Nenhum card pode "fingir" que salvou algo sem realmente persistir (localStorage) ou mostrar dado real.
+- Não mexer em nada relacionado a Dados & Privacidade (DataPrivacySection) nem no header/InfoBox do topo da página — só nos cards "Conteúdo em breve".

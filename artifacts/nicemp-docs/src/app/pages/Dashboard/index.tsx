@@ -16,6 +16,7 @@ import {
 import {
   ProjectRepository, PageRepository, VersionRepository, HistoryRepository,
 } from '@/services/storage';
+import { formatDate } from '@/utils/formatDate';
 
 function groupByModule<T extends { module: string }>(items: T[]): [string, number][] {
   const counts = new Map<string, number>();
@@ -26,16 +27,8 @@ function groupByModule<T extends { module: string }>(items: T[]): [string, numbe
   return [...counts.entries()].sort((a, b) => b[1] - a[1]);
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
-}
-
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
+  return formatDate(iso, { withTime: true });
 }
 
 /**

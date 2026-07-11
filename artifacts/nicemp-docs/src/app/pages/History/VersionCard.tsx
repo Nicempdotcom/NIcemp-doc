@@ -4,6 +4,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Checkbox } from '@/app/components/ui/checkbox';
 import { cn } from '@/utils';
+import { formatDate } from '@/utils/formatDate';
 import type { VersionEntity, VersionSnapshotEntity } from '@/services/storage/types';
 import VersionEntityList from './VersionEntityList';
 
@@ -15,13 +16,6 @@ interface VersionCardProps {
   selectionDisabled: boolean;
   onToggleSelect: () => void;
   onCompareWithPrevious?: () => void;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 const STAT_ITEMS: { key: keyof VersionEntity['stats']; label: string; icon: React.ElementType }[] = [
@@ -66,7 +60,7 @@ export default function VersionCard({
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {formatDate(version.snapshotAt)} às {formatTime(version.snapshotAt)}
+              {formatDate(version.snapshotAt, { withTime: true })}
             </p>
           </div>
 

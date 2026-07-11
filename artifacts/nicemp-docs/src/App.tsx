@@ -39,6 +39,7 @@ import { ImpactProvider }         from '@/features/impact';
 import { AuthProvider, useAuth }  from '@/app/providers/AuthProvider';
 import { HydrationService }       from '@/services/storage/HydrationService';
 import { isSupabaseConfigured }   from '@/lib/supabase';
+import { PreferencesRepository }  from '@/services/storage/PreferencesRepository';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -167,6 +168,11 @@ function App() {
     root.classList.add(theme);
     localStorage.setItem('nicemp-docs-theme', theme);
   }, [theme]);
+
+  // Reflect stored UI preferences (e.g. table/data density) onto <html> on boot.
+  useEffect(() => {
+    PreferencesRepository.applyDomEffects();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

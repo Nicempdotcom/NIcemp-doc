@@ -27,6 +27,7 @@ import {
 import { ROUTES } from '@/routes';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { PreferencesRepository } from '@/services/storage/PreferencesRepository';
 
 const NAV_GROUPS = [
   {
@@ -103,9 +104,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const stored = loadStoredGroups();
     const activeLabel = findActiveGroupLabel(location.pathname);
+    // "Preferências do Sistema > Sidebar recolhida por padrão" controls the
+    // fallback for groups the user hasn't explicitly toggled yet.
+    const defaultOpen = !PreferencesRepository.get().sidebarDefaultCollapsed;
     const initial: Record<string, boolean> = {};
     NAV_GROUPS.forEach((group) => {
-      initial[group.label] = stored[group.label] ?? false;
+      initial[group.label] = stored[group.label] ?? defaultOpen;
     });
     if (activeLabel) initial[activeLabel] = true;
     return initial;

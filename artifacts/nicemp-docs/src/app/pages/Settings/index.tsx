@@ -18,6 +18,20 @@ import { StorageService } from '@/services/storage';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { SlidersHorizontal, Globe, Palette, Link2, Key, Webhook, Users, ShieldCheck, DatabaseZap, Trash2, Cloud, HardDrive, Loader2 } from 'lucide-react';
 import type { StoreKey } from '@/services/storage/types';
+import SystemPreferencesDialog from './dialogs/SystemPreferencesDialog';
+import RegionalizationDialog from './dialogs/RegionalizationDialog';
+import ThemeDialog from './dialogs/ThemeDialog';
+import ApiKeysDialog from './dialogs/ApiKeysDialog';
+import IntegrationsDialog from './dialogs/IntegrationsDialog';
+import WebhooksDialog from './dialogs/WebhooksDialog';
+import UsersDialog from './dialogs/UsersDialog';
+import RolesDialog from './dialogs/RolesDialog';
+
+type SettingsDialog =
+  | 'preferences' | 'regionalization' | 'theme'
+  | 'apiKeys' | 'integrations' | 'webhooks'
+  | 'users' | 'roles'
+  | null;
 
 const COUNT_LABELS: Record<string, string> = {
   projects:         'Projetos',
@@ -148,6 +162,9 @@ function DataPrivacySection() {
 }
 
 export default function Settings() {
+  const [activeDialog, setActiveDialog] = useState<SettingsDialog>(null);
+  const close = () => setActiveDialog(null);
+
   return (
     <div className="w-full">
       <PageHeader
@@ -165,26 +182,35 @@ export default function Settings() {
 
       <Section title="Geral" className="mt-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <DocCard icon={SlidersHorizontal} title="Preferências do Sistema" description="Conteúdo em breve" />
-          <DocCard icon={Globe} title="Regionalização" description="Conteúdo em breve" />
-          <DocCard icon={Palette} title="Temas & Aparência" description="Conteúdo em breve" />
+          <DocCard icon={SlidersHorizontal} title="Preferências do Sistema" description="Sidebar, tabelas compactas e abertura automática do último projeto." onClick={() => setActiveDialog('preferences')} />
+          <DocCard icon={Globe} title="Regionalização" description="Formato de data e fuso horário usados em todo o portal." onClick={() => setActiveDialog('regionalization')} />
+          <DocCard icon={Palette} title="Temas & Aparência" description="Modo claro/escuro e densidade visual." onClick={() => setActiveDialog('theme')} />
         </div>
       </Section>
 
       <Section title="Integrações">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <DocCard icon={Link2} title="Chaves de API" description="Conteúdo em breve" />
-          <DocCard icon={Key} title="Integrações Ativas" description="Conteúdo em breve" />
-          <DocCard icon={Webhook} title="Webhooks Configurados" description="Conteúdo em breve" />
+          <DocCard icon={Link2} title="Chaves de API" description="Status real da conexão Supabase — sem chaves fictícias." onClick={() => setActiveDialog('apiKeys')} />
+          <DocCard icon={Key} title="Integrações Ativas" description="Supabase e localStorage — as únicas fontes de dados do portal." onClick={() => setActiveDialog('integrations')} />
+          <DocCard icon={Webhook} title="Webhooks Configurados" description="Endpoints planejados para notificações futuras." onClick={() => setActiveDialog('webhooks')} />
         </div>
       </Section>
 
       <Section title="Usuários & Permissões">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <DocCard icon={Users} title="Gestão de Usuários" description="Conteúdo em breve" />
-          <DocCard icon={ShieldCheck} title="Papéis & Permissões" description="Conteúdo em breve" />
+          <DocCard icon={Users} title="Gestão de Usuários" description="Sua sessão atual e como criar novos acessos." onClick={() => setActiveDialog('users')} />
+          <DocCard icon={ShieldCheck} title="Papéis & Permissões" description="Situação atual: acesso total para todo usuário autenticado." onClick={() => setActiveDialog('roles')} />
         </div>
       </Section>
+
+      <SystemPreferencesDialog open={activeDialog === 'preferences'} onOpenChange={(v) => !v && close()} />
+      <RegionalizationDialog open={activeDialog === 'regionalization'} onOpenChange={(v) => !v && close()} />
+      <ThemeDialog open={activeDialog === 'theme'} onOpenChange={(v) => !v && close()} />
+      <ApiKeysDialog open={activeDialog === 'apiKeys'} onOpenChange={(v) => !v && close()} />
+      <IntegrationsDialog open={activeDialog === 'integrations'} onOpenChange={(v) => !v && close()} />
+      <WebhooksDialog open={activeDialog === 'webhooks'} onOpenChange={(v) => !v && close()} />
+      <UsersDialog open={activeDialog === 'users'} onOpenChange={(v) => !v && close()} />
+      <RolesDialog open={activeDialog === 'roles'} onOpenChange={(v) => !v && close()} />
     </div>
   );
 }

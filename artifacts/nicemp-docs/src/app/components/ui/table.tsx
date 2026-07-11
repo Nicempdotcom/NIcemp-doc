@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/utils';
+import { usePreferences } from '@/hooks/use-preferences';
 
 const Table = React.forwardRef<
   HTMLTableElement,
@@ -68,31 +69,39 @@ TableRow.displayName = 'TableRow';
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
   React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <th
-    ref={ref}
-    className={cn(
-      'h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const { compactTables } = usePreferences();
+  return (
+    <th
+      ref={ref}
+      className={cn(
+        compactTables ? 'h-7 px-2 text-xs' : 'h-10 px-2',
+        'text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 TableHead.displayName = 'TableHead';
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
   React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <td
-    ref={ref}
-    className={cn(
-      'p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const { compactTables } = usePreferences();
+  return (
+    <td
+      ref={ref}
+      className={cn(
+        compactTables ? 'p-1 text-xs' : 'p-2',
+        'align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 TableCell.displayName = 'TableCell';
 
 const TableCaption = React.forwardRef<
