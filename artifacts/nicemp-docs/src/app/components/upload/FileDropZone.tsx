@@ -38,8 +38,14 @@ export default function FileDropZone({ onFile, disabled = false, onError }: File
     handleFile(e.dataTransfer.files[0]);
   };
 
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    handleFile(e.target.files?.[0]);
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset immediately so selecting the *same* file again still fires
+    // 'change' next time — otherwise the browser treats it as a no-op
+    // (value unchanged) and the picker appears to do nothing at all.
+    e.target.value = '';
+    handleFile(file);
+  };
 
   return (
     <div
