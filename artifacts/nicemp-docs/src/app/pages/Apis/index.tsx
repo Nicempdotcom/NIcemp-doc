@@ -58,16 +58,16 @@ export default function Apis() {
         <>
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar por nome ou rota..." resultCount={filtered.length} totalCount={apis.length} />
           <div className="rounded-lg border border-border overflow-x-auto">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/40">
-                  <TableHead>Método</TableHead>
-                  <TableHead>Rota</TableHead>
-                  <TableHead>Módulo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Autenticação</TableHead>
-                  <TableHead>Papéis</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="w-[8%]">Método</TableHead>
+                  <TableHead className="w-[28%]">Rota</TableHead>
+                  <TableHead className="w-[12%]">Módulo</TableHead>
+                  <TableHead className="w-[10%]">Status</TableHead>
+                  <TableHead className="w-[14%]">Autenticação</TableHead>
+                  <TableHead className="w-[18%]">Papéis</TableHead>
+                  <TableHead className="w-[10%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -79,12 +79,12 @@ export default function Apis() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
                         <span className="font-mono text-sm text-foreground truncate flex-1 min-w-0" title={a.path || a.location}>{a.path || a.location}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{a.module ? <Badge variant="outline" className="text-[10px] font-normal">{a.module}</Badge> : '—'}</TableCell>
+                    <TableCell className="truncate">{a.module ? <Badge variant="outline" className="text-[10px] font-normal">{a.module}</Badge> : '—'}</TableCell>
                     <TableCell><StatusBadge status={a.status} /></TableCell>
                     <TableCell>
                       {a.auth ? (
@@ -93,7 +93,7 @@ export default function Apis() {
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><LockOpen className="h-3 w-3" /> Pública</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{a.roles.length > 0 ? a.roles.join(', ') : '—'}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs truncate" title={a.roles.length > 0 ? a.roles.join(', ') : '—'}>{a.roles.length > 0 ? a.roles.join(', ') : '—'}</TableCell>
                     <TableCell className="text-right">
                       <GeneratePromptButton
                         iconOnly

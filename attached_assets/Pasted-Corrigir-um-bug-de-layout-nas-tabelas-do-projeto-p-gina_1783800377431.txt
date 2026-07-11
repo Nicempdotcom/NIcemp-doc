@@ -1,0 +1,20 @@
+Corrigir um bug de layout nas tabelas do projeto (páginas Frontend, Modules, Hooks, Components, Apis e Dependencies, em src/app/pages/*/index.tsx, usando o componente compartilhado src/app/components/ui/table.tsx).
+
+Comportamento atual (errado): as tabelas usam table-layout: auto (padrão do HTML). Como os textos de caminho de arquivo (ex: "src/app/pages/Overview/buildArchitectureFlow.ts") não têm espaços, o navegador não quebra a linha e a coluna cresce para caber o texto inteiro. Isso empurra a tabela para além da largura da página, forçando uma barra de rolagem horizontal. As classes "truncate" já existentes nas células não têm efeito nenhum porque a célula não tem uma largura máxima definida — truncate só funciona quando o container tem largura limitada.
+
+Comportamento esperado: a tabela deve caber inteira na largura da página, sem scroll horizontal, com todas as colunas visíveis ao mesmo tempo. Textos longos (nome de arquivo, rota, caminho, papéis, etc.) devem ser cortados com reticências (…) e mostrar o valor completo em um tooltip (atributo title) ao passar o mouse, em vez de expandir a coluna.
+
+Correção esperada, aplicada em cada uma das 6 páginas listadas acima:
+1. Adicionar a classe "table-fixed" ao componente <Table> de cada tabela.
+2. Definir uma largura fixa em % em cada <TableHead>, com a soma das colunas de cada tabela totalizando 100% (dar mais espaço para colunas de texto livre como "Nome"/"Rota"/"O que faz", e menos para colunas curtas como "Status"/"Ações").
+3. Em toda <TableCell> que possa conter texto longo (nome, localização/caminho de arquivo, rota, módulo, papéis, retorno de hook, etc.), garantir a classe "truncate" e um atributo title={valorCompleto} para tooltip nativo, além de "min-w-0" nos containers flex internos para que o truncate realmente funcione dentro de layouts flex.
+4. Manter o container externo com overflow-x-auto apenas como rede de segurança para telas muito estreitas — ele não deve mais ser ativado em larguras normais de desktop depois da correção.
+
+Investigue a causa raiz antes de aplicar a correção — não aplique um "band-aid" que só esconde o sintoma (por exemplo, não basta remover a barra de scroll sem resolver o motivo do overflow).
+
+Checklist:
+- A causa raiz (table-layout: auto sem largura de coluna definida) foi identificada e documentada.
+- Todas as 6 tabelas (Frontend, Modules, Hooks, Components, Apis, Dependencies) cabem na largura da tela em resoluções normais de desktop, sem scroll horizontal.
+- Textos longos aparecem truncados com "…" e mostram o valor completo via tooltip ao passar o mouse.
+- Nenhuma lógica, dado ou comportamento funcional foi alterado — só CSS/layout das tabelas.
+- Testado com dados reais de path longos (ex: nomes de arquivo dentro de src/app/pages/...).

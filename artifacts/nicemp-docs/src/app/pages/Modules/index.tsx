@@ -94,26 +94,26 @@ export default function Modules() {
         <Section title="Módulos Detectados" description="Cada módulo agrega tudo que foi identificado sob o mesmo nome de pasta/feature.">
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar módulo..." resultCount={filtered.length} totalCount={modules.length} />
           <div className="rounded-lg border border-border overflow-x-auto">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/40">
-                  <TableHead>Módulo</TableHead>
-                  <TableHead>Páginas</TableHead>
-                  <TableHead>Componentes</TableHead>
-                  <TableHead>Hooks</TableHead>
-                  <TableHead>APIs</TableHead>
-                  <TableHead>Tabelas</TableHead>
-                  <TableHead>Interações</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="w-[22%]">Módulo</TableHead>
+                  <TableHead className="w-[8%]">Páginas</TableHead>
+                  <TableHead className="w-[12%]">Componentes</TableHead>
+                  <TableHead className="w-[8%]">Hooks</TableHead>
+                  <TableHead className="w-[8%]">APIs</TableHead>
+                  <TableHead className="w-[8%]">Tabelas</TableHead>
+                  <TableHead className="w-[22%]">Interações</TableHead>
+                  <TableHead className="w-[12%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((m) => (
                   <TableRow key={m.name}>
                     <TableCell>
-                      <div className="flex items-center gap-2 font-medium text-foreground">
+                      <div className="flex items-center gap-2 font-medium text-foreground min-w-0">
                         <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />
-                        {m.name}
+                        <span className="truncate" title={m.name}>{m.name}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{m.pages}</TableCell>

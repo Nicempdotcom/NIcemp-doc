@@ -53,33 +53,33 @@ export default function Components() {
         <>
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar componente..." resultCount={filtered.length} totalCount={components.length} />
           <div className="rounded-lg border border-border overflow-x-auto">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/40">
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Módulo</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Props</TableHead>
-                  <TableHead>Usado em</TableHead>
-                  <TableHead>O que faz</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="w-[22%]">Nome</TableHead>
+                  <TableHead className="w-[12%]">Módulo</TableHead>
+                  <TableHead className="w-[10%]">Categoria</TableHead>
+                  <TableHead className="w-[10%]">Status</TableHead>
+                  <TableHead className="w-[8%]">Props</TableHead>
+                  <TableHead className="w-[8%]">Usado em</TableHead>
+                  <TableHead className="w-[20%]">O que faz</TableHead>
+                  <TableHead className="w-[10%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-foreground truncate">{c.name}</div>
+                          <div className="font-medium text-foreground truncate" title={c.name}>{c.name}</div>
                           <div className="text-xs text-muted-foreground font-mono truncate" title={c.location}>{c.location}</div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{c.module ? <Badge variant="outline" className="text-[10px] font-normal">{c.module}</Badge> : '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{c.category || '—'}</TableCell>
+                    <TableCell className="truncate">{c.module ? <Badge variant="outline" className="text-[10px] font-normal">{c.module}</Badge> : '—'}</TableCell>
+                    <TableCell className="text-muted-foreground truncate" title={c.category || '—'}>{c.category || '—'}</TableCell>
                     <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-muted-foreground">{c.props.length}</TableCell>
                     <TableCell className="text-muted-foreground">{c.usedIn.length}</TableCell>

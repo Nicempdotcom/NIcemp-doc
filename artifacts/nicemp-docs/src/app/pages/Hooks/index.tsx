@@ -48,34 +48,34 @@ export default function Hooks() {
         <>
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar hook..." resultCount={filtered.length} totalCount={hooks.length} />
           <div className="rounded-lg border border-border overflow-x-auto">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/40">
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Módulo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Parâmetros</TableHead>
-                  <TableHead>Retorno</TableHead>
-                  <TableHead>Usado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="w-[28%]">Nome</TableHead>
+                  <TableHead className="w-[12%]">Módulo</TableHead>
+                  <TableHead className="w-[10%]">Status</TableHead>
+                  <TableHead className="w-[10%]">Parâmetros</TableHead>
+                  <TableHead className="w-[20%]">Retorno</TableHead>
+                  <TableHead className="w-[10%]">Usado em</TableHead>
+                  <TableHead className="w-[10%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((h) => (
                   <TableRow key={h.id}>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Zap className="h-3.5 w-3.5 text-primary shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-foreground font-mono truncate">{h.name}</div>
+                          <div className="font-medium text-foreground font-mono truncate" title={h.name}>{h.name}</div>
                           <div className="text-xs text-muted-foreground font-mono truncate" title={h.location}>{h.location}</div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{h.module ? <Badge variant="outline" className="text-[10px] font-normal">{h.module}</Badge> : '—'}</TableCell>
+                    <TableCell className="truncate">{h.module ? <Badge variant="outline" className="text-[10px] font-normal">{h.module}</Badge> : '—'}</TableCell>
                     <TableCell><StatusBadge status={h.status} /></TableCell>
                     <TableCell className="text-muted-foreground">{h.params.length}</TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">{h.returns || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs truncate" title={h.returns || '—'}>{h.returns || '—'}</TableCell>
                     <TableCell className="text-muted-foreground">{h.usedIn.length}</TableCell>
                     <TableCell className="text-right">
                       <GeneratePromptButton

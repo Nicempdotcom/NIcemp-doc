@@ -66,27 +66,27 @@ export default function Dependencies() {
 
           <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar pacote..." resultCount={filtered.length} totalCount={dependencies.length} />
           <div className="rounded-lg border border-border overflow-x-auto">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/40">
-                  <TableHead>Pacote</TableHead>
-                  <TableHead>Versão</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Registro</TableHead>
+                  <TableHead className="w-[40%]">Pacote</TableHead>
+                  <TableHead className="w-[15%]">Versão</TableHead>
+                  <TableHead className="w-[20%]">Tipo</TableHead>
+                  <TableHead className="w-[25%]">Registro</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((d) => (
                   <TableRow key={d.id}>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Package className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span className="font-mono text-sm text-foreground">{d.packageName}</span>
+                        <span className="font-mono text-sm text-foreground truncate" title={d.packageName}>{d.packageName}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">{d.version}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px] font-normal">{DEP_KIND_LABEL[d.depKind]}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{d.registry || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs truncate" title={d.version}>{d.version}</TableCell>
+                    <TableCell className="truncate"><Badge variant="outline" className="text-[10px] font-normal">{DEP_KIND_LABEL[d.depKind]}</Badge></TableCell>
+                    <TableCell className="text-muted-foreground text-xs truncate" title={d.registry || '—'}>{d.registry || '—'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

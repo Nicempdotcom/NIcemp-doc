@@ -119,31 +119,31 @@ export default function Frontend() {
           <>
             <EntityTableToolbar query={query} onQueryChange={setQuery} placeholder="Buscar página..." resultCount={filteredPages.length} totalCount={pages.length} />
             <div className="rounded-lg border border-border overflow-x-auto">
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-muted/40">
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Rota</TableHead>
-                    <TableHead>Módulo</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>O que faz</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="w-[25%]">Nome</TableHead>
+                    <TableHead className="w-[15%]">Rota</TableHead>
+                    <TableHead className="w-[12%]">Módulo</TableHead>
+                    <TableHead className="w-[10%]">Status</TableHead>
+                    <TableHead className="w-[28%]">O que faz</TableHead>
+                    <TableHead className="w-[10%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPages.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-foreground truncate">{p.name}</div>
+                            <div className="font-medium text-foreground truncate" title={p.name}>{p.name}</div>
                             <div className="text-xs text-muted-foreground font-mono truncate" title={p.location}>{p.location}</div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{p.route || '—'}</TableCell>
-                      <TableCell>{p.module ? <Badge variant="outline" className="text-[10px] font-normal">{p.module}</Badge> : '—'}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground truncate" title={p.route || '—'}>{p.route || '—'}</TableCell>
+                      <TableCell className="truncate">{p.module ? <Badge variant="outline" className="text-[10px] font-normal">{p.module}</Badge> : '—'}</TableCell>
                       <TableCell><StatusBadge status={p.status} /></TableCell>
                       <TableCell>
                         <InteractionsDisclosure interactions={interactions.filter((i) => i.location === p.location)} />
