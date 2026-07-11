@@ -60,7 +60,9 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<UploadState>(INITIAL);
 
   const processFile = useCallback(async (file: File): Promise<void> => {
+    console.log('[DEBUG] processFile called', { name: file.name, size: file.size });
     // ── Validate extension (only check — no size limit) ───────────────────
+    console.log('[DEBUG] isZip result=', isZip(file));
     if (!isZip(file)) {
       setState({ ...INITIAL, stage: 'error', error: friendly('invalid_type') });
       return;

@@ -1,0 +1,41 @@
+Bug confirmado: ao selecionar um arquivo ZIP pelo seletor nativo (o diálogo do
+sistema abre normalmente e o usuário escolhe o arquivo), a tela não reage em
+NADA depois disso — sem erro visível, sem mudança de estado, sem log.
+
+Local do fluxo:
+- artifacts/nicemp-docs/src/app/components/upload/FileDropZone.tsx
+  → onInputChange → handleFile → onFile (prop)
+- artifacts/nicemp-docs/src/features/upload/UploadProvider.tsx
+  → processFile (recebido como onFile)
+
+## Preciso que você:
+
+1. Adicione console.log (temporário, será removido depois de confirmar) em CADA
+   um destes pontos, na ordem exata do fluxo:
+   a) Logo no início de onInputChange (FileDropZone.tsx) — logar se
+      e.target.files existe e quantos itens tem.
+   b) Logo no início de handleFile (FileDropZone.tsx) — logar o file recebido
+      (nome, tamanho) antes do try/catch.
+   c) Dentro do try, imediatamente antes de chamar onFile(file).
+   d) Logo no início de processFile (UploadProvider.tsx) — antes de qualquer
+      outra lógica.
+   e) Depois de isZip(file) — logar o resultado (true/false).
+
+2. Depois de adicionar os logs, faça o build e me diga QUAIS desses logs
+   aparecem no console quando eu seleciono um ZIP válido, e onde a cadeia para.
+
+3. Verifique também se há mais de uma instância de <UploadProvider> na árvore
+   (ex.: um provider duplicado envolvendo rotas diferentes) — isso causaria o
+   componente renderizado usar um contexto diferente do que processa o arquivo,
+   fazendo o estado mudar em um contexto "fantasma" que a tela não está lendo.
+
+4. Verifique se `stage === 'reading'` (prop disabled do FileDropZone) pode estar
+   preso como `true` de alguma tentativa anterior que travou — se sim, o
+   dropzone estaria com pointer-events: none, mas nesse caso o próprio clique
+   para abrir o seletor não deveria ter funcionado, então descarte essa hipótese
+   se o diálogo abriu normalmente.
+
+5. Depois de achar a causa raiz, corrija e me explique exatamente qual etapa
+   estava quebrada e por quê.
+
+Não reintroduza nenhum limite de tamanho de arquivo ZIP em nenhuma etapa.
