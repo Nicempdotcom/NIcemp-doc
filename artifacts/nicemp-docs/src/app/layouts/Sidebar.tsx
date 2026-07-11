@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   UploadCloud,
@@ -21,6 +21,8 @@ import {
   LogOut,
   Search,
   BookOpen,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { ROUTES } from '@/routes';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -69,8 +71,56 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+const GROUPS_STORAGE_KEY = 'sidebar:groups';
+
+function findActiveGroupLabel(pathname: string): string | undefined {
+  return NAV_GROUPS.find((group) => group.items.some((item) => item.href === pathname))?.label;
+}
+
+function loadStoredGroups(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(GROUPS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { session, signOut } = useAuth();
+  const location = useLocation();
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const stored = loadStoredGroups();
+    const activeLabel = findActiveGroupLabel(location.pathname);
+    const initial: Record<string, boolean> = {};
+    NAV_GROUPS.forEach((group) => {
+      initial[group.label] = stored[group.label] ?? false;
+    });
+    if (activeLabel) initial[activeLabel] = true;
+    return initial;
+  });
+
+  // Always keep the group of the currently active route open, even if the
+  // user had previously collapsed it or navigated from another group.
+  useEffect(() => {
+    const activeLabel = findActiveGroupLabel(location.pathname);
+    if (!activeLabel) return;
+    setOpenGroups((prev) => (prev[activeLabel] ? prev : { ...prev, [activeLabel]: true }));
+  }, [location.pathname]);
+
+  // Persist the user's collapse/expand preference across reloads.
+  useEffect(() => {
+    try {
+      localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(openGroups));
+    } catch {
+      // localStorage may be unavailable (e.g. private mode) — ignore silently.
+    }
+  }, [openGroups]);
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
   return (
     <>
@@ -105,36 +155,56 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label}>
-              <p className="px-3 mb-1 mt-2 text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
-                {group.label}
-              </p>
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <NavLink
-                      key={item.href}
-                      to={item.href}
-                      onClick={onClose}
-                      className={({ isActive }) => `
-                        flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150
-                        ${isActive
-                          ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium'
-                          : 'border-l-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                        }
-                      `}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {item.label}
-                    </NavLink>
-                  );
-                })}
+        <nav className="sidebar-scroll flex-1 overflow-y-auto px-3 py-2 space-y-1">
+          {NAV_GROUPS.map((group) => {
+            const isGroupOpen = openGroups[group.label] ?? false;
+            return (
+              <div key={group.label}>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  aria-expanded={isGroupOpen}
+                  className="w-full flex items-center justify-between gap-2 px-3 mb-1 mt-2 text-[10px] uppercase tracking-widest text-muted-foreground font-semibold hover:text-foreground transition-colors"
+                >
+                  <span>{group.label}</span>
+                  {isGroupOpen ? (
+                    <ChevronDown className="h-3 w-3 shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3 shrink-0" />
+                  )}
+                </button>
+                <div
+                  className="grid transition-[grid-template-rows] duration-200 ease-in-out"
+                  style={{ gridTemplateRows: isGroupOpen ? '1fr' : '0fr' }}
+                >
+                  <div className="overflow-hidden">
+                    <div className="space-y-0.5 pb-1">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <NavLink
+                            key={item.href}
+                            to={item.href}
+                            onClick={onClose}
+                            className={({ isActive }) => `
+                              flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150
+                              ${isActive
+                                ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium'
+                                : 'border-l-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                              }
+                            `}
+                          >
+                            <Icon className="h-4 w-4 shrink-0" />
+                            {item.label}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Footer — user session + logout */}

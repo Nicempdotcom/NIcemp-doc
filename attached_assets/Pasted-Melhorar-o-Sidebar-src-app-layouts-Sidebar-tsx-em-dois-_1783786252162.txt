@@ -1,0 +1,47 @@
+Melhorar o Sidebar (src/app/layouts/Sidebar.tsx) em dois pontos: reduzir a quantidade de itens
+sempre visíveis (hoje são 20, sempre abertos) e corrigir a barra de rolagem feia no modo escuro.
+
+CONTEXTO
+- NAV_GROUPS tem 3 grupos: "Plataforma" (8 itens), "Documentação" (11 itens), "Sistema" (1 item).
+  Hoje todos os grupos renderizam sempre expandidos, sem nenhum controle de collapse.
+- O scroll da navegação é a <nav className="flex-1 overflow-y-auto ..."> — usa a barra de rolagem
+  nativa do navegador, sem nenhum estilo customizado em src/index.css.
+- Tokens de tema já existem para o sidebar (light e dark) em src/index.css:
+  --sidebar, --sidebar-foreground, --sidebar-border, --sidebar-accent (com variantes .dark).
+
+O QUE FAZER
+
+1. Tornar cada grupo do NAV_GROUPS colapsável (accordion):
+   - Cabeçalho do grupo (o <p> com o label) vira um <button> clicável, com um ícone de chevron
+     (ChevronDown/ChevronRight do lucide-react) que indica aberto/fechado.
+   - Estado de aberto/fechado por grupo, guardado em useState (um Record<string, boolean> por
+     label de grupo).
+   - Estado inicial: o grupo que contém a rota atualmente ativa (comparar item.href com a rota
+     via useLocation do react-router-dom) começa ABERTO; os outros começam FECHADOS.
+   - Ao clicar num link e navegar, se o novo grupo ativo for diferente, abrir o novo grupo
+     automaticamente (não precisa fechar os outros à força, só garantir que o grupo da rota
+     ativa está sempre aberto).
+   - Persistir o estado de aberto/fechado em localStorage (chave tipo "sidebar:groups") para
+     manter a preferência do usuário entre recarregamentos — mas SEMPRE reabrir o grupo da rota
+     ativa no carregamento, mesmo que estivesse salvo como fechado.
+   - Transição suave de abrir/fechar (max-height ou grid-template-rows com transition-all,
+     nada de layout pulando bruscamente).
+
+2. Adicionar scrollbar customizada na <nav> (o container com overflow-y-auto), coerente com os
+   tokens de tema já existentes, funcionando em light E dark:
+   - Usar `scrollbar-width: thin` + `scrollbar-color` (Firefox) e as pseudo-classes
+     `::-webkit-scrollbar` / `::-webkit-scrollbar-thumb` / `::-webkit-scrollbar-track`
+     (Chrome/Edge/Safari) em src/index.css, dentro de uma classe utilitária nova, ex:
+     `.sidebar-scroll`, aplicada na <nav>.
+   - Track transparente; thumb usando `hsl(var(--sidebar-border))` (fino, ~6-8px, com
+     border-radius), ficando mais visível (`hsl(var(--sidebar-accent))`) no hover.
+   - Confirmar que fica coerente nos dois temas (o valor de --sidebar-border já muda
+     automaticamente entre light/dark via a classe .dark existente).
+
+RESTRIÇÕES
+- Não alterar ROUTES, App.tsx nem a estrutura de NAV_GROUPS (rótulos, itens, ícones, ordem) —
+  só a forma como são renderizados/colapsados.
+- Não remover nenhum item de menu existente.
+- Manter o comportamento mobile atual (overlay + botão X) intacto.
+- Ao concluir, rode `git status` e `git diff --stat` e cole o resultado aqui ANTES de dizer que
+  terminou. Se vier "nothing to commit", a tarefa não foi feita — refaça, não relate concluído.
