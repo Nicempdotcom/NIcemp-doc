@@ -1,0 +1,18 @@
+Corrigir um bug de layout que afeta TODOS os modais do projeto (componente compartilhado src/app/components/ui/dialog.tsx, DialogContent) e especialmente o modal "Gerar prompt" (src/app/components/prompts/EntityPickerPromptDialog.tsx).
+
+Comportamento atual (errado): o DialogContent usa "display: grid" sem grid-template-columns explícito com minmax(0, ...). Por padrão, itens de grid têm min-width: auto, ou seja, não encolhem abaixo do tamanho mínimo do próprio conteúdo. Quando um modal tem conteúdo com texto longo e sem espaços (como caminhos de arquivo em fonte monoespaçada), esse conteúdo força a largura mínima da linha/coluna do grid a ficar maior que a largura do modal (max-w-lg / max-w-2xl). Como o DialogContent já tem overflow-x-hidden, o excesso é cortado sem aviso — sem reticências, de forma abrupta — inclusive cortando elementos que não têm relação direta com o texto longo, como os botões do rodapé (ex: o texto "Gerar prompt" aparece cortado como "Gerar p").
+
+Comportamento esperado: nenhum elemento do modal (linhas de lista, texto de caminho de arquivo, botões do rodapé) deve ser cortado de forma abrupta. Textos longos devem truncar com "…" e mostrar o valor completo via tooltip (title), e o modal deve manter sua largura definida (max-w-lg ou a que for customizada) em qualquer situação.
+
+Correção esperada:
+1. Em DialogContent (dialog.tsx), adicionar min-width: 0 a todos os filhos diretos do grid (ex: usando a classe "[&>*]:min-w-0" do Tailwind, ou aplicando min-w-0 individualmente em DialogHeader, no conteúdo do corpo e em DialogFooter), para que eles consigam encolher corretamente dentro do grid em vez de forçar a largura do modal.
+2. Em EntityPickerPromptDialog.tsx, trocar o layout das linhas da lista de entidades (e do bloco "entidade selecionada") de flexbox+porcentagem para CSS Grid com colunas de largura explícita, por exemplo: grid-template-columns: auto 1fr minmax(0,180px) — badge de tipo (auto), nome (1fr, com min-w-0 e truncate), caminho do arquivo (minmax(0,180px), com truncate e title). Colunas com minmax(0, ...) garantem que o track nunca cresça além do valor definido, independente do tamanho do conteúdo.
+3. Confirmar que o rodapé do modal (Cancelar / Gerar prompt) nunca fica cortado, em qualquer largura de tela normal de desktop.
+
+Investigue a causa raiz (min-width: auto padrão em itens de grid/flex, combinado com texto sem quebra de linha) antes de aplicar qualquer correção — não aumente a largura do modal nem reduza a fonte como band-aid; resolva o comportamento de sizing do grid/flex.
+
+Checklist:
+- A causa raiz (min-width: auto em itens de grid do DialogContent) foi identificada e documentada.
+- Nenhum modal do projeto (incluindo o "Gerar prompt") corta texto ou botões de forma abrupta; tudo trunca com "…" e tooltip, ou permanece dentro da largura do modal.
+- O bug relatado (texto do caminho de arquivo e botão "Gerar prompt" cortados) não reproduz mais.
+- Nenhuma lógica, dado ou comportamento funcional foi alterado — só CSS/layout.

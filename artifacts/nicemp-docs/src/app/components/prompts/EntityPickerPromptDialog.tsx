@@ -419,10 +419,10 @@ export default function EntityPickerPromptDialog({
 
                 {selected && (
                   <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2 min-w-0 gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="grid grid-cols-[auto_1fr_minmax(0,180px)] items-center gap-2 min-w-0 flex-1">
                       <Badge variant="outline" className="text-[10px] shrink-0">{KIND_CATEGORY_LABELS[selected.kind]}</Badge>
-                      <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{selected.name}</span>
-                      <span className="text-xs text-muted-foreground font-mono truncate max-w-[40%] hidden sm:block" title={selected.location}>{selected.location}</span>
+                      <span className="text-sm font-medium text-foreground truncate min-w-0" title={selected.name}>{selected.name}</span>
+                      <span className="text-xs text-muted-foreground font-mono truncate min-w-0 hidden sm:block" title={selected.location}>{selected.location}</span>
                     </div>
                     <button
                       type="button"
@@ -444,13 +444,11 @@ export default function EntityPickerPromptDialog({
                           key={e.id}
                           type="button"
                           onClick={() => setSelected(e)}
-                          className="w-full min-w-0 flex items-center gap-3 px-3 py-2 text-left hover:bg-accent/50 transition-colors"
+                          className="w-full min-w-0 grid grid-cols-[auto_1fr_minmax(0,180px)] items-center gap-3 px-3 py-2 text-left hover:bg-accent/50 transition-colors"
                         >
                           <Badge variant="outline" className="text-[10px] shrink-0">{KIND_CATEGORY_LABELS[e.kind]}</Badge>
-                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-                            <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0" title={e.name}>{e.name}</span>
-                            <span className="text-xs text-muted-foreground font-mono truncate max-w-[45%] shrink-0 hidden sm:block" title={e.location}>{e.location}</span>
-                          </div>
+                          <span className="text-sm font-medium text-foreground truncate min-w-0" title={e.name}>{e.name}</span>
+                          <span className="text-xs text-muted-foreground font-mono truncate min-w-0 hidden sm:block" title={e.location}>{e.location}</span>
                         </button>
                       ))
                     )}
