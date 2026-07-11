@@ -1,6 +1,7 @@
 import PageHeader from '@/app/layouts/PageHeader';
 import { Section, InfoBox, DocCard } from '@/app/components/docs';
 import CreatePagePromptDialog from '@/app/components/prompts/CreatePagePromptDialog';
+import CreateToolPromptDialog from '@/app/components/prompts/CreateToolPromptDialog';
 import { LayoutTemplate, PackagePlus, Wrench, RefreshCcw, Bug, BookOpen, FileCode2 } from 'lucide-react';
 
 export default function Prompts() {
@@ -20,6 +21,7 @@ export default function Prompts() {
       <Section title="Prompts de Criação" className="mt-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <CreatePagePromptDialog />
+          <CreateToolPromptDialog />
           <DocCard icon={LayoutTemplate} title="Criar Componentes" description="Conteúdo em breve" />
           <DocCard icon={PackagePlus} title="Criar Módulos" description="Conteúdo em breve" />
         </div>

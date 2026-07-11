@@ -1,0 +1,87 @@
+Criar o arquivo src/services/prompts/ToolCreationPromptGenerator.ts com a função
+buildToolCreationPrompt, exatamente como descrito abaixo. Este é um passo isolado — não mexer em
+nenhuma tela ainda, só criar esse arquivo novo.
+
+[Adicionar um segundo botão "Criar Ferramenta" na tela Prompts Replit (NicEmp Docs), ao lado do
+"Criar Página" já existente, específico pra criar uma nova calculadora/ferramenta no site nicemp.com.
+
+CONTEXTO (convenções reais do nicemp.com — projeto artifacts/nicemp/)
+- Rotas ficam em src/constants/routes.ts (objeto `routes`, chave: caminho).
+- Roteador é o wouter (não react-router-dom). Rotas registradas em src/App.tsx como
+  <Route path={routes.chave} component={NomeCalculator} />.
+- Toda ferramenta pública segue o padrão: <Header /> + <main> com useSeo({ title, description,
+  canonicalPath }) no topo do componente + conteúdo da calculadora + <FaqSection items={faqs} />
+  opcional + <Footer />. Usar como referência de estilo/estrutura arquivos existentes como
+  src/pages/PorcentagemCalculator.tsx ou src/pages/AreaPerimetroCalculator.tsx (não copiar
+  conteúdo, só a estrutura/padrão visual).
+- O catálogo principal de ferramentas é o array `allTools` em src/pages/ToolsHome.tsx, com os
+  campos: title, description, href, icon (componente lucide-react), category
+  ("Financeiro" | "Tributário" | "Matemática" | "Gestão" | nova categoria se fizer sentido),
+  popular? (opcional), comingSoon? (opcional).
+- IMPORTANTE — catálogo NÃO é centralizado: src/components/ToolsSection.tsx (destaques da home)
+  e src/components/ToolsCarousel.tsx (carrossel da home) têm listas MANUAIS e SEPARADAS do
+  allTools, cada uma com sua própria estrutura de dados. Nem toda ferramenta precisa estar nessas
+  duas — são só destaques.
+
+O QUE FAZER
+
+1. Criar src/services/prompts/ToolCreationPromptGenerator.ts com:
+     buildToolCreationPrompt(input: {
+       toolName: string;          // ex: "Calculadora de Depreciação"
+       routeKey: string;          // ex: "depreciacao" (chave em routes.ts)
+       routePath: string;         // ex: "/ferramentas/calculadora-de-depreciacao"
+       category: 'Financeiro' | 'Tributário' | 'Matemática' | 'Gestão';
+       iconName: string;          // nome de ícone lucide-react, ex: "Calculator"
+       featureOnHome: boolean;    // se true, inclui passo pra adicionar em
+                                  // ToolsSection.tsx e ToolsCarousel.tsx também
+       objective: string;        // o que a ferramenta calcula/faz
+     }): string
+   Seções do prompt gerado (mesmo estilo dos outros prompts do sistema):
+   - "1. Objetivo" — nome + objective.
+   - "2. Passo a passo obrigatório", nesta ordem:
+     a) Adicionar a chave em routes.ts: `routeKey: '${routePath}',`
+     b) Criar src/pages/${PascalCase}Calculator.tsx seguindo o padrão descrito acima
+        (Header/main/useSeo/Footer, FaqSection se fizer sentido pro tema).
+     c) Importar e adicionar UMA linha <Route path={routes.routeKey} component={X} /> em App.tsx,
+        sem remover ou reordenar as rotas existentes.
+     d) Adicionar UM objeto novo no array allTools de ToolsHome.tsx, com os campos title/description/
+        href/icon/category (e popular/comingSoon se fizer sentido), sem remover nem reordenar os
+        itens já existentes.
+     e) SE featureOnHome for true: adicionar também UMA entrada em ToolsSection.tsx e UMA em
+        ToolsCarousel.tsx, seguindo exatamente o formato de dado que cada um já usa (são estruturas
+        diferentes entre si — não tentar unificar). SE for false, pular este passo e avisar
+        explicitamente que a ferramenta ficará visível só em /ferramentas, não na home.
+   - "3. Arquivos permitidos" — routes.ts, App.tsx, ToolsHome.tsx, o novo arquivo da página, e
+     (só se featureOnHome) ToolsSection.tsx + ToolsCarousel.tsx.
+   - "4. Arquivos proibidos" — qualquer outro arquivo, especialmente Footer.tsx e Header.tsx,
+     a menos que pedido explicitamente; e aviso: "Não reescreva os arrays allTools/ToolsSection/
+     ToolsCarousel inteiros — adicione apenas o item novo, mantendo todos os itens existentes
+     exatamente como estão."
+   - "5. Checklist final":
+     [ ] A rota abre em ${routePath} sem erro de console
+     [ ] A ferramenta aparece em /ferramentas, na categoria certa, e é encontrada pela busca
+     [ ] Todas as ferramentas que já existiam antes continuam aparecendo em /ferramentas
+         (conferir a lista completa, uma por uma)
+     [ ] Se featureOnHome: a ferramenta aparece na home (destaques e/ou carrossel)
+   - "6. Ao concluir" — listar todos os arquivos criados/modificados.
+
+2. Criar src/app/components/prompts/CreateToolPromptDialog.tsx, no mesmo padrão visual e de
+   comportamento do CreatePagePromptDialog.tsx já existente (Dialog + Input/Select/Textarea +
+   Textarea readOnly com o prompt gerado + botão Copiar). Campos do formulário:
+   Nome da ferramenta, Rota, Categoria (Select: Financeiro/Tributário/Matemática/Gestão),
+   Ícone, um checkbox/switch "Destacar na home?" (mapeia pra featureOnHome), Objetivo (Textarea).
+
+3. Em src/app/pages/Prompts/index.tsx: adicionar o CreateToolPromptDialog como um botão/DocCard
+   ao lado do "Criar Páginas" já implementado, dentro da mesma seção "Prompts de Criação".
+
+RESTRIÇÕES
+- Não alterar PageCreationPromptGenerator.ts nem CreatePagePromptDialog.tsx (continuam como estão).
+- A ferramenta só GERA TEXTO — não cria arquivos nem edita nada no nicemp.com sozinha.
+- Manter tudo em português.]
+
+IMPORTANTE — prova de execução:
+Ao terminar, rode no Shell:
+  git status
+  git diff --stat
+E cole o resultado aqui. Se aparecer "nothing to commit", significa que o arquivo NÃO foi criado
+de verdade — nesse caso, refaça a tarefa, não relate como concluída.
