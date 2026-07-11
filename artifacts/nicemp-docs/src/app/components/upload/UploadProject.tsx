@@ -125,15 +125,26 @@ export default function UploadProject() {
   const didStart = useRef(false);
 
   useEffect(() => {
-    console.log('[DEBUG] auto-start effect ran', { stage, hasBuffer: upload.zipBuffer !== null, phase, didStart: didStart.current });
     if (stage !== 'completed' || upload.zipBuffer === null || phase !== 'idle') return;
+    // Guard BEFORE the async-ish takeBuffer() call — if this effect somehow
+    // runs twice for the same completed upload (e.g. a duplicate dependency
+    // change in the same commit), the ref check below must be the only thing
+    // that decides whether we proceed. Relying on takeBuffer()'s return value
+    // as the guard is unsafe: the first call already nulls the state, so a
+    // second invocation gets `null` back and silently no-ops forever, even
+    // though `didStart.current` was already flipped to `true`.
     if (didStart.current) return;
     didStart.current = true;
 
-    const buffer = takeBuffer();
-    console.log('[DEBUG] takeBuffer() ->', buffer ? buffer.byteLength : buffer);
-    if (!buffer) return;
-    console.log('[DEBUG] calling startAnalysis');
+    // Read the buffer straight from this render's state — `takeBuffer()`
+    // updates state via a `setState` updater callback, which React runs
+    // asynchronously on the next render. Relying on its return value here
+    // always yields `null` (the updater hasn't run yet), which is why the
+    // analysis never used to start. We already have the real buffer in
+    // `upload.zipBuffer` from the closure; call takeBuffer() only to clear
+    // it out of UploadProvider's state (for GC), ignoring its return value.
+    const buffer = upload.zipBuffer;
+    takeBuffer();
     startAnalysis(buffer, upload.fileName, upload.fileSize);
   }, [stage, upload.zipBuffer, phase]);
 
@@ -241,8 +252,6 @@ export default function UploadProject() {
     if (!comparison) return;
     navigate(`${ROUTES.comparison}?from=${comparison.fromVersionId}&to=${comparison.toVersionId}`);
   };
-
-  console.log('[RENDER] UploadProject', { stage, phase, fileName, fileSize });
 
   // ── Render: file reading progress (fast, before worker starts) ────────────
   if (stage === 'reading') {

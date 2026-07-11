@@ -16,14 +16,10 @@ export default function FileDropZone({ onFile, disabled = false, onError }: File
 
   const handleFile = useCallback(
     (file: File | undefined) => {
-      console.log('[DEBUG] handleFile called', file ? { name: file.name, size: file.size } : file, 'disabled=', disabled);
       if (!file || disabled) return;
       try {
-        console.log('[DEBUG] calling onFile(file)');
         onFile(file);
-        console.log('[DEBUG] onFile(file) returned');
       } catch (err) {
-        console.log('[DEBUG] onFile threw', err);
         onError?.(err instanceof Error ? err.message : 'Erro inesperado ao processar o arquivo.');
       }
     },
@@ -58,7 +54,6 @@ export default function FileDropZone({ onFile, disabled = false, onError }: File
   };
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[DEBUG] onInputChange fired, files=', e.target.files, 'length=', e.target.files?.length);
     const file = e.target.files?.[0];
     // Reset immediately so selecting the *same* file again still fires
     // 'change' next time — otherwise the browser treats it as a no-op

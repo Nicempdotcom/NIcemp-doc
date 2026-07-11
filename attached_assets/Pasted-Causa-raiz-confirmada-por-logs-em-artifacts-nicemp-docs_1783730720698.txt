@@ -1,0 +1,47 @@
+Causa raiz confirmada por logs: em
+artifacts/nicemp-docs/src/app/components/upload/UploadProject.tsx, o useEffect
+de "auto-start" (que detecta stage === 'completed' e chama takeBuffer() +
+startAnalysis()) está sendo executado em duplicidade — muito provavelmente por
+causa de double-invoke de efeitos do React 18 Strict Mode em desenvolvimento
+(Vite + React).
+
+Sequência observada nos logs:
+1. Efeito roda, vê hasBuffer=true, didStart=false.
+2. Chama takeBuffer() — mas o valor retornado já é null (o buffer já tinha
+   sido consumido por uma invocação anterior do mesmo efeito).
+3. Por causa do `if (!buffer) return;`, startAnalysis() NUNCA é chamado.
+4. didStart.current já ficou true, travando permanentemente qualquer nova
+   tentativa nessa sessão do componente.
+5. Resultado: phase nunca sai de 'idle', a tela volta a mostrar o dropzone
+   como se nada tivesse acontecido, sem nenhum erro visível.
+
+## Correção pedida
+
+Refatore esse fluxo de auto-start para ser resiliente a execução dupla do
+efeito (seja por Strict Mode, seja por qualquer outra causa), sem depender de
+"tirar o buffer do estado" como trava de controle único. Sugestões de
+abordagem (escolha a mais adequada à arquitetura atual):
+
+1. Trocar o padrão "efeito + ref didStart + takeBuffer que limpa estado" por
+   iniciar a análise diretamente dentro do callback de sucesso do
+   processFile/readAsBuffer (ex.: um `onReady(buffer)` chamado uma única vez
+   ali dentro), em vez de observar mudança de state via useEffect.
+   OU
+2. Se for manter o useEffect, mova a checagem e o set de `didStart.current =
+   true` para ANTES de qualquer chamada assíncrona, e faça takeBuffer()
+   apenas UMA vez por chamada de processFile (ex.: usando o próprio buffer já
+   retornado pela promise de leitura, sem precisar re-ler do state
+   compartilhado).
+
+3. Depois de corrigir, mantenha os logs de debug temporariamente e me confirme
+   que agora, ao selecionar o mesmo ZIP de teste (sample-project.zip):
+   - phase sai de 'idle' e avança (reading/analyzing/completed do analisador,
+     não do upload).
+   - a tela muda para a tela de processamento/progresso.
+   - a análise final aparece na tela.
+
+4. Depois de confirmar que funciona, remova os console.log de debug
+   adicionados nas últimas iterações (onInputChange, handleFile, processFile,
+   readAsBuffer, RENDER UploadProject, auto-start effect, takeBuffer).
+
+Não reintroduza nenhum limite de tamanho de arquivo ZIP em nenhuma etapa.
