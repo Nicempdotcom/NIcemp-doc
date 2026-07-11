@@ -4,10 +4,7 @@
   // `--config` so the deploy step doesn't try to auto-detect a project from
   // the monorepo root.
   //
-  // IMPORTANT: replace "name" below with the exact existing Worker/project
-  // name from the Cloudflare dashboard before deploying, so this updates the
-  // existing project instead of creating a new one.
-  "name": "REPLACE_WITH_EXACT_CLOUDFLARE_PROJECT_NAME",
+  "name": "nicempdoc",
   "compatibility_date": "2026-07-11",
   "assets": {
     "directory": "./dist/public",
