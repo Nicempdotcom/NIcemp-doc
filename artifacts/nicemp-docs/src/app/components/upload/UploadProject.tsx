@@ -57,6 +57,7 @@ interface SavedCounts {
   Tabelas:      number;
   Dependências: number;
   Tecnologias:  number;
+  Interações:   number;
 }
 
 function DbSaveStatus({ dbPhase, counts, error }: {
@@ -209,6 +210,7 @@ export default function UploadProject() {
         DocumentationRepository.hooks.saveMany(entities.hooks);
         DocumentationRepository.apis.saveMany(entities.apis);
         DocumentationRepository.tables.saveMany(entities.tables);
+        DocumentationRepository.interactions.saveMany(entities.interactions);
         StorageService.upsertMany('dependencies', entities.dependencies);
         StorageService.upsertMany('technologies', entities.technologies);
         HistoryRepository.append(entities.historyEntry);
@@ -228,6 +230,7 @@ export default function UploadProject() {
           Tabelas:      entities.tables.length,
           Dependências: entities.dependencies.length,
           Tecnologias:  entities.technologies.length,
+          Interações:   entities.interactions.length,
         });
         setDbPhase('saved');
       } catch (err) {

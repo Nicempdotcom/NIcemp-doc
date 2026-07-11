@@ -18,6 +18,7 @@ import {
   Layers,
   Zap,
   Globe,
+  Compass,
 } from 'lucide-react';
 import { ROUTES } from '@/routes';
 
@@ -31,6 +32,7 @@ const NAV_GROUPS = [
       { label: 'Histórico',      icon: History,         href: ROUTES.history    },
       { label: 'Comparação',     icon: GitCompare,      href: ROUTES.comparison },
       { label: 'Impacto',        icon: AlertTriangle,   href: ROUTES.impact     },
+      { label: 'Explorador ao vivo', icon: Compass,     href: ROUTES.explorer   },
     ],
   },
   {

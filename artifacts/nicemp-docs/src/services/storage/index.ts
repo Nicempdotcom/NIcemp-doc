@@ -9,6 +9,7 @@ export {
   HookRepository,
   ApiRepository,
   TableRepository,
+  InteractionRepository,
   ProjectRepository,
   VersionRepository,
   VersionSnapshotRepository,

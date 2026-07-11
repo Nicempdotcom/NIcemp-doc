@@ -7,7 +7,7 @@
  * Rule: Source code content is NEVER stored — only structural metadata.
  */
 
-import type { ProjectMap, CategorizedFile, DependencyMap, TechnologyProfile } from '@/services/engine';
+import type { ProjectMap, CategorizedFile, DependencyMap, TechnologyProfile, InteractionEntry } from '@/services/engine';
 import type {
   ProjectEntity,
   VersionEntity,
@@ -18,6 +18,7 @@ import type {
   TableEntity,
   DependencyEntity,
   TechnologyEntity,
+  InteractionEntity,
   HistoryEntry,
   RiskLevel,
   DocStatus,
@@ -283,6 +284,27 @@ function toTableEntities(files: CategorizedFile[], projectId: string): TableEnti
     }));
 }
 
+function toInteractionEntities(interactions: InteractionEntry[], projectId: string): InteractionEntity[] {
+  const ts = now();
+  return interactions.map((entry) => ({
+    id:            stableId('interaction', entry.id),
+    kind:          'interaction' as const,
+    name:          entry.label || entry.handlerName || 'Interação',
+    description:   entry.description,
+    location:      entry.filePath,
+    relationships: [],
+    riskLevel:     entry.callsApi ? ('medium' as RiskLevel) : ('low' as RiskLevel),
+    lastChanged:   ts,
+    createdAt:     ts,
+    projectId,
+    module:        entry.module,
+    handlerName:   entry.handlerName,
+    label:         entry.label,
+    callsApi:      entry.callsApi,
+    apiHint:       entry.apiHint,
+  }));
+}
+
 function toDependencyEntities(deps: DependencyMap, projectId: string): DependencyEntity[] {
   const ts = now();
   const seen = new Set<string>();
@@ -437,6 +459,7 @@ export interface MappedEntities {
   tables:       TableEntity[];
   dependencies: DependencyEntity[];
   technologies: TechnologyEntity[];
+  interactions: InteractionEntity[];
   historyEntry: HistoryEntry;
 }
 
@@ -452,6 +475,7 @@ export function mapProjectMapToEntities(projectMap: ProjectMap): MappedEntities 
   const tables       = toTableEntities(projectMap.files, projectId);
   const dependencies = toDependencyEntities(projectMap.dependencies, projectId);
   const technologies = toTechnologyEntities(projectMap.technology, projectId);
+  const interactions = toInteractionEntities(projectMap.interactions, projectId);
 
   const historyEntry = buildAnalysisHistoryEntry(projectId, project.rootName, {
     páginas:       pages.length,
@@ -461,11 +485,12 @@ export function mapProjectMapToEntities(projectMap: ProjectMap): MappedEntities 
     tabelas:       tables.length,
     dependências:  dependencies.length,
     tecnologias:   technologies.length,
+    interações:    interactions.length,
   });
 
   return {
     project, version, pages, components,
-    hooks, apis, tables, dependencies, technologies,
+    hooks, apis, tables, dependencies, technologies, interactions,
     historyEntry,
   };
 }

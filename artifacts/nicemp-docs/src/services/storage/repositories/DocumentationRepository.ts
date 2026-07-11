@@ -14,6 +14,7 @@ import type {
   HookEntity,
   ApiEntity,
   TableEntity,
+  InteractionEntity,
 } from '../types';
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -263,6 +264,57 @@ export const TableRepository = {
   },
 } as const;
 
+// ─── Interaction ("o que este botão/tela faz" — EPIC 10) ─────────────────────
+
+export const InteractionRepository = {
+  findAll(): InteractionEntity[] {
+    return StorageService.read<InteractionEntity>('interactions');
+  },
+
+  findById(id: string): InteractionEntity | undefined {
+    return this.findAll().find((e) => e.id === id);
+  },
+
+  findByProject(projectId: string): InteractionEntity[] {
+    return this.findAll().filter((e) => e.projectId === projectId);
+  },
+
+  findByModule(module: string): InteractionEntity[] {
+    return this.findAll().filter((e) => e.module === module);
+  },
+
+  findByFilePath(filePath: string): InteractionEntity[] {
+    return this.findAll().filter((e) => e.location === filePath);
+  },
+
+  save(entity: InteractionEntity): void {
+    StorageService.upsert<InteractionEntity>('interactions', entity);
+  },
+
+  saveMany(entities: InteractionEntity[]): void {
+    StorageService.upsertMany<InteractionEntity>('interactions', entities);
+  },
+
+  update(id: string, patch: Partial<InteractionEntity>): void {
+    const all = this.findAll();
+    const idx = all.findIndex((e) => e.id === id);
+    if (idx < 0) return;
+    StorageService.write<InteractionEntity>('interactions', [
+      ...all.slice(0, idx),
+      { ...all[idx], ...patch, lastChanged: new Date().toISOString() },
+      ...all.slice(idx + 1),
+    ]);
+  },
+
+  remove(id: string): void {
+    StorageService.remove('interactions', id);
+  },
+
+  clear(): void {
+    StorageService.clearStore('interactions');
+  },
+} as const;
+
 // ─── Convenience: DocumentationRepository (façade) ────────────────────────────
 
 /**
@@ -270,15 +322,16 @@ export const TableRepository = {
  * Use this in features/providers when you need cross-entity operations.
  */
 export const DocumentationRepository = {
-  pages:      PageRepository,
-  components: ComponentRepository,
-  hooks:      HookRepository,
-  apis:       ApiRepository,
-  tables:     TableRepository,
+  pages:        PageRepository,
+  components:   ComponentRepository,
+  hooks:        HookRepository,
+  apis:         ApiRepository,
+  tables:       TableRepository,
+  interactions: InteractionRepository,
 
   /** Remove all documentation entities for a given project. */
   clearByProject(projectId: string): void {
-    const stores = ['pages', 'components', 'hooks', 'apis', 'tables'] as const;
+    const stores = ['pages', 'components', 'hooks', 'apis', 'tables', 'interactions'] as const;
     for (const store of stores) {
       const remaining = StorageService.read<{ id: string; projectId: string }>(store)
         .filter((e) => e.projectId !== projectId);
@@ -289,11 +342,12 @@ export const DocumentationRepository = {
   /** Count all entities for a project, grouped by type. */
   countByProject(projectId: string): Record<string, number> {
     return {
-      pages:      PageRepository.findByProject(projectId).length,
-      components: ComponentRepository.findByProject(projectId).length,
-      hooks:      HookRepository.findByProject(projectId).length,
-      apis:       ApiRepository.findByProject(projectId).length,
-      tables:     TableRepository.findByProject(projectId).length,
+      pages:        PageRepository.findByProject(projectId).length,
+      components:   ComponentRepository.findByProject(projectId).length,
+      hooks:        HookRepository.findByProject(projectId).length,
+      apis:         ApiRepository.findByProject(projectId).length,
+      tables:       TableRepository.findByProject(projectId).length,
+      interactions: InteractionRepository.findByProject(projectId).length,
     };
   },
 } as const;

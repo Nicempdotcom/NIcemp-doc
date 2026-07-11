@@ -42,7 +42,8 @@ export type StoreKey =
   | 'tables'
   | 'dependencies'
   | 'technologies'
-  | 'history';
+  | 'history'
+  | 'interactions';
 
 /** Maps StoreKey → the logical JSON filename it corresponds to. */
 export const STORE_FILE_NAMES: Record<StoreKey, string> = {
@@ -57,6 +58,7 @@ export const STORE_FILE_NAMES: Record<StoreKey, string> = {
   dependencies:     'dependencies.json',
   technologies:     'technologies.json',
   history:          'history.json',
+  interactions:     'interactions.json',
 };
 
 // ─── Base entity ──────────────────────────────────────────────────────────────
@@ -239,6 +241,20 @@ export interface TechnologyEntity extends BaseDocEntity {
   confidence: 'high' | 'medium' | 'low';
 }
 
+// ─── Interaction (EPIC 10 — "o que este botão/tela faz") ─────────────────────
+//
+// Heuristically detected from onClick handlers in page/component source.
+// `description` (from BaseDocEntity) holds the full plain-Portuguese sentence.
+
+export interface InteractionEntity extends BaseDocEntity {
+  kind:        'interaction';
+  module:      string;
+  handlerName: string;    // '' when the handler couldn't be resolved to a name
+  label:       string;    // Clickable element's visible text or aria-label/title
+  callsApi:    boolean;
+  apiHint:     string;    // e.g. "POST /api/pedidos", "navega para /login", or ''
+}
+
 // ─── History entry ────────────────────────────────────────────────────────────
 
 export type HistoryEventKind =
@@ -300,4 +316,5 @@ export type AnyDocEntity =
   | ApiEntity
   | TableEntity
   | DependencyEntity
-  | TechnologyEntity;
+  | TechnologyEntity
+  | InteractionEntity;

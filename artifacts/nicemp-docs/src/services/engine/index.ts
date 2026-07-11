@@ -11,6 +11,7 @@ export type {
   TechnologyProfile,
   ProjectStats,
   ProjectMap,
+  InteractionEntry,
 } from './types';
 
 export { CATEGORY_LABELS } from './types';
@@ -18,4 +19,5 @@ export { ProjectScanner }    from './ProjectScanner';
 export { StructureAnalyzer } from './StructureAnalyzer';
 export { DependencyAnalyzer } from './DependencyAnalyzer';
 export { TechnologyAnalyzer } from './TechnologyAnalyzer';
+export { InteractionAnalyzer } from './InteractionAnalyzer';
 export { ProjectAnalyzer }   from './ProjectAnalyzer';

@@ -1,0 +1,185 @@
+import React, { useMemo, useState } from 'react';
+import { Search, FileText, Layers, Zap, Globe2 } from 'lucide-react';
+import PageHeader from '@/app/layouts/PageHeader';
+import { Section, InfoBox, InteractionsDisclosure } from '@/app/components/docs';
+import StatusBadge from '@/app/components/docs/StatusBadge';
+import { Badge } from '@/app/components/ui/badge';
+import { Input } from '@/app/components/ui/input';
+import { Button } from '@/app/components/ui/button';
+import {
+  ProjectRepository,
+  PageRepository,
+  ComponentRepository,
+  HookRepository,
+  ApiRepository,
+  InteractionRepository,
+} from '@/services/storage';
+import { matchPageByPath, type UrlMatchResult } from '@/services/exploration/urlMatch';
+import type { PageEntity } from '@/services/storage/types';
+
+/**
+ * Explorador ao vivo — paste a live URL and see what NicEmp Docs knows
+ * about that page: which components/hooks/APIs/interactions belong to
+ * its module, plus a best-effort iframe preview (EPIC 10).
+ *
+ * Matching is approximate: it compares the URL's path against each
+ * detected page's inferred route, which works best for conventional
+ * file/folder routing. It will not resolve custom routers, rewrites,
+ * or server-side redirects.
+ */
+export default function Explorer() {
+  const project = useMemo(() => ProjectRepository.findLatest(), []);
+  const pages = useMemo(() => (project ? PageRepository.findByProject(project.id) : []), [project]);
+  const components = useMemo(() => (project ? ComponentRepository.findByProject(project.id) : []), [project]);
+  const hooks = useMemo(() => (project ? HookRepository.findByProject(project.id) : []), [project]);
+  const apis = useMemo(() => (project ? ApiRepository.findByProject(project.id) : []), [project]);
+  const interactions = useMemo(() => (project ? InteractionRepository.findByProject(project.id) : []), [project]);
+
+  const [urlInput, setUrlInput] = useState('');
+  const [result, setResult] = useState<UrlMatchResult | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const handleExplore = () => {
+    if (!urlInput.trim()) return;
+    const matched = matchPageByPath(urlInput, pages);
+    setResult(matched);
+    const withProtocol = /^https?:\/\//i.test(urlInput.trim()) ? urlInput.trim() : `https://${urlInput.trim()}`;
+    setPreviewUrl(withProtocol);
+  };
+
+  const moduleDataFor = (page: PageEntity) => ({
+    components: components.filter((c) => c.module === page.module),
+    hooks: hooks.filter((h) => h.module === page.module),
+    apis: apis.filter((a) => a.module === page.module),
+    interactions: interactions.filter((i) => i.module === page.module),
+  });
+
+  if (!project) {
+    return (
+      <div className="w-full">
+        <PageHeader
+          title="Explorador ao vivo"
+          description="Cole a URL de uma tela em produção e veja o que o NicEmp Docs sabe sobre ela."
+          badge="EPIC 10"
+          badgeVariant="info"
+        />
+        <InfoBox variant="tip" title="Nenhum projeto analisado ainda">
+          Envie um arquivo ZIP na tela de Upload para popular esta página automaticamente.
+        </InfoBox>
+      </div>
+    );
+  }
+
+  const matched = result?.exact ?? null;
+  const matchedData = matched ? moduleDataFor(matched) : null;
+
+  return (
+    <div className="w-full">
+      <PageHeader
+        title="Explorador ao vivo"
+        description="Cole a URL de uma tela em produção e veja o que o NicEmp Docs sabe sobre ela — componentes, hooks, APIs e interações do mesmo módulo."
+        badge="EPIC 10"
+        badgeVariant="info"
+      />
+
+      <Section title="Buscar por URL" description="Funciona melhor com roteamento convencional por pastas/arquivos (ex.: pages/, app/.../page.tsx). Rotas customizadas, redirects e reescritas podem não ser encontrados.">
+        <div className="flex gap-2 max-w-xl">
+          <Input
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleExplore(); }}
+            placeholder="https://meuapp.com/pedidos/123"
+            className="flex-1"
+          />
+          <Button onClick={handleExplore} className="gap-2">
+            <Search className="h-4 w-4" /> Explorar
+          </Button>
+        </div>
+      </Section>
+
+      {result && (
+        <>
+          {matched && matchedData && (
+            <Section title="Página encontrada" description={`Correspondência para o caminho "${result.path}".`}>
+              <div className="rounded-lg border border-border p-5 mb-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-foreground">{matched.name}</span>
+                  <StatusBadge status={matched.status} />
+                </div>
+                <div className="text-xs text-muted-foreground font-mono mb-3">{matched.location}</div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <Badge variant="outline" className="text-[10px] font-normal">Módulo: {matched.module}</Badge>
+                  <Badge variant="outline" className="text-[10px] font-normal font-mono">Rota: {matched.route || '—'}</Badge>
+                </div>
+                <InteractionsDisclosure interactions={matchedData.interactions} emptyLabel="Nenhuma interação detectada nesta tela." />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-card border border-card-border rounded-lg p-4">
+                  <Layers className="h-4 w-4 text-primary mb-1" />
+                  <div className="text-2xl font-bold text-foreground">{matchedData.components.length}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide">Componentes do módulo</div>
+                </div>
+                <div className="bg-card border border-card-border rounded-lg p-4">
+                  <Zap className="h-4 w-4 text-primary mb-1" />
+                  <div className="text-2xl font-bold text-foreground">{matchedData.hooks.length}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide">Hooks do módulo</div>
+                </div>
+                <div className="bg-card border border-card-border rounded-lg p-4">
+                  <Globe2 className="h-4 w-4 text-primary mb-1" />
+                  <div className="text-2xl font-bold text-foreground">{matchedData.apis.length}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide">APIs do módulo</div>
+                </div>
+              </div>
+            </Section>
+          )}
+
+          {!matched && (
+            <Section title="Nenhuma correspondência exata" description={`Não encontramos uma página cuja rota inferida bata com "${result.path}".`}>
+              {result.suggestions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma página parecida foi encontrada.</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground mb-2">Páginas parecidas:</p>
+                  {result.suggestions.map(({ page, score }) => (
+                    <div key={page.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-sm font-medium text-foreground">{page.name}</span>
+                        <span className="text-xs text-muted-foreground font-mono">{page.route || '—'}</span>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] font-normal">{Math.round(score * 100)}% parecido</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Section>
+          )}
+
+          <Section title="Pré-visualização (melhor esforço)" description="Muitos sites bloqueiam a exibição em iframe por motivos de segurança (X-Frame-Options/CSP). Não há como detectar isso automaticamente — se a área abaixo aparecer em branco, é provável que o site esteja bloqueando.">
+            <InfoBox variant="warning" title="Aviso permanente">
+              Esta pré-visualização não rastreia cliques nem interações de origem cruzada (cross-origin), por design — é apenas uma janela visual best-effort.
+            </InfoBox>
+            {previewUrl && (
+              <div className="rounded-lg border border-border overflow-hidden h-[480px] bg-muted/20">
+                <iframe
+                  src={previewUrl}
+                  title="Pré-visualização ao vivo"
+                  className="w-full h-full"
+                  sandbox="allow-scripts allow-same-origin allow-forms"
+                />
+              </div>
+            )}
+          </Section>
+        </>
+      )}
+
+      {!result && (
+        <InfoBox variant="info" title="Como funciona">
+          Colamos a URL, extraímos o caminho (ex.: /pedidos/123) e comparamos com as rotas inferidas de cada página detectada no projeto. Quando não há correspondência exata, mostramos as páginas mais parecidas.
+        </InfoBox>
+      )}
+    </div>
+  );
+}

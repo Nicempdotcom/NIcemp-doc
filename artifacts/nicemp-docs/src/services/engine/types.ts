@@ -127,6 +127,23 @@ export interface ProjectStats {
   maxDepth:    number;
 }
 
+// ── Interactions (EPIC 10 — "what happens when I click X") ──────────────────
+//
+// Heuristic, regex-based extraction — no AST parser. When nothing can be
+// inferred with confidence, InteractionAnalyzer omits the interaction rather
+// than inventing a description.
+
+export interface InteractionEntry {
+  id: string;             // `${filePath}:${matchIndex}` — stable within one analysis
+  filePath: string;       // Source file path (page or component)
+  module: string;         // Top-level module/feature folder
+  handlerName: string;    // Detected handler function name, or '' if inline/unresolved
+  label: string;          // Clickable element's visible text or aria-label/title
+  callsApi: boolean;      // Whether a backend/API call was detected
+  apiHint: string;        // e.g. "POST /api/pedidos", "navega para /login", or ''
+  description: string;    // Plain-Portuguese sentence, e.g. "Botão 'Salvar' → executa handleSave → envia dados para POST /api/pedidos"
+}
+
 // ── Final project map ─────────────────────────────────────────────────────────
 
 export interface ProjectMap {
@@ -137,5 +154,6 @@ export interface ProjectMap {
   tree: DirectoryNode;
   dependencies: DependencyMap;
   technology: TechnologyProfile;
+  interactions: InteractionEntry[];
   stats: ProjectStats;
 }

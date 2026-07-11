@@ -5,13 +5,14 @@ import PageHeader from '@/app/layouts/PageHeader';
 import Section from '@/app/components/docs/Section';
 import InfoBox from '@/app/components/docs/InfoBox';
 import StatusBadge from '@/app/components/docs/StatusBadge';
+import InteractionsDisclosure from '@/app/components/docs/InteractionsDisclosure';
 import EntityTableToolbar from '@/app/components/docs/EntityTableToolbar';
 import { Badge } from '@/app/components/ui/badge';
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '@/app/components/ui/table';
 import {
-  ProjectRepository, PageRepository, ComponentRepository, HookRepository,
+  ProjectRepository, PageRepository, ComponentRepository, HookRepository, InteractionRepository,
 } from '@/services/storage';
 import { ROUTES } from '@/routes';
 import GeneratePromptButton from '@/app/components/prompts/GeneratePromptButton';
@@ -37,6 +38,7 @@ export default function Frontend() {
   const pages      = useMemo(() => (project ? PageRepository.findByProject(project.id) : []), [project]);
   const components = useMemo(() => (project ? ComponentRepository.findByProject(project.id) : []), [project]);
   const hooks       = useMemo(() => (project ? HookRepository.findByProject(project.id) : []), [project]);
+  const interactions = useMemo(() => (project ? InteractionRepository.findByProject(project.id) : []), [project]);
   const nameIndex   = useMemo(() => (project ? buildEntityNameIndex(project.id) : new Map<string, string>()), [project]);
 
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
@@ -123,6 +125,7 @@ export default function Frontend() {
                     <TableHead>Rota</TableHead>
                     <TableHead>Módulo</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>O que faz</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -141,6 +144,9 @@ export default function Frontend() {
                       <TableCell className="font-mono text-xs text-muted-foreground">{p.route || '—'}</TableCell>
                       <TableCell>{p.module ? <Badge variant="outline" className="text-[10px] font-normal">{p.module}</Badge> : '—'}</TableCell>
                       <TableCell><StatusBadge status={p.status} /></TableCell>
+                      <TableCell>
+                        <InteractionsDisclosure interactions={interactions.filter((i) => i.location === p.location)} />
+                      </TableCell>
                       <TableCell className="text-right">
                         <GeneratePromptButton
                           iconOnly

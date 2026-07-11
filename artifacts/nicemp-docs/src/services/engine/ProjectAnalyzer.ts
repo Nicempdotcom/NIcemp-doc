@@ -19,6 +19,7 @@ import { ProjectScanner }    from './ProjectScanner';
 import { StructureAnalyzer } from './StructureAnalyzer';
 import { DependencyAnalyzer } from './DependencyAnalyzer';
 import { TechnologyAnalyzer } from './TechnologyAnalyzer';
+import { InteractionAnalyzer } from './InteractionAnalyzer';
 
 function makeId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -81,6 +82,7 @@ export class ProjectAnalyzer {
   private structure  = new StructureAnalyzer();
   private dependency = new DependencyAnalyzer();
   private technology = new TechnologyAnalyzer();
+  private interaction = new InteractionAnalyzer();
 
   /**
    * Run the full pipeline.
@@ -108,8 +110,11 @@ export class ProjectAnalyzer {
     const technology = this.technology.analyze(files, dependencies);
     onProgress(95);
 
+    // ── Phase 4.5: Interactions ("o que este botão/tela faz") ─────────────
+    const interactions = this.interaction.analyze(categorized);
+
     // ── Phase 5: Assemble (95–100%) ──────────────────────────────────────
-    const partial = { files: categorized, tree, dependencies, technology };
+    const partial = { files: categorized, tree, dependencies, technology, interactions };
     const rootName = detectRootName(partial);
     const stats    = buildStats({ ...partial, rootName });
 
@@ -121,6 +126,7 @@ export class ProjectAnalyzer {
       tree,
       dependencies,
       technology,
+      interactions,
       stats,
     };
 

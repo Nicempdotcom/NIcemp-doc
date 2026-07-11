@@ -1,0 +1,82 @@
+Quero adicionar duas capacidades ao NicEmp Docs, para usuários não-programadores
+entenderem "o que acontece quando eu clico em X" sem precisar ler código.
+
+## PARTE 1 — Explicações em linguagem simples nas páginas já existentes
+
+Hoje o motor de análise (artifacts/nicemp-docs/src/services/engine/) categoriza
+arquivos por tipo (page, component, hook, api...) mas não extrai NADA sobre
+interações (cliques, botões, chamadas de API). Preciso de um novo passo de
+análise que faça isso, usando o conteúdo já lido de cada arquivo
+(CategorizedFile.content, já disponível em ScannedFile).
+
+1. Crie um novo analisador `InteractionAnalyzer` em
+   artifacts/nicemp-docs/src/services/engine/InteractionAnalyzer.ts, que recebe
+   os arquivos categorizados como 'page' ou 'component' e, usando heurísticas de
+   regex (sem precisar de um parser AST completo), extrai:
+   - Elementos clicáveis: padrões como `onClick={handlerName}` ou
+     `onClick={() => ...}` em JSX, junto com o texto/label mais próximo (ex.:
+     o texto dentro do <button> ou o valor de aria-label/title próximo).
+   - Para cada handler encontrado, procure a definição da função
+     (`function handlerName` ou `const handlerName = `) no mesmo arquivo e
+     dentro dela procure por padrões que indiquem chamada de API:
+     `fetch(`, `axios.`, `apiClient.`, `.mutate(`, `useMutation`, `navigate(`,
+     `router.push(`.
+   - Gere uma frase em português simples por interação encontrada, ex.:
+     "Botão 'Salvar' → executa handleSave → envia dados para POST /api/pedidos"
+     ou, quando não houver chamada de API detectável:
+     "Botão 'Cancelar' → executa handleCancel → volta para a tela anterior"
+   - Se nada for detectável com confiança, não invente — omita a interação em
+     vez de gerar uma frase genérica errada.
+
+2. Adicione o resultado como um novo campo `interactions: InteractionEntry[]`
+   no `ProjectMap` (artifacts/nicemp-docs/src/services/engine/types.ts), rode
+   esse analisador dentro de `runAnalysisPipeline.ts` junto dos outros passos
+   (mesmo padrão de progresso/etapa que os demais).
+
+3. Persista essas interações junto das entidades já salvas em
+   `services/storage` (mesmo padrão de Pages/Components/APIs) e exiba-as nas
+   páginas de documentação já existentes — artifacts/nicemp-docs/src/app/pages/
+   Components/index.tsx, Frontend/index.tsx e Modules/index.tsx — como uma
+   nova coluna ou seção expansível "O que este botão/tela faz", em linguagem
+   simples, sem jargão técnico.
+
+## PARTE 2 — Explorador por URL
+
+Crie uma nova página "Explorador ao vivo" no NicEmp Docs:
+
+1. Rota nova em `artifacts/nicemp-docs/src/routes.tsx` (ex.: `/explorer`) e
+   entrada no menu lateral (`Sidebar.tsx`), com um ícone apropriado (ex.:
+   `Compass` do lucide-react).
+
+2. A tela tem um campo para o usuário colar a URL completa do site publicado
+   (ex.: `https://meusite.com/dashboard/pedidos`).
+
+3. Ao confirmar, o sistema:
+   a) Extrai o caminho da URL (`/dashboard/pedidos`).
+   b) Tenta casar esse caminho com as rotas/páginas detectadas no
+      ProjectMap (arquivos categorizados como 'page' ou 'route', usando o
+      caminho do arquivo como aproximação — ex.: `pages/dashboard/pedidos.tsx`
+      ou `app/dashboard/pedidos/page.tsx` casando com `/dashboard/pedidos`).
+   c) Se encontrar correspondência, mostra: o nome da página, os componentes
+      que ela usa, as APIs relacionadas, e a lista de interações (da Parte 1)
+      daquela página — tudo em linguagem simples, como uma lista clicável
+      (clicar em cada item expande mais detalhes).
+   d) Se NÃO encontrar correspondência exata, mostre as páginas mais
+      parecidas como sugestão, com uma mensagem clara tipo "Não encontrei uma
+      página exata para esse endereço — talvez seja uma destas:".
+   e) Também tente carregar a URL num <iframe> como referência visual (só
+      para o usuário confirmar visualmente que é a tela certa) — mas deixe
+      claro na interface, com um aviso pequeno, que MUITOS sites bloqueiam
+      isso por segurança (X-Frame-Options/CSP) e que, quando isso acontecer,
+      é normal e não afeta o restante da funcionalidade da página, que
+      continua funcionando normalmente sem o preview visual.
+
+4. Não implemente nenhum tipo de rastreamento de clique DENTRO do iframe
+   (isso não é tecnicamente confiável entre origens diferentes) — a interação
+   do usuário acontece na lista ao lado, não sobre o site embutido.
+
+## Ao final, me explique:
+1. Todos os arquivos criados/modificados.
+2. Como funciona o casamento de URL → página (e suas limitações, ex.: só
+   funciona bem para roteamento baseado em arquivo/pasta convencional).
+3. Confirme que nenhum limite de tamanho de ZIP foi reintroduzido.

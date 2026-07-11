@@ -2,14 +2,15 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { GitBranch } from 'lucide-react';
 import PageHeader from '@/app/layouts/PageHeader';
-import { Section, InfoBox } from '@/app/components/docs';
+import { Section, InfoBox, InteractionsDisclosure } from '@/app/components/docs';
 import EntityTableToolbar from '@/app/components/docs/EntityTableToolbar';
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '@/app/components/ui/table';
 import {
-  ProjectRepository, PageRepository, ComponentRepository, HookRepository, ApiRepository, TableRepository,
+  ProjectRepository, PageRepository, ComponentRepository, HookRepository, ApiRepository, TableRepository, InteractionRepository,
 } from '@/services/storage';
+import type { InteractionEntity } from '@/services/storage/types';
 import type { RiskLevel } from '@/services/storage/types';
 import GeneratePromptButton from '@/app/components/prompts/GeneratePromptButton';
 
@@ -29,6 +30,7 @@ interface ModuleRow {
   tables: number;
   riskLevel: RiskLevel;
   dependencies: string[];
+  interactions: InteractionEntity[];
 }
 
 /**
@@ -45,13 +47,14 @@ export default function Modules() {
   const hooks       = useMemo(() => (project ? HookRepository.findByProject(project.id) : []), [project]);
   const apis        = useMemo(() => (project ? ApiRepository.findByProject(project.id) : []), [project]);
   const tables      = useMemo(() => (project ? TableRepository.findByProject(project.id) : []), [project]);
+  const interactionsAll = useMemo(() => (project ? InteractionRepository.findByProject(project.id) : []), [project]);
 
   const modules = useMemo<ModuleRow[]>(() => {
     const map = new Map<string, ModuleRow>();
     const ensure = (name: string) => {
       const key = name || 'sem módulo';
       if (!map.has(key)) {
-        map.set(key, { name: key, pages: 0, components: 0, hooks: 0, apis: 0, tables: 0, riskLevel: 'none', dependencies: [] });
+        map.set(key, { name: key, pages: 0, components: 0, hooks: 0, apis: 0, tables: 0, riskLevel: 'none', dependencies: [], interactions: [] });
       }
       return map.get(key)!;
     };
@@ -60,8 +63,9 @@ export default function Modules() {
     hooks.forEach((h) => { const m = ensure(h.module); m.hooks += 1; m.riskLevel = highestRisk([m.riskLevel, h.riskLevel]); m.dependencies.push(`Hook: ${h.name}`); });
     apis.forEach((a) => { const m = ensure(a.module); m.apis += 1; m.riskLevel = highestRisk([m.riskLevel, a.riskLevel]); m.dependencies.push(`API: ${a.name}`); });
     tables.forEach((t) => { const m = ensure(t.module); m.tables += 1; m.dependencies.push(`Tabela: ${t.tableName}`); });
+    interactionsAll.forEach((i) => { const m = ensure(i.module); m.interactions.push(i); });
     return [...map.values()].sort((a, b) => (b.pages + b.components + b.hooks + b.apis + b.tables) - (a.pages + a.components + a.hooks + a.apis + a.tables));
-  }, [pages, components, hooks, apis, tables]);
+  }, [pages, components, hooks, apis, tables, interactionsAll]);
 
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   useEffect(() => { setQuery(searchParams.get('q') ?? ''); }, [searchParams]);
@@ -98,6 +102,7 @@ export default function Modules() {
                   <TableHead>Hooks</TableHead>
                   <TableHead>APIs</TableHead>
                   <TableHead>Tabelas</TableHead>
+                  <TableHead>Interações</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -115,6 +120,9 @@ export default function Modules() {
                     <TableCell className="text-muted-foreground">{m.hooks}</TableCell>
                     <TableCell className="text-muted-foreground">{m.apis}</TableCell>
                     <TableCell className="text-muted-foreground">{m.tables}</TableCell>
+                    <TableCell>
+                      <InteractionsDisclosure interactions={m.interactions} />
+                    </TableCell>
                     <TableCell className="text-right">
                       <GeneratePromptButton
                         iconOnly

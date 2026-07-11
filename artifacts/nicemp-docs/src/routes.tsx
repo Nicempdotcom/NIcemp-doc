@@ -15,5 +15,6 @@ export const ROUTES = {
   dependencies: '/dependencies',
   modules:      '/modules',
   prompts:      '/prompts',
+  explorer:     '/explorer',
   settings:     '/settings',
 };

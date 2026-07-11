@@ -47,7 +47,7 @@ function clearStore(store: StoreKey): void {
 function clearAll(): void {
   const stores: StoreKey[] = [
     'projects', 'versions', 'pages', 'components', 'hooks',
-    'apis', 'tables', 'dependencies', 'technologies', 'history',
+    'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
   ];
   stores.forEach(clearStore);
 }
@@ -114,7 +114,7 @@ export const StorageService = {
   countAll(): Record<StoreKey, number> {
     const stores: StoreKey[] = [
       'projects', 'versions', 'pages', 'components', 'hooks',
-      'apis', 'tables', 'dependencies', 'technologies', 'history',
+      'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
     ];
     return Object.fromEntries(
       stores.map((s) => [s, read(s).length]),
@@ -128,7 +128,7 @@ export const StorageService = {
   exportSnapshot(): Record<StoreKey, unknown[]> {
     const stores: StoreKey[] = [
       'projects', 'versions', 'pages', 'components', 'hooks',
-      'apis', 'tables', 'dependencies', 'technologies', 'history',
+      'apis', 'tables', 'dependencies', 'technologies', 'history', 'interactions',
     ];
     return Object.fromEntries(
       stores.map((s) => [s, read(s)]),

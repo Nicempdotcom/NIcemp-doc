@@ -13,6 +13,7 @@ import JSZip from 'jszip';
 import { StructureAnalyzer }  from './StructureAnalyzer';
 import { DependencyAnalyzer } from './DependencyAnalyzer';
 import { TechnologyAnalyzer } from './TechnologyAnalyzer';
+import { InteractionAnalyzer } from './InteractionAnalyzer';
 import type { ScannedFile, ProjectMap } from './types';
 
 // ─── Live counts (kept in sync with src/workers/types.ts) ─────────────────────
@@ -201,6 +202,13 @@ export async function runAnalysisPipeline(
   onProgress(70, 'Identificando páginas, componentes e hooks…', { ...counts });
   await tick();
 
+  // ── 3.5 Interactions — "o que este botão/tela faz" (EPIC 10) ──────────────
+  onProgress(73, 'Analisando cliques e interações...', { ...counts });
+  const interactionAnalyzer = new InteractionAnalyzer();
+  const interactions = interactionAnalyzer.analyze(categorized);
+  checkCancelled();
+  await tick();
+
   // ── 4. Dependency map ──────────────────────────────────────────────────────
   onProgress(76, 'Construindo mapa de dependências...', { ...counts });
   const depAnalyzer  = new DependencyAnalyzer();
@@ -250,6 +258,7 @@ export async function runAnalysisPipeline(
     tree,
     dependencies,
     technology,
+    interactions,
     stats,
   };
 

@@ -5,11 +5,12 @@ import PageHeader from '@/app/layouts/PageHeader';
 import InfoBox from '@/app/components/docs/InfoBox';
 import EntityTableToolbar from '@/app/components/docs/EntityTableToolbar';
 import StatusBadge from '@/app/components/docs/StatusBadge';
+import InteractionsDisclosure from '@/app/components/docs/InteractionsDisclosure';
 import { Badge } from '@/app/components/ui/badge';
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '@/app/components/ui/table';
-import { ProjectRepository, ComponentRepository } from '@/services/storage';
+import { ProjectRepository, ComponentRepository, InteractionRepository } from '@/services/storage';
 import GeneratePromptButton from '@/app/components/prompts/GeneratePromptButton';
 import { buildEntityNameIndex, resolveNames } from '@/services/prompts/resolveDependencyNames';
 
@@ -21,6 +22,7 @@ export default function Components() {
   const [searchParams] = useSearchParams();
   const project = useMemo(() => ProjectRepository.findLatest(), []);
   const components = useMemo(() => (project ? ComponentRepository.findByProject(project.id) : []), [project]);
+  const interactions = useMemo(() => (project ? InteractionRepository.findByProject(project.id) : []), [project]);
   const nameIndex = useMemo(() => (project ? buildEntityNameIndex(project.id) : new Map<string, string>()), [project]);
 
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
@@ -59,6 +61,7 @@ export default function Components() {
                   <TableHead>Status</TableHead>
                   <TableHead>Props</TableHead>
                   <TableHead>Usado em</TableHead>
+                  <TableHead>O que faz</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -79,6 +82,9 @@ export default function Components() {
                     <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-muted-foreground">{c.props.length}</TableCell>
                     <TableCell className="text-muted-foreground">{c.usedIn.length}</TableCell>
+                    <TableCell>
+                      <InteractionsDisclosure interactions={interactions.filter((i) => i.location === c.location)} />
+                    </TableCell>
                     <TableCell className="text-right">
                       <GeneratePromptButton
                         iconOnly
