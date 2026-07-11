@@ -1,0 +1,102 @@
+Tornar o NicEmp Docs mais educativo pra quem não é técnico, com foco em três mudanças: (1) o Glossário passa a explicar TUDO que existe no site (não só termos técnicos genéricos, mas também o que cada tela faz), (2) o Glossário fica mais estruturado e fácil de navegar, e (3) ele sobe de posição no menu lateral, que também fica mais organizado em categorias.
+
+## 1. Expandir `glossary.ts` para cobrir o site inteiro
+
+Arquivo: `artifacts/nicemp-docs/src/app/components/docs/glossary.ts`
+
+Hoje só tem ~15 termos técnicos genéricos (Página, Componente, Hook, API...). Adicionar uma segunda dimensão: cada entrada passa a ter uma **categoria**, e passamos a incluir também os nomes das próprias telas do sistema, explicando o que cada uma faz.
+
+Trocar a estrutura pra suportar categorias:
+
+```ts
+export interface GlossaryEntry {
+  termo: string;
+  explicacao: string;
+  categoria: 'conceito' | 'indicador' | 'tela' | 'documentacao';
+}
+
+export const GLOSSARY_ITEMS: GlossaryEntry[] = [
+  // ── Conceitos gerais ──────────────────────────────────────────────
+  { categoria: 'conceito', termo: 'Página', explicacao: 'Uma tela do site — o que a pessoa vê quando acessa um endereço, como /login ou /dashboard.' },
+  { categoria: 'conceito', termo: 'Componente', explicacao: 'Um pedaço reutilizável de tela, como um botão, um card ou um formulário, que pode aparecer em várias páginas diferentes.' },
+  { categoria: 'conceito', termo: 'Hook', explicacao: 'Um pedaço de lógica reutilizável que várias telas usam por trás dos panos — não aparece visualmente, só faz o sistema funcionar.' },
+  { categoria: 'conceito', termo: 'API', explicacao: "A 'ponte' entre o site e o servidor — é por onde o site pede ou envia informações (ex.: salvar um pedido, buscar dados de um cliente)." },
+  { categoria: 'conceito', termo: 'Banco de Dados', explicacao: 'Onde as informações ficam guardadas de forma permanente (clientes, pedidos, produtos etc.).' },
+  { categoria: 'conceito', termo: 'Tabela', explicacao: 'Uma "gaveta" dentro do banco de dados, onde um tipo específico de informação fica guardado (ex.: a tabela de clientes, a tabela de pedidos).' },
+  { categoria: 'conceito', termo: 'Módulo', explicacao: "Um grupo de páginas/componentes/APIs que trabalham juntos numa mesma parte do sistema (ex.: tudo relacionado a 'Pedidos')." },
+  { categoria: 'conceito', termo: 'Dependência', explicacao: 'Uma ferramenta pronta, feita por outra empresa/pessoa, que o projeto usa em vez de reinventar (ex.: uma biblioteca de calendário).' },
+  { categoria: 'conceito', termo: 'Interação', explicacao: 'Uma ação que o usuário faz clicando em algo (um botão, um link) e o que acontece como consequência.' },
+  { categoria: 'conceito', termo: 'Rota', explicacao: 'O endereço de uma página dentro do site, como /login ou /dashboard — é o que aparece na barra do navegador.' },
+  { categoria: 'conceito', termo: 'Arquitetura', explicacao: 'Como as partes do sistema (telas, lógica, servidor, banco de dados) se encaixam e conversam entre si.' },
+  { categoria: 'conceito', termo: 'Frontend', explicacao: 'A parte do sistema que a pessoa vê e usa diretamente no navegador: telas, botões, formulários.' },
+  { categoria: 'conceito', termo: 'Backend', explicacao: 'A parte do sistema que roda no servidor, fora da vista do usuário — recebe pedidos, processa regras e acessa o banco de dados.' },
+  { categoria: 'conceito', termo: 'Fluxo de Navegação', explicacao: 'O caminho que a pessoa percorre clicando de uma tela para outra dentro do site.' },
+
+  // ── Indicadores e status usados nas telas ────────────────────────
+  { categoria: 'indicador', termo: 'Status (Estável / Instável / Depreciado)', explicacao: 'Mostra a "saúde" de uma página ou componente: Estável significa que está funcionando normalmente; Depreciado significa que ainda existe mas está sendo substituído; Instável indica risco de quebra.' },
+  { categoria: 'indicador', termo: 'Nível de Risco', explicacao: 'Uma estimativa de quão arriscado é mexer numa parte do código: Baixo (mudança segura), Médio (merece atenção) ou Alto (pode quebrar outras partes do sistema, como banco de dados e APIs).' },
+  { categoria: 'indicador', termo: 'Versão', explicacao: 'Um retrato do projeto analisado em um determinado momento — toda vez que um novo ZIP é enviado, uma nova versão é criada, permitindo comparar o antes e o depois.' },
+  { categoria: 'indicador', termo: 'Grafo de Dependências', explicacao: 'Um "mapa" que mostra quais páginas, componentes, hooks e APIs estão conectados entre si dentro do mesmo módulo.' },
+  { categoria: 'indicador', termo: 'Rota Inferida', explicacao: 'O endereço (URL) que o sistema deduz automaticamente pra uma página, com base em onde o arquivo dela está guardado no projeto.' },
+  { categoria: 'indicador', termo: 'Correspondência Exata', explicacao: 'Quando a URL colada no Explorador ao vivo bate certinho com a rota inferida de uma página já detectada no projeto.' },
+
+  // ── Telas da plataforma ───────────────────────────────────────────
+  { categoria: 'tela', termo: 'Dashboard', explicacao: 'Tela inicial com um resumo geral do projeto analisado: quantidade de páginas, componentes, APIs e outras estatísticas rápidas.' },
+  { categoria: 'tela', termo: 'Upload', explicacao: 'Onde você envia o arquivo ZIP do projeto pra ser analisado. É o ponto de partida — sem isso, as outras telas ficam vazias.' },
+  { categoria: 'tela', termo: 'Projeto', explicacao: 'Lista detalhada de tudo que foi encontrado na última análise: todas as páginas, componentes, hooks e APIs, um por um.' },
+  { categoria: 'tela', termo: 'Histórico', explicacao: 'Lista de todas as versões (análises) já feitas do projeto, permitindo ver e apagar versões antigas.' },
+  { categoria: 'tela', termo: 'Comparação', explicacao: 'Mostra o que mudou entre duas versões do projeto — o que foi adicionado, removido ou alterado.' },
+  { categoria: 'tela', termo: 'Impacto', explicacao: 'Ajuda a responder "se eu mexer nisso, o que mais pode quebrar?" — mostra tudo que depende de uma determinada parte do sistema.' },
+  { categoria: 'tela', termo: 'Organograma', explicacao: 'Visão visual de como os módulos do sistema se relacionam entre si, como um organograma de empresa, mas para o código.' },
+  { categoria: 'tela', termo: 'Explorador ao vivo', explicacao: 'Você cola a URL de uma tela em produção e o sistema descobre qual arquivo é essa página e tudo relacionado a ela (componentes, hooks, APIs).' },
+  { categoria: 'tela', termo: 'Prompts Replit', explicacao: 'Gera automaticamente um texto pronto (prompt) pra pedir uma mudança específica pro Replit Agent, já com contexto técnico da parte do sistema envolvida.' },
+  { categoria: 'tela', termo: 'Configurações', explicacao: 'Ajustes gerais da própria ferramenta NicEmp Docs (não do projeto analisado).' },
+
+  // ── Seções de documentação ────────────────────────────────────────
+  { categoria: 'documentacao', termo: 'Arquitetura (seção)', explicacao: 'Documentação de como as camadas do sistema se conectam de ponta a ponta.' },
+  { categoria: 'documentacao', termo: 'Frontend (seção)', explicacao: 'Lista e documentação de tudo que é tela/visual no projeto analisado.' },
+  { categoria: 'documentacao', termo: 'Backend (seção)', explicacao: 'Lista e documentação de tudo que roda no servidor no projeto analisado.' },
+  { categoria: 'documentacao', termo: 'Banco de Dados (seção)', explicacao: 'Lista das tabelas e estrutura de dados encontradas no projeto analisado.' },
+  { categoria: 'documentacao', termo: 'Componentes (seção)', explicacao: 'Lista de todos os componentes de tela encontrados no projeto.' },
+  { categoria: 'documentacao', termo: 'Hooks (seção)', explicacao: 'Lista de toda a lógica reutilizável encontrada no projeto.' },
+  { categoria: 'documentacao', termo: 'APIs (seção)', explicacao: 'Lista de todos os pontos de comunicação com o servidor encontrados no projeto.' },
+  { categoria: 'documentacao', termo: 'Dependências (seção)', explicacao: 'Lista de todas as ferramentas prontas (bibliotecas) que o projeto usa.' },
+  { categoria: 'documentacao', termo: 'Módulos (seção)', explicacao: 'Lista de todos os grandes grupos/áreas em que o projeto está dividido.' },
+];
+
+/** Compat: mantém o formato antigo (lista simples ordenada) pra quem ainda usa GLOSSARY_TERMS. */
+export const GLOSSARY_TERMS = [...GLOSSARY_ITEMS].sort((a, b) => a.termo.localeCompare(b.termo, 'pt-BR'));
+```
+
+Revisar o restante do projeto (ex.: `TermHint`, se existir, ou qualquer lugar que importe `GLOSSARY` como objeto simples) e ajustar os imports necessários pra continuar funcionando com a nova estrutura — sem quebrar nada que já usa o glossário hoje.
+
+Adicionar também, se fizer sentido durante a implementação, os termos que faltarem específicos do próprio produto (ex.: "EPIC", "Snapshot", "Categoria de Nó") caso apareçam em outras telas e ainda não estejam cobertos.
+
+## 2. Deixar a tela de Glossário mais estruturada
+
+Arquivo: `artifacts/nicemp-docs/src/app/pages/Glossario/index.tsx`
+
+Reorganizar pra agrupar por categoria em vez de uma grade única solta:
+
+- Seção "Conceitos Gerais" (categoria `conceito`)
+- Seção "Como ler os indicadores" (categoria `indicador`)
+- Seção "Telas da plataforma" (categoria `tela`)
+- Seção "Seções de documentação" (categoria `documentacao`)
+
+Cada seção com seu próprio título (`<Section title="..." />`, componente já usado em outras páginas do projeto, ver `Explorer/index.tsx` como referência de padrão) e a grade de cards dentro.
+
+Adicionar um campo de busca no topo (`Input`, mesmo componente usado no Explorador ao vivo) que filtra os termos por texto (nome ou explicação) em tempo real, escondendo as seções que ficarem vazias após o filtro.
+
+## 3. Reorganizar o menu lateral
+
+Arquivo: `artifacts/nicemp-docs/src/app/layouts/Sidebar.tsx`
+
+- Mover "Glossário" para ser o **primeiro item do grupo "Plataforma"** (antes de "Dashboard"), já que ele serve como porta de entrada pra quem não conhece os termos do sistema.
+- Dividir o grupo "Documentação" (hoje com 10 itens soltos) em dois subgrupos, pra ficar mais fácil de escanear visualmente:
+  - **"Estrutura & Camadas"**: Arquitetura, Frontend, Backend, Banco de Dados
+  - **"Inventário Técnico"**: Componentes, Hooks, APIs, Dependências, Módulos
+  - Manter "Prompts Replit" como item avulso no fim desse grupo (ou em um terceiro subgrupo "Ferramentas", se preferir)
+
+Manter o comportamento de expandir/colapsar grupos e a persistência em `localStorage` que já existe — só reorganizar o array `NAV_GROUPS` com essa nova divisão, sem reescrever a lógica de renderização.
+
+Ao final, testar: o Glossário aparece logo no topo do menu (dentro de Plataforma), o "Documentação" mostra os itens divididos nos dois subgrupos, os filtros de busca no Glossário funcionam, e nenhuma rota existente quebrou (todas as páginas continuam acessíveis pelos mesmos links de antes).
