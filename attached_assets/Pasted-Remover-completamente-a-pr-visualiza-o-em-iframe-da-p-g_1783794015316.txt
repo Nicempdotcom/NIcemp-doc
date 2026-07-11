@@ -1,0 +1,39 @@
+Remover completamente a pré-visualização em iframe da página "Explorador ao vivo" (EPIC 10). O objetivo agora é só um: colar a URL de uma tela em produção e obter o rastreio completo (arquivo da página, e o que mexer em Estilo/Visual vs Lógica/Dados) — sem tentar exibir o site de terceiro embutido dentro do NicEmp Docs.
+
+Isso substitui qualquer trabalho de detecção de bloqueio de iframe (timeout, `previewBlocked`, etc.) que tenha sido feito a partir do prompt anterior — não precisa mais disso. Se esse código já foi adicionado, remover.
+
+Arquivo: `artifacts/nicemp-docs/src/app/pages/Explorer/index.tsx`
+
+## O que remover
+
+- Toda a seção `<Section title="Pré-visualização (melhor esforço)" ...>`, incluindo o `InfoBox` de aviso permanente e o `<iframe>`.
+- Os estados `previewUrl`, `previewError`, `previewBlocked` e o timer relacionado (`previewLoadTimer`), e a função `handleIframeLoad`, se existirem.
+- Qualquer lógica em `handleExplore` que monte `previewUrl`/`previewError` (construção de `withProtocol`, checagem de `looksLikeBarePath`, `setTimeout` de bloqueio, etc.) — `handleExplore` deve só fazer o match da página e nada de URL de preview.
+
+## O que manter/simplificar
+
+`handleExplore` fica reduzido a:
+
+```ts
+const handleExplore = () => {
+  if (!urlInput.trim()) return;
+  const matched = matchPageByPath(urlInput.trim(), pages);
+  setResult(matched);
+};
+```
+
+## O que adicionar no lugar do preview
+
+No bloco "Página encontrada" (onde `matched` existe), logo abaixo do cabeçalho com nome/status/módulo/rota, adicionar um link simples "Abrir página em nova aba" apontando pra URL original que o usuário colou (`urlInput`), sem tentar embutir nada — só um `<a href={urlInput} target="_blank" rel="noopener noreferrer">` com um ícone de link externo (ex.: `ExternalLink` do lucide-react, já deve estar disponível no projeto).
+
+## Confirmar que o restante continua intacto
+
+- A seção "Buscar por URL".
+- A seção "Nenhuma correspondência exata" com sugestões.
+- A separação em "🎨 Estilo / Visual" e "⚙️ Lógica / Dados" implementada no prompt anterior (não mexer nisso).
+- A correção da inferência de rota do App Router em `mapper.ts` (não mexer nisso).
+- A seção "Como funciona" exibida quando `!result`.
+
+Atualizar também a descrição da seção "Buscar por URL" e o texto de "Como funciona", removendo qualquer menção a pré-visualização/iframe, já que essa funcionalidade não existe mais na página.
+
+Ao final, testar: colar uma URL que bate com uma página existente → mostra o rastreio completo (arquivo, módulo, rota, estilo/visual, lógica/dados) e o link "Abrir em nova aba", sem nenhuma caixa de preview. Colar uma URL sem correspondência → mostra sugestões normalmente, sem nenhuma referência a preview.

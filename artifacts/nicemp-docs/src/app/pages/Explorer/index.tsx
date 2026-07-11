@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, FileText, Layers, Zap, Globe2, Database, Share2 } from 'lucide-react';
+import { Search, FileText, Layers, Zap, Globe2, Database, Share2, ExternalLink } from 'lucide-react';
 import PageHeader from '@/app/layouts/PageHeader';
 import { Section, InfoBox, InteractionsDisclosure } from '@/app/components/docs';
 import StatusBadge from '@/app/components/docs/StatusBadge';
@@ -39,9 +39,9 @@ const CATEGORY_LABEL: Record<NodeCategory, string> = {
 };
 
 /**
- * Explorador ao vivo — paste a live URL and see what NicEmp Docs knows
- * about that page: which components/hooks/APIs/interactions belong to
- * its module, plus a best-effort iframe preview (EPIC 10).
+ * Explorador ao vivo — cole a URL de uma tela em produção e veja o rastreio
+ * completo: arquivo da página, módulo, rota, componentes, hooks, APIs,
+ * interações e dependências reais (EPIC 10).
  *
  * Matching is approximate: it compares the URL's path against each
  * detected page's inferred route, which works best for conventional
@@ -66,26 +66,11 @@ export default function Explorer() {
 
   const [urlInput, setUrlInput] = useState('');
   const [result, setResult] = useState<UrlMatchResult | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const handleExplore = () => {
     if (!urlInput.trim()) return;
-    const raw = urlInput.trim();
-    const matched = matchPageByPath(raw, pages);
+    const matched = matchPageByPath(urlInput.trim(), pages);
     setResult(matched);
-
-    const hasProtocol = /^https?:\/\//i.test(raw);
-    const looksLikeBarePath = raw.startsWith('/') && !hasProtocol;
-
-    if (looksLikeBarePath) {
-      // Só um caminho, sem domínio — não dá para montar uma URL de preview válida.
-      setPreviewUrl(null);
-      setPreviewError('Cole a URL completa (com domínio) para ver a pré-visualização, ex.: https://seusite.com/admin');
-    } else {
-      setPreviewError(null);
-      setPreviewUrl(hasProtocol ? raw : `https://${raw}`);
-    }
   };
 
   const moduleDataFor = (page: PageEntity) => ({
@@ -119,7 +104,7 @@ export default function Explorer() {
     <div className="w-full">
       <PageHeader
         title="Explorador ao vivo"
-        description="Cole a URL de uma tela em produção e veja o que o NicEmp Docs sabe sobre ela — componentes, hooks, APIs e interações do mesmo módulo."
+        description="Cole a URL de uma tela em produção e veja o rastreio completo — arquivo, módulo, rota, componentes, hooks, APIs e interações."
         badge="EPIC 10"
         badgeVariant="info"
       />
@@ -165,6 +150,15 @@ export default function Explorer() {
                     )}
                     details={{ Rota: matched.route || '—', Status: matched.status }}
                   />
+                  <a
+                    href={urlInput}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Abrir página em nova aba
+                  </a>
                 </div>
                 <InteractionsDisclosure interactions={matchedData.interactions} emptyLabel="Nenhuma interação detectada nesta tela." />
               </div>
@@ -236,33 +230,12 @@ export default function Explorer() {
               )}
             </Section>
           )}
-
-          <Section title="Pré-visualização (melhor esforço)" description="Muitos sites bloqueiam a exibição em iframe por motivos de segurança (X-Frame-Options/CSP). Não há como detectar isso automaticamente — se a área abaixo aparecer em branco, é provável que o site esteja bloqueando.">
-            <InfoBox variant="warning" title="Aviso permanente">
-              Esta pré-visualização não rastreia cliques nem interações de origem cruzada (cross-origin), por design — é apenas uma janela visual best-effort.
-            </InfoBox>
-            {previewError && (
-              <InfoBox variant="warning" title="URL incompleta">
-                {previewError}
-              </InfoBox>
-            )}
-            {previewUrl && (
-              <div className="rounded-lg border border-border overflow-hidden h-[480px] bg-muted/20">
-                <iframe
-                  src={previewUrl}
-                  title="Pré-visualização ao vivo"
-                  className="w-full h-full"
-                  sandbox="allow-scripts allow-same-origin allow-forms"
-                />
-              </div>
-            )}
-          </Section>
         </>
       )}
 
       {!result && (
         <InfoBox variant="info" title="Como funciona">
-          Colamos a URL, extraímos o caminho (ex.: /pedidos/123) e comparamos com as rotas inferidas de cada página detectada no projeto. Quando não há correspondência exata, mostramos as páginas mais parecidas.
+          Cole a URL de uma tela em produção, extraímos o caminho (ex.: /pedidos/123) e comparamos com as rotas inferidas de cada página detectada no projeto. Quando há correspondência, mostramos o arquivo responsável pela rota, o módulo ao qual pertence, e todas as entidades relacionadas — componentes, hooks, APIs e interações. Quando não há correspondência exata, mostramos as páginas mais parecidas.
         </InfoBox>
       )}
     </div>
