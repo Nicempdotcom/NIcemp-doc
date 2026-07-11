@@ -36,14 +36,24 @@ function readAsBuffer(
   file: File,
   onProgress: (pct: number) => void,
 ): Promise<ArrayBuffer> {
+  console.log('[DEBUG] readAsBuffer: promise executor start');
   return new Promise((resolve, reject) => {
     const reader    = new FileReader();
     reader.onprogress = (e) => {
+      console.log('[DEBUG] reader.onprogress fired', e.lengthComputable, e.loaded, e.total);
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
-    reader.onload  = () => resolve(reader.result as ArrayBuffer);
-    reader.onerror = () => reject(new Error('FileReader failed'));
+    reader.onload  = () => {
+      console.log('[DEBUG] reader.onload fired, byteLength=', (reader.result as ArrayBuffer)?.byteLength);
+      resolve(reader.result as ArrayBuffer);
+    };
+    reader.onerror = () => {
+      console.log('[DEBUG] reader.onerror fired', reader.error);
+      reject(new Error('FileReader failed'));
+    };
+    console.log('[DEBUG] calling reader.readAsArrayBuffer(file)');
     reader.readAsArrayBuffer(file);
+    console.log('[DEBUG] reader.readAsArrayBuffer(file) call returned (async)');
   });
 }
 
@@ -69,6 +79,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     }
 
     // ── Start reading ─────────────────────────────────────────────────────
+    console.log('[DEBUG] setState reading called');
     setState({
       ...INITIAL,
       stage:    'reading',
@@ -81,7 +92,9 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
       buffer = await readAsBuffer(file, (pct) =>
         setState((s) => ({ ...s, readProgress: pct })),
       );
-    } catch {
+      console.log('[DEBUG] buffer pronto, size=', buffer.byteLength);
+    } catch (err) {
+      console.log('[DEBUG] catch around readAsBuffer, err=', err);
       setState({ ...INITIAL, stage: 'error', error: friendly('read_failed') });
       return;
     }

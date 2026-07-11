@@ -125,12 +125,15 @@ export default function UploadProject() {
   const didStart = useRef(false);
 
   useEffect(() => {
+    console.log('[DEBUG] auto-start effect ran', { stage, hasBuffer: upload.zipBuffer !== null, phase, didStart: didStart.current });
     if (stage !== 'completed' || upload.zipBuffer === null || phase !== 'idle') return;
     if (didStart.current) return;
     didStart.current = true;
 
     const buffer = takeBuffer();
+    console.log('[DEBUG] takeBuffer() ->', buffer ? buffer.byteLength : buffer);
     if (!buffer) return;
+    console.log('[DEBUG] calling startAnalysis');
     startAnalysis(buffer, upload.fileName, upload.fileSize);
   }, [stage, upload.zipBuffer, phase]);
 
@@ -238,6 +241,8 @@ export default function UploadProject() {
     if (!comparison) return;
     navigate(`${ROUTES.comparison}?from=${comparison.fromVersionId}&to=${comparison.toVersionId}`);
   };
+
+  console.log('[RENDER] UploadProject', { stage, phase, fileName, fileSize });
 
   // ── Render: file reading progress (fast, before worker starts) ────────────
   if (stage === 'reading') {

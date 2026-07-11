@@ -89,6 +89,7 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
     fileName: string,
     fileSize: number,
   ) => {
+    console.log('[DEBUG] startAnalysis() called', { fileName, fileSize, bufferLen: buffer.byteLength });
     // Kill any previous worker
     if (workerRef.current) {
       workerRef.current.terminate();
