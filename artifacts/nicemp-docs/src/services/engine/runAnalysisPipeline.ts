@@ -15,6 +15,7 @@ import { DependencyAnalyzer } from './DependencyAnalyzer';
 import { TechnologyAnalyzer } from './TechnologyAnalyzer';
 import { InteractionAnalyzer } from './InteractionAnalyzer';
 import type { ScannedFile, ProjectMap } from './types';
+import { isExcludedPath } from './pathExclusions';
 
 // ─── Live counts (kept in sync with src/workers/types.ts) ─────────────────────
 
@@ -127,14 +128,23 @@ export async function runAnalysisPipeline(
   checkCancelled();
 
   const allEntries  = Object.entries(jszip.files);
-  const fileEntries = allEntries.filter(([, f]) => !f.dir);
+  const prefix      = detectPrefix(allEntries);
+
+  // Exclude backup/build folders (node_modules/, dist/, build/, .git/,
+  // .migration-backup/, dist-cloudflare/) before any content is read or
+  // categorized — they are copies, not real source code.
+  const fileEntries = allEntries
+    .filter(([, f]) => !f.dir)
+    .filter(([rawPath]) => {
+      const path = rawPath.startsWith(prefix) ? rawPath.slice(prefix.length) : rawPath;
+      return path && !isExcludedPath(path);
+    });
 
   if (fileEntries.length === 0) {
     throw new Error('O arquivo ZIP está vazio. Adicione arquivos ao projeto antes de enviar.');
   }
 
   counts.filesTotal = fileEntries.length;
-  const prefix = detectPrefix(allEntries);
 
   onProgress(5, `Lendo estrutura do ZIP… (${fileEntries.length} arquivos encontrados)`, counts);
 

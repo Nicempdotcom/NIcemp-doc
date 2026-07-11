@@ -10,6 +10,7 @@
 
 import JSZip from 'jszip';
 import type { ScannedFile } from './types';
+import { isExcludedPath } from './pathExclusions';
 
 // ─── Binary detection ─────────────────────────────────────────────────────────
 
@@ -71,8 +72,15 @@ export class ProjectScanner {
     const allEntries = Object.entries(jszip.files);
     const prefix     = detectAndStripRoot(allEntries);
 
-    // 2. Filter to non-directory entries
-    const fileEntries = allEntries.filter(([, f]) => !f.dir);
+    // 2. Filter to non-directory entries, excluding backup/build folders
+    // (node_modules/, dist/, build/, .git/, .migration-backup/, dist-cloudflare/)
+    // before any content is read or categorized.
+    const fileEntries = allEntries
+      .filter(([, f]) => !f.dir)
+      .filter(([rawPath]) => {
+        const path = rawPath.startsWith(prefix) ? rawPath.slice(prefix.length) : rawPath;
+        return path && !isExcludedPath(path);
+      });
     const total       = fileEntries.length;
     onProgress(12);
 
