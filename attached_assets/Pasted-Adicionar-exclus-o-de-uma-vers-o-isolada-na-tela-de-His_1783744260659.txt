@@ -1,0 +1,48 @@
+Adicionar exclusão de uma versão isolada na tela de Histórico (EPIC 06), sem mexer em páginas/componentes atuais.
+
+CONTEXTO
+- src/app/pages/History/index.tsx renderiza a timeline chamando VersionRepository.findByProject(projectId)
+  e passando cada VersionEntity pro VersionCard.
+- src/app/pages/History/VersionCard.tsx exibe cada versão, mas hoje não tem botão de excluir.
+- A camada de dados JÁ tem os métodos prontos, não precisa criar nada novo aqui:
+  - VersionRepository.remove(id: string) -> src/services/storage/repositories/VersionRepository.ts
+  - VersionSnapshotRepository.remove(versionId: string) -> src/services/storage/repositories/VersionSnapshotRepository.ts
+  Ambos já removem do localStorage E do Supabase (fire-and-forget), pois usam StorageService.remove().
+
+O QUE FAZER
+
+1. Em VersionCard.tsx:
+   - Adicionar prop `onDelete: () => void`.
+   - Adicionar um botão de lixeira (ícone Trash2, variant="ghost", tamanho sm) ao lado de "Comparar com anterior" / "Abrir versão".
+   - Envolver o botão num <AlertDialog> (mesmo padrão já usado em app/pages/Settings/index.tsx)
+     com título "Excluir esta versão do histórico?" e descrição:
+     "Isso vai apagar apenas o registro '{version.name}' da linha do tempo. As páginas, componentes e demais
+      dados do projeto continuam como estão — nada do que já foi analisado é afetado. Essa ação não pode ser desfeita."
+   - Botão de confirmação chama onDelete().
+
+2. Em History/index.tsx:
+   - Trocar `const versions = useMemo(...)` por estado (useState) + função `reload()` que rechama
+     VersionRepository.findByProject(projectId), pra poder atualizar a lista depois de excluir.
+   - Criar handler:
+       function handleDeleteVersion(versionId: string) {
+         VersionRepository.remove(versionId);
+         VersionSnapshotRepository.remove(versionId);
+         setSelected((prev) => prev.filter((id) => id !== versionId)); // tira da seleção de comparação se estava marcada
+         reload();
+         toast({ title: 'Versão excluída', description: 'O registro foi removido da linha do tempo.' });
+       }
+   - Passar `onDelete={() => handleDeleteVersion(version.id)}` pro VersionCard.
+   - Usar o hook useToast (@/hooks/use-toast), igual já é feito em Settings/index.tsx.
+
+3. Regra de proteção: se `versions.length === 1` (é a única versão do projeto), trocar a descrição do
+   AlertDialog para avisar: "Esta é a única versão registrada deste projeto. Excluir vai deixar o histórico vazio."
+   (não precisa bloquear, só avisar).
+
+RESTRIÇÕES
+- NÃO alterar StorageService.ts, SupabaseBackend.ts, VersionRepository.ts nem VersionSnapshotRepository.ts
+  (os métodos remove() já existem e já fazem o que precisa).
+- NÃO tocar em PageRepository, ComponentRepository, HooksRepository, etc. — excluir uma versão do histórico
+  NUNCA deve apagar páginas/componentes/hooks/apis atuais do projeto.
+- NÃO usar StorageService.clearAll() nem clearStore() aqui — isso é o botão "Resetar histórico" existente
+  em Settings, que continua intacto e serve pra outra coisa (apagar TUDO).
+- Manter o padrão visual (shadcn/ui Button, AlertDialog, Badge) já usado no restante do arquivo.
