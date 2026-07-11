@@ -1,0 +1,53 @@
+As páginas Organograma, Explorador ao vivo e Glossário sumiram de novo do
+menu lateral (`src/app/layouts/Sidebar.tsx`) e das rotas (`src/App.tsx`) —
+isso já tinha sido corrigido antes, mas voltou a acontecer, provavelmente
+ao editar esses mesmos arquivos durante a implementação do Dashboard com
+dados reais.
+
+## 1. Investigar a causa raiz
+
+Antes de simplesmente readicionar, me diga: o que causou isso da segunda
+vez? Você reescreveu App.tsx/Sidebar.tsx inteiros a partir de uma versão
+antiga em algum momento, ou foi uma edição pontual que acabou removendo
+essas linhas por engano? Preciso entender pra isso não virar um padrão.
+
+## 2. Restaurar (de novo)
+
+1. `src/App.tsx`: adicione de volta os imports e `<Route>` de `Overview`
+   (`ROUTES.overview`), `Explorer` (`ROUTES.explorer`) e `Glossario`
+   (`ROUTES.glossario`).
+2. `src/app/layouts/Sidebar.tsx`: adicione de volta os itens de menu
+   "Organograma", "Explorador ao vivo" e "Glossário" nos grupos corretos
+   (confira o texto exato dos labels e ícones — no print mais recente que
+   tenho, os labels usados eram "Explorador ao vivo" e "Organograma" no
+   grupo Plataforma, e "Glossário" no grupo Documentação).
+3. Confirme que `src/app/layouts/Breadcrumb.tsx` continua cobrindo os
+   labels certos.
+
+## 3. Salvaguarda pra não repetir uma terceira vez
+
+Adicione uma verificação simples que quebre o build/typecheck se alguma
+rota declarada em `src/routes.tsx` (objeto ROUTES) não tiver um `<Route>`
+correspondente em `src/App.tsx`. Pode ser, por exemplo:
+- um teste unitário simples (se o projeto já tiver alguma infra de teste),
+  ou
+- um script pequeno (`scripts/check-routes.ts` ou similar) que importe
+  ROUTES e verifique — via leitura do arquivo App.tsx como texto, ou de
+  forma programática — que toda chave de ROUTES aparece pelo menos uma vez
+  como `path={ROUTES.xxx}` em App.tsx, falhando com erro claro se faltar
+  alguma.
+
+Se isso for desproporcional pro tamanho do projeto, ao menos registre uma
+nota em `.agents/memory/` explicando esse padrão de regressão (rotas
+somem do App.tsx/Sidebar.tsx quando esses arquivos são editados por outras
+tarefas) pra qualquer agente futuro saber que precisa conferir isso
+explicitamente antes de finalizar qualquer tarefa que toque nesses dois
+arquivos.
+
+## 4. Validação
+- Rode `pnpm run typecheck` e `pnpm run build:cloudflare`.
+- Teste manualmente: clique nos três itens no menu lateral e confirme que
+  abrem sem erro.
+
+Me diga ao final: a causa raiz encontrada, os arquivos modificados, e qual
+salvaguarda você implementou.

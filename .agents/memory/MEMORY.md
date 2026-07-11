@@ -3,3 +3,4 @@
 - [setState updater return value is stale](setstate-updater-return-value.md) — can't synchronously read a value out of a setState updater callback; it runs async, so the read is always stale.
 - [NicEmp Docs entity relationship arrays are unpopulated](nicemp-docs-relationships-unpopulated.md) — PageEntity.components/hooks/apis are always []; group by `module` string instead of these arrays.
 - [NicEmp Docs Supabase persistence](nicemp-docs-supabase.md) — sync cache + write-through strategy; table naming quirk (tables→database_tables); auth model; Cloudflare build PORT quirk.
+- [Route regression pattern](route-regression-pattern.md) — Overview/Explorer/Glossario dropped twice from App.tsx/Sidebar.tsx rewrites; run check:routes after any edit to these files.

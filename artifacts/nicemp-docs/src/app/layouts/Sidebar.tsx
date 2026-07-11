@@ -19,6 +19,8 @@ import {
   Zap,
   Globe,
   LogOut,
+  Search,
+  BookOpen,
 } from 'lucide-react';
 import { ROUTES } from '@/routes';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -33,7 +35,9 @@ const NAV_GROUPS = [
       { label: 'Projeto',        icon: FolderKanban,    href: ROUTES.project    },
       { label: 'Histórico',      icon: History,         href: ROUTES.history    },
       { label: 'Comparação',     icon: GitCompare,      href: ROUTES.comparison },
-      { label: 'Impacto',        icon: AlertTriangle,   href: ROUTES.impact     },
+      { label: 'Impacto',          icon: AlertTriangle,   href: ROUTES.impact     },
+      { label: 'Organograma',      icon: Network,         href: ROUTES.overview   },
+      { label: 'Explorador ao vivo', icon: Search,        href: ROUTES.explorer   },
     ],
   },
   {
@@ -49,6 +53,7 @@ const NAV_GROUPS = [
       { label: 'Dependências',   icon: Package,         href: ROUTES.dependencies },
       { label: 'Módulos',        icon: Package,         href: ROUTES.modules      },
       { label: 'Prompts Replit', icon: Bot,             href: ROUTES.prompts      },
+      { label: 'Glossário',      icon: BookOpen,        href: ROUTES.glossario    },
     ],
   },
   {

@@ -11,6 +11,7 @@ const getRouteLabel = (pathname: string) => {
     case ROUTES.comparison:   return 'Comparação de Versões';
     case ROUTES.impact:       return 'Impacto das Alterações';
     case ROUTES.overview:     return 'Organograma';
+    case ROUTES.explorer:     return 'Explorador ao vivo';
     case ROUTES.architecture: return 'Arquitetura';
     case ROUTES.frontend:     return 'Frontend';
     case ROUTES.backend:      return 'Backend';

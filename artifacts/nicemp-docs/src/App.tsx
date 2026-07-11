@@ -26,6 +26,9 @@ import Modules      from '@/app/pages/Modules';
 import Prompts      from '@/app/pages/Prompts';
 import Settings     from '@/app/pages/Settings';
 import Login        from '@/app/pages/Login';
+import Overview     from '@/app/pages/Overview';
+import Explorer     from '@/app/pages/Explorer';
+import Glossario    from '@/app/pages/Glossario';
 import NotFound     from '@/app/pages/not-found';
 import { ROUTES }   from '@/routes';
 
@@ -137,6 +140,9 @@ function Layout() {
               <Route path={ROUTES.apis}         element={<Apis />}         />
               <Route path={ROUTES.dependencies} element={<Dependencies />} />
               <Route path={ROUTES.modules}      element={<Modules />}      />
+              <Route path={ROUTES.overview}     element={<Overview />}     />
+              <Route path={ROUTES.explorer}     element={<Explorer />}     />
+              <Route path={ROUTES.glossario}    element={<Glossario />}    />
               <Route path={ROUTES.prompts}      element={<Prompts />}      />
               <Route path={ROUTES.settings}     element={<Settings />}     />
               <Route path="*"                   element={<NotFound />}     />
