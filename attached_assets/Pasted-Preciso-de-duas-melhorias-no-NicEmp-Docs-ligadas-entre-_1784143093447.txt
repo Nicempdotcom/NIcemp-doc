@@ -1,0 +1,60 @@
+Preciso de duas melhorias no NicEmp Docs, ligadas entre si:
+
+## 1. Conexão real com o Supabase de cada projeto enviado
+
+Hoje a página "Banco de Dados" (src/app/pages/Database/index.tsx) só mostra
+tabelas INFERIDAS a partir do scan estático do ZIP (via
+ProjectRepository.findLatest() + TableRepository.findByProject). Isso é útil,
+mas não é uma conexão de verdade — se o projeto do parceiro usa Supabase como
+banco, quero poder conectar a instância real dele e ver dados ao vivo, não só
+o que foi deduzido do código.
+
+O que preciso:
+- Em Configurações > Integrações (IntegrationsDialog.tsx), adicionar um novo
+  tipo de integração "Banco de Dados do Projeto", separado da integração
+  Supabase que já existe (essa é só a persistência interna do NicEmp Docs —
+  não mexer nela).
+- Um fluxo para o usuário colar a Project URL + anon/service key (ou a
+  connection string direta) do Supabase do PRÓPRIO projeto que ele documentou,
+  associado ao projectId daquele projeto específico (cada projeto pode ter um
+  Supabase diferente).
+- Guardar essa credencial de forma segura (nunca em texto puro em log, nunca
+  exposta em componentes client sem necessidade) — se possível usando o
+  api-server (artifacts/api-server) como proxy, em vez de bater direto do
+  front-end.
+- Na página Banco de Dados, quando existir uma conexão configurada para o
+  projeto aberto, mostrar uma aba/seção extra "Conexão ao vivo" com: status
+  (healthy/unhealthy), tabelas reais via introspecção do schema (information_schema
+  ou Management API), contagem de linhas por tabela, últimas migrations e
+  última data de backup — parecido com o painel que o Supabase mostra
+  (status, compute, last migration, last backup).
+- Se não houver conexão configurada, manter o comportamento atual (tabelas
+  inferidas do ZIP) como fallback, sem quebrar nada que já funciona.
+- Deixar claro na UI que "detectado automaticamente" e "conectado ao vivo" são
+  coisas diferentes (badges distintos).
+
+## 2. Melhor identificação dos projetos enviados
+
+Hoje o app usa ProjectRepository.findLatest() em várias páginas, então só
+enxergo o ÚLTIMO projeto enviado — não dá pra saber facilmente quais projetos
+já subi, quando, e diferenciar dois uploads parecidos.
+
+O que preciso:
+- Uma lista/seletor de projetos (pode ficar no Sidebar ou no Painel) mostrando
+  todos os ProjectEntity já salvos: nome, rootName, data de criação
+  (createdAt), package manager e stats básicas (páginas, componentes, tabelas
+  etc.), não só o mais recente.
+- Permitir dar um apelido/label customizado ao projeto no momento do upload ou
+  depois (ex: "NicEmp — produção" vs "NicEmp — testes"), sem depender só do
+  nome da pasta raiz do ZIP, que às vezes é genérico (tipo "src" ou "app").
+- Trocar o projeto "ativo" que está sendo visualizado deve atualizar todas as
+  páginas que hoje chamam findLatest() (Overview, Database, Architecture,
+  Front-end, Backend, Componentes, Ganchos, APIs, Dependências, Módulos etc.)
+  para usar o projeto selecionado, não sempre o mais recente.
+- Isso deve valer também pra conexão de banco do item 1 — a credencial de
+  Supabase fica atrelada ao projectId, então trocar de projeto troca também
+  qual conexão está ativa.
+
+Antes de implementar, quero ver o plano de mudança (quais arquivos vai tocar,
+como vai persistir o "projeto ativo" — localStorage? nova store?) antes de
+sair codando.
