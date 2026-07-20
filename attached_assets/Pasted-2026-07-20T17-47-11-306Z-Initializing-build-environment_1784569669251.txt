@@ -1,0 +1,36 @@
+2026-07-20T17:47:11.306Z	Initializing build environment...
+2026-07-20T17:47:15.527Z	Success: Finished initializing build environment
+2026-07-20T17:47:17.175Z	Cloning repository...
+2026-07-20T17:47:21.172Z	Detected the following tools from environment: pnpm@10.26.1, nodejs@22.16.0
+2026-07-20T17:47:22.740Z	Installing project dependencies: pnpm install --frozen-lockfile
+2026-07-20T17:47:23.505Z	Scope: all 9 workspace projects
+2026-07-20T17:47:23.621Z	Lockfile is up to date, resolution step is skipped
+2026-07-20T17:47:23.682Z	Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-07-20T17:47:23.787Z	Packages: +510
+2026-07-20T17:47:23.788Z	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-07-20T17:47:24.685Z	Progress: resolved 510, reused 0, downloaded 16, added 3
+2026-07-20T17:47:25.685Z	Progress: resolved 510, reused 0, downloaded 191, added 68
+2026-07-20T17:47:26.695Z	Progress: resolved 510, reused 0, downloaded 268, added 92
+2026-07-20T17:47:27.695Z	Progress: resolved 510, reused 0, downloaded 301, added 108
+2026-07-20T17:47:28.696Z	Progress: resolved 510, reused 0, downloaded 306, added 108
+2026-07-20T17:47:29.697Z	Progress: resolved 510, reused 0, downloaded 374, added 131
+2026-07-20T17:47:30.698Z	Progress: resolved 510, reused 0, downloaded 412, added 143
+2026-07-20T17:47:31.699Z	Progress: resolved 510, reused 0, downloaded 430, added 151
+2026-07-20T17:47:32.699Z	Progress: resolved 510, reused 0, downloaded 510, added 303
+2026-07-20T17:47:33.295Z	Progress: resolved 510, reused 0, downloaded 510, added 510, done
+2026-07-20T17:47:33.617Z	.../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-07-20T17:47:33.688Z	.../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-07-20T17:47:34.202Z	
+2026-07-20T17:47:34.202Z	dependencies:
+2026-07-20T17:47:34.203Z	+ @replit/connectors-sdk 0.4.1
+2026-07-20T17:47:34.203Z	
+2026-07-20T17:47:34.203Z	devDependencies:
+2026-07-20T17:47:34.203Z	+ prettier 3.9.4
+2026-07-20T17:47:34.204Z	+ typescript 5.9.3
+2026-07-20T17:47:34.205Z	
+2026-07-20T17:47:34.260Z	. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-07-20T17:47:34.292Z	. preinstall: Done
+2026-07-20T17:47:34.516Z	Done in 11.5s using pnpm v10.26.1
+2026-07-20T17:47:34.836Z	Executing user build command: … && pnpm run build:cloudflare
+2026-07-20T17:47:34.839Z	/bin/sh: 1: …: not found
+2026-07-20T17:47:34.842Z	Failed: error occurred while running build command
