@@ -1,50 +1,39 @@
 # NicEmp Docs
 
-NicEmp Docs analyzes an uploaded project ZIP and generates/maintains living technical documentation (architecture, frontend, backend, DB, components, hooks, APIs, dependencies) for it, with versioning and comparison between analyses.
-
-## Run & Operate
-
-- `pnpm --filter @workspace/nicemp-docs run dev` — run the docs web app (artifact preview path `/`)
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000, preview path `/api`)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string (already configured)
+A Portuguese-language documentation and analysis platform for software projects. Users upload a ZIP of their codebase and the app parses it into structured entities (pages, components, hooks, APIs, database tables, etc.), displaying them via an interactive dashboard with glossary, history, comparison, org chart, and live explorer views.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- Frontend: React + Vite (`artifacts/nicemp-docs`), Radix UI, Tailwind
-- API: Express 5 (`artifacts/api-server`)
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **Frontend**: React + Vite + TypeScript (`artifacts/nicemp-docs`)
+- **Backend**: Node.js API server (`artifacts/api-server`)
+- **UI**: Radix UI + Tailwind CSS + shadcn/ui
+- **Persistence**: Supabase (PostgreSQL)
 
-## Where things live
+## How to run
 
-- `artifacts/nicemp-docs` — frontend (upload flow, docs viewer, comparison/history views)
-- `artifacts/api-server` — Express API (ZIP upload/analysis endpoints)
-- `lib/db` — Drizzle schema/migrations (source of truth for DB shape)
-- `lib/api-spec` — OpenAPI spec (source of truth for API contracts)
+All workflows are configured. Start from the Replit UI:
+- **NicEmp Docs** (`artifacts/nicemp-docs: web`) — main React app, served at `/`
+- **API Server** (`artifacts/api-server: API Server`) — backend API, served at `/api`
 
-## Architecture decisions
+Dependencies: `pnpm install` at the root.
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+## Project structure
 
-## Product
-
-NicEmp Docs lets a user upload a project as a ZIP, analyzes it, and produces browsable technical documentation (dashboard, architecture, frontend/backend/DB breakdowns, components, hooks, APIs, dependencies), plus version history and comparison between uploads.
+```
+artifacts/
+  nicemp-docs/    # React + Vite frontend
+    src/
+      app/        # Layouts, routing
+      features/   # Feature modules
+      services/   # Business logic, parsers, prompts
+      database/   # Supabase client + queries
+      hooks/      # Shared React hooks
+      utils/      # Utility functions
+      workers/    # Web workers
+  api-server/     # Fastify API server
+  mockup-sandbox/ # Component preview sandbox (Canvas)
+```
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+<!-- Record user preferences here as they are confirmed -->

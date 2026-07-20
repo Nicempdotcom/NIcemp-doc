@@ -1,0 +1,81 @@
+# Prompt para Replit Agent — NIcemp-doc: Categorias dinâmicas na "Criar Ferramenta"
+
+## 1. Objetivo
+Hoje o modal "Gerar prompt — Criar Ferramenta" 
+(`artifacts/nicemp-docs/src/app/components/prompts/CreateToolPromptDialog.tsx`) usa uma lista fixa
+de categorias (`CATEGORY_OPTIONS = ['Financeiro', 'Tributário', 'Matemática', 'Gestão']`, hardcoded
+também como o tipo `ToolCategory` em `src/services/prompts/ToolCreationPromptGenerator.ts`).
+
+Quero que, quando o projeto nicemp.com for analisado pelo motor de análise do NicEmp Docs
+(`src/services/engine/*Analyzer.ts` + `src/services/storage`), o sistema também detecte quais
+categorias de ferramentas JÁ EXISTEM de verdade no código (lidas do array `allTools` em
+`ToolsHome.tsx` do projeto analisado, campo `category`), e passe a exibir essa lista real no
+dropdown "Categoria" do modal — em vez da lista fixa. Também quero um botão para criar uma
+categoria nova diretamente ali, caso eu queira introduzir uma categoria que ainda não existe.
+
+Isso NÃO deve criar nem editar nada no projeto nicemp.com automaticamente — o NIcemp-doc só lê/gera
+texto, igual já funciona hoje.
+
+## 2. Passo a passo obrigatório
+
+a) Criar um novo detector `ToolCategoryAnalyzer` em `src/services/engine/`, que recebe os arquivos
+   já escaneados do projeto analisado e procura o(s) arquivo(s) de catálogo de ferramentas
+   (heurística: arquivo cujo conteúdo tenha um array `allTools` com objetos contendo a chave
+   `category`). Extrair a lista de categorias distintas + quantidade de ferramentas por categoria.
+   Se o arquivo de catálogo não for encontrado (ex.: projeto analisado não é o nicemp.com, ou ainda
+   não foi conectado/analisado), retornar lista vazia sem quebrar o restante da análise.
+
+b) Persistir o resultado em `src/services/storage`: criar uma entidade nova, ex.
+   `ToolCategoryEntity { kind: 'tool-category', name: string, toolCount: number }`, associada à
+   versão/snapshot do projeto (mesmo padrão de `VersionSnapshotEntity` usado pelas outras
+   entidades), com o repositório correspondente (`ToolCategoryRepository`, seguindo o padrão de
+   `PageRepository`/`ComponentRepository` já existentes).
+
+c) Em `CreateToolPromptDialog.tsx`, substituir o array fixo `CATEGORY_OPTIONS` por uma leitura via
+   `ToolCategoryRepository.findByProject(...)` (mesmo padrão usado em `Explorer/index.tsx` com
+   `ProjectRepository.findLatest()`). Mostrar no `Select` as categorias reais encontradas, com a
+   contagem de ferramentas ao lado (ex.: "Financeiro (6)"). Se ainda não houver nenhuma análise
+   feita, usar as 4 categorias atuais como fallback, para não deixar o campo vazio.
+
+d) Adicionar ao final da lista do `Select` uma opção "+ Criar nova categoria". Ao ser selecionada,
+   abrir um campo de texto inline (ou um segundo `Input` que aparece condicionalmente) para digitar
+   o nome da categoria nova. Validar que não é uma categoria já existente (case-insensitive).
+
+e) Em `ToolCreationPromptGenerator.ts`, trocar o tipo `ToolCategory` de union fixa para `string`, e
+   adicionar ao `ToolCreationPromptInput` um campo booleano `isNewCategory`. Quando `true`, o texto
+   gerado (seção "2. Passo a passo obrigatório", item d do array `allTools`) deve incluir um aviso
+   extra deixando claro que essa categoria AINDA NÃO EXISTE no projeto nicemp.com e que o Replit
+   Agent de lá precisa: i) conferir se existe algum filtro/lista de categorias separada em
+   `ToolsHome.tsx` (além do campo `category` de cada item) e atualizá-la também, ii) confirmar que a
+   nova categoria aparece corretamente no filtro da página `/ferramentas`. Adicionar também um item
+   correspondente na seção "5. Checklist final" nesse caso.
+
+## 3. Arquivos permitidos
+- `src/services/engine/ToolCategoryAnalyzer.ts` (novo arquivo)
+- `src/services/storage/types.ts`
+- `src/services/storage/` (novo repositório, seguindo o padrão dos existentes)
+- `src/app/components/prompts/CreateToolPromptDialog.tsx`
+- `src/services/prompts/ToolCreationPromptGenerator.ts`
+- Ponto de integração do pipeline de análise onde os demais `*Analyzer.ts` são chamados (ex.
+  `ProjectAnalyzer.ts`), apenas para registrar a chamada ao novo analisador.
+
+Nada além disso.
+
+## 4. Arquivos proibidos
+- Qualquer arquivo relacionado a Header/Footer/rotas gerais do NIcemp-doc.
+- Não alterar o comportamento dos outros diálogos de prompt (`CreateComponentPromptDialog.tsx` e
+  seu gerador), a menos que seja estritamente necessário para reaproveitar algum tipo compartilhado.
+
+## 5. Checklist final
+- [ ] Analisando um projeto que tenha `allTools` com `category`, o dropdown do modal "Criar
+      Ferramenta" passa a mostrar as categorias reais, com contagem por categoria.
+- [ ] Sem nenhuma análise feita ainda, o dropdown continua funcionando com as 4 categorias atuais
+      como fallback (sem quebrar o fluxo existente).
+- [ ] O botão "+ Criar nova categoria" permite digitar um nome novo e usá-lo na geração do prompt.
+- [ ] Quando a categoria usada é nova, o prompt final gerado (texto copiável) inclui o aviso extra
+      sobre criar a categoria no nicemp.com e o item extra no checklist.
+- [ ] Nenhuma funcionalidade existente do modal (nome, rota, ícone, destacar na home, objetivo,
+      copiar prompt) foi alterada ou quebrada.
+
+## 6. Ao concluir
+⚠️ Obrigatório: listar todos os arquivos que foram criados/modificados.
