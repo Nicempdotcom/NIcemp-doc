@@ -1,0 +1,54 @@
+2026-07-20T17:04:20.576Z	Initializing build environment...
+2026-07-20T17:04:24.108Z	Success: Finished initializing build environment
+2026-07-20T17:04:25.498Z	Cloning repository...
+2026-07-20T17:04:29.371Z	Detected the following tools from environment: pnpm@10.26.1, nodejs@22.16.0
+2026-07-20T17:04:32.329Z	Installing project dependencies: pnpm install --frozen-lockfile
+2026-07-20T17:04:32.855Z	Scope: all 9 workspace projects
+2026-07-20T17:04:32.954Z	Lockfile is up to date, resolution step is skipped
+2026-07-20T17:04:32.988Z	Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-07-20T17:04:33.038Z	Packages: +510
+2026-07-20T17:04:33.039Z	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-07-20T17:04:33.990Z	Progress: resolved 510, reused 0, downloaded 89, added 76
+2026-07-20T17:04:34.991Z	Progress: resolved 510, reused 0, downloaded 169, added 108
+2026-07-20T17:04:35.991Z	Progress: resolved 510, reused 0, downloaded 184, added 112
+2026-07-20T17:04:36.992Z	Progress: resolved 510, reused 0, downloaded 240, added 140
+2026-07-20T17:04:37.993Z	Progress: resolved 510, reused 0, downloaded 290, added 156
+2026-07-20T17:04:38.994Z	Progress: resolved 510, reused 0, downloaded 397, added 190
+2026-07-20T17:04:39.994Z	Progress: resolved 510, reused 0, downloaded 490, added 222
+2026-07-20T17:04:40.423Z	Progress: resolved 510, reused 0, downloaded 510, added 510, done
+2026-07-20T17:04:40.666Z	.../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-07-20T17:04:40.799Z	.../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-07-20T17:04:41.090Z	
+2026-07-20T17:04:41.091Z	dependencies:
+2026-07-20T17:04:41.091Z	+ @replit/connectors-sdk 0.4.1
+2026-07-20T17:04:41.091Z	
+2026-07-20T17:04:41.092Z	devDependencies:
+2026-07-20T17:04:41.092Z	+ prettier 3.9.4
+2026-07-20T17:04:41.092Z	+ typescript 5.9.3
+2026-07-20T17:04:41.092Z	
+2026-07-20T17:04:41.134Z	. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-07-20T17:04:41.145Z	. preinstall: Done
+2026-07-20T17:04:41.307Z	Done in 8.8s using pnpm v10.26.1
+2026-07-20T17:04:41.635Z	Executing user build command: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/nicemp-doc run build:cloudflare
+2026-07-20T17:04:42.215Z	Scope: all 9 workspace projects
+2026-07-20T17:04:42.325Z	Lockfile is up to date, resolution step is skipped
+2026-07-20T17:04:42.407Z	Already up to date
+2026-07-20T17:04:43.401Z	
+2026-07-20T17:04:43.444Z	. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-07-20T17:04:43.455Z	. preinstall: Done
+2026-07-20T17:04:43.619Z	Done in 1.7s using pnpm v10.26.1
+2026-07-20T17:04:44.088Z	No projects matched the filters in "/opt/buildhome/repo"
+2026-07-20T17:04:44.105Z	Success: Build command completed
+2026-07-20T17:04:44.415Z	Executing user deploy command: npx wrangler deploy
+2026-07-20T17:04:45.434Z	npm warn exec The following package was not found and will be installed: wrangler@4.112.0
+2026-07-20T17:04:56.907Z	
+2026-07-20T17:04:56.907Z	 ⛅️ wrangler 4.112.0
+2026-07-20T17:04:56.907Z	────────────────────
+2026-07-20T17:04:57.263Z	
+2026-07-20T17:04:57.263Z	Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-07-20T17:04:57.264Z	
+2026-07-20T17:04:57.334Z	✘ [ERROR] The Cloudflare application detection logic has been run in the root of a workspace instead of targeting a specific project. Change your working directory to one of the applications in the workspace and try again.
+2026-07-20T17:04:57.335Z	
+2026-07-20T17:04:57.335Z	
+2026-07-20T17:04:57.371Z	🪵  Logs were written to "/opt/buildhome/.config/.wrangler/logs/wrangler-2026-07-20_17-04-56_488.log"
+2026-07-20T17:04:57.435Z	Failed: error occurred while running deploy command
