@@ -1,0 +1,45 @@
+O Organograma (src/app/pages/Overview) hoje é tecnicamente correto mas visualmente denso
+para quem não é programador: o card de cada item (src/app/pages/Overview/DiagramNode.tsx)
+mostra só um pill de módulo + o nome, e o caminho do arquivo só aparece passando o mouse —
+não tem nenhuma frase de "para que serve" no card. Quero uma versão mais simples, no estilo:
+caixa grande, colorida, cantos arredondados, com o nome em negrito e UMA linha de descrição
+em português logo abaixo (mesmo padrão de um card resumido, sem informação técnica visível
+por padrão). Isso depende do campo `description` já estar preenchido (assumir que a tarefa
+anterior de gerar descrições automáticas já foi aplicada).
+
+## 1. Mostrar a descrição no card
+Em src/app/pages/Overview/DiagramNode.tsx, adicionar a `description` da entidade como uma
+segunda linha de texto abaixo do nome (cortar em ~40 caracteres se for muito longa). Manter
+o caminho do arquivo só no tooltip do hover, como já é hoje.
+
+## 2. Adicionar um alternador "Visão simples" / "Visão técnica"
+Em src/app/pages/Overview/index.tsx, adicionar um toggle (padrão: "Visão simples"):
+- Visão simples: cards maiores, cor por tipo (página/componente/hook/API/banco), com a
+  descrição em português visível, sem pill de módulo técnico.
+- Visão técnica: mantém exatamente o comportamento de hoje (pill de módulo, cores por
+  módulo, sem descrição no card).
+Não mexer na lógica de conexões (buildNavigationFlow.ts / buildArchitectureFlow.ts) nem
+nas duas abas existentes (Fluxo de Navegação / Arquitetura por trás) — só o conteúdo visual
+do card muda entre os dois modos.
+
+## 3. Cores por tipo na visão simples
+Em src/app/pages/Overview/diagramUtils.ts, ajustar (ou adicionar, sem remover a lógica
+atual usada na Visão técnica) um mapeamento de cor por categoria de entidade, para reforçar
+visualmente o tipo de cada card na Visão simples.
+
+## Arquivos permitidos
+- src/app/pages/Overview/DiagramNode.tsx
+- src/app/pages/Overview/index.tsx
+- src/app/pages/Overview/diagramUtils.ts
+
+## Arquivos proibidos
+- Qualquer arquivo fora de src/app/pages/Overview
+- buildNavigationFlow.ts e buildArchitectureFlow.ts (a lógica de conexões não muda, só o
+  visual do card)
+
+## Checklist final
+- [ ] Ao subir um projeto, a Visão simples aparece por padrão com nome + frase de descrição
+      em cada card, sem exigir hover
+- [ ] A Visão técnica continua idêntica ao comportamento atual quando selecionada
+- [ ] As duas abas (Navegação/Arquitetura) continuam funcionando nos dois modos
+- [ ] Liste todos os arquivos criados/modificados ao final
