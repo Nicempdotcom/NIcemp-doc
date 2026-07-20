@@ -1,0 +1,115 @@
+2026-07-20T18:42:43.798Z	Initializing build environment...
+2026-07-20T18:42:46.181Z	Success: Finished initializing build environment
+2026-07-20T18:42:46.879Z	Cloning repository...
+2026-07-20T18:42:50.275Z	Detected the following tools from environment: pnpm@10.26.1, nodejs@22.16.0
+2026-07-20T18:42:51.974Z	Installing project dependencies: pnpm install --frozen-lockfile
+2026-07-20T18:42:52.682Z	Scope: all 9 workspace projects
+2026-07-20T18:42:52.793Z	Lockfile is up to date, resolution step is skipped
+2026-07-20T18:42:52.850Z	Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-07-20T18:42:52.944Z	Packages: +510
+2026-07-20T18:42:52.944Z	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-07-20T18:42:53.851Z	Progress: resolved 510, reused 0, downloaded 10, added 0
+2026-07-20T18:42:54.851Z	Progress: resolved 510, reused 0, downloaded 123, added 40
+2026-07-20T18:42:55.853Z	Progress: resolved 510, reused 0, downloaded 238, added 81
+2026-07-20T18:42:56.861Z	Progress: resolved 510, reused 0, downloaded 290, added 101
+2026-07-20T18:42:57.862Z	Progress: resolved 510, reused 0, downloaded 297, added 101
+2026-07-20T18:42:58.862Z	Progress: resolved 510, reused 0, downloaded 332, added 113
+2026-07-20T18:42:59.868Z	Progress: resolved 510, reused 0, downloaded 406, added 142
+2026-07-20T18:43:00.867Z	Progress: resolved 510, reused 0, downloaded 411, added 146
+2026-07-20T18:43:01.868Z	Progress: resolved 510, reused 0, downloaded 510, added 282
+2026-07-20T18:43:02.633Z	Progress: resolved 510, reused 0, downloaded 510, added 510, done
+2026-07-20T18:43:02.940Z	.../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-07-20T18:43:03.023Z	.../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-07-20T18:43:03.449Z	
+2026-07-20T18:43:03.450Z	dependencies:
+2026-07-20T18:43:03.450Z	+ @replit/connectors-sdk 0.4.1
+2026-07-20T18:43:03.450Z	
+2026-07-20T18:43:03.451Z	devDependencies:
+2026-07-20T18:43:03.451Z	+ prettier 3.9.4
+2026-07-20T18:43:03.451Z	+ typescript 5.9.3
+2026-07-20T18:43:03.451Z	
+2026-07-20T18:43:03.512Z	. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-07-20T18:43:03.523Z	. preinstall: Done
+2026-07-20T18:43:03.691Z	Done in 11.5s using pnpm v10.26.1
+2026-07-20T18:43:03.986Z	Executing user build command: pnpm run build
+2026-07-20T18:43:04.436Z	
+2026-07-20T18:43:04.438Z	> workspace@0.0.0 build /opt/buildhome/repo
+2026-07-20T18:43:04.438Z	> pnpm run typecheck && pnpm -r --if-present run build
+2026-07-20T18:43:04.440Z	
+2026-07-20T18:43:04.906Z	
+2026-07-20T18:43:04.907Z	> workspace@0.0.0 typecheck /opt/buildhome/repo
+2026-07-20T18:43:04.908Z	> pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+2026-07-20T18:43:04.908Z	
+2026-07-20T18:43:05.461Z	
+2026-07-20T18:43:05.461Z	> workspace@0.0.0 typecheck:libs /opt/buildhome/repo
+2026-07-20T18:43:05.461Z	> tsc --build
+2026-07-20T18:43:05.461Z	
+2026-07-20T18:43:08.938Z	Scope: 4 of 9 workspace projects
+2026-07-20T18:43:08.951Z	artifacts/mockup-sandbox typecheck$ tsc -p tsconfig.json --noEmit
+2026-07-20T18:43:08.955Z	artifacts/api-server typecheck$ tsc -p tsconfig.json --noEmit
+2026-07-20T18:43:11.305Z	artifacts/api-server typecheck: Done
+2026-07-20T18:43:11.306Z	artifacts/nicemp-docs typecheck$ tsc -p tsconfig.json --noEmit
+2026-07-20T18:43:21.626Z	artifacts/mockup-sandbox typecheck: Done
+2026-07-20T18:43:21.628Z	scripts typecheck$ tsc -p tsconfig.json --noEmit
+2026-07-20T18:43:23.204Z	scripts typecheck: Done
+2026-07-20T18:43:27.202Z	artifacts/nicemp-docs typecheck: Done
+2026-07-20T18:43:27.634Z	Scope: 8 of 9 workspace projects
+2026-07-20T18:43:27.642Z	artifacts/mockup-sandbox build$ vite build
+2026-07-20T18:43:28.089Z	artifacts/mockup-sandbox build: vite v7.3.6 building client environment for production...
+2026-07-20T18:43:28.207Z	artifacts/mockup-sandbox build: transforming...
+2026-07-20T18:43:29.508Z	artifacts/mockup-sandbox build: ✓ 30 modules transformed.
+2026-07-20T18:43:29.714Z	artifacts/mockup-sandbox build: rendering chunks...
+2026-07-20T18:43:29.719Z	artifacts/mockup-sandbox build: computing gzip size...
+2026-07-20T18:43:29.730Z	artifacts/mockup-sandbox build: dist/index.html                   4.44 kB │ gzip:  1.24 kB
+2026-07-20T18:43:29.733Z	artifacts/mockup-sandbox build: dist/assets/index-D3zZPnxY.css   88.21 kB │ gzip: 14.76 kB
+2026-07-20T18:43:29.734Z	artifacts/mockup-sandbox build: dist/assets/index-EGLZVJl0.js   187.73 kB │ gzip: 59.51 kB
+2026-07-20T18:43:29.734Z	artifacts/mockup-sandbox build: ✓ built in 1.60s
+2026-07-20T18:43:29.783Z	artifacts/mockup-sandbox build: Done
+2026-07-20T18:43:29.784Z	artifacts/api-server build$ node ./build.mjs
+2026-07-20T18:43:29.785Z	artifacts/nicemp-docs build$ vite build --config vite.config.ts
+2026-07-20T18:43:30.256Z	artifacts/nicemp-docs build: vite v7.3.6 building client environment for production...
+2026-07-20T18:43:30.365Z	artifacts/nicemp-docs build: transforming...
+2026-07-20T18:43:30.381Z	artifacts/api-server build:   dist/index.mjs                       1.4mb ⚠️
+2026-07-20T18:43:30.382Z	artifacts/api-server build:   dist/pino-worker.mjs               153.4kb
+2026-07-20T18:43:30.388Z	artifacts/api-server build:   dist/pino-file.mjs                 142.1kb
+2026-07-20T18:43:30.389Z	artifacts/api-server build:   dist/pino-pretty.mjs               114.6kb
+2026-07-20T18:43:30.389Z	artifacts/api-server build:   dist/thread-stream-worker.mjs        7.3kb
+2026-07-20T18:43:30.389Z	artifacts/api-server build:   dist/index.mjs.map                   2.1mb
+2026-07-20T18:43:30.389Z	artifacts/api-server build:   dist/pino-worker.mjs.map           256.9kb
+2026-07-20T18:43:30.389Z	artifacts/api-server build:   dist/pino-file.mjs.map             229.0kb
+2026-07-20T18:43:30.390Z	artifacts/api-server build:   dist/pino-pretty.mjs.map           204.0kb
+2026-07-20T18:43:30.390Z	artifacts/api-server build:   dist/thread-stream-worker.mjs.map   12.0kb
+2026-07-20T18:43:30.390Z	artifacts/api-server build: ⚡ Done in 467ms
+2026-07-20T18:43:30.409Z	artifacts/api-server build: Done
+2026-07-20T18:43:31.535Z	artifacts/nicemp-docs build: src/app/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-07-20T18:43:33.222Z	artifacts/nicemp-docs build: src/app/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-07-20T18:43:34.587Z	artifacts/nicemp-docs build: src/app/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-07-20T18:43:34.758Z	artifacts/nicemp-docs build: src/app/components/ui/command.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-07-20T18:43:41.502Z	artifacts/nicemp-docs build: ✓ 2752 modules transformed.
+2026-07-20T18:43:42.835Z	artifacts/nicemp-docs build: rendering chunks...
+2026-07-20T18:43:42.864Z	artifacts/nicemp-docs build: computing gzip size...
+2026-07-20T18:43:42.910Z	artifacts/nicemp-docs build: dist/public/index.html                              1.38 kB │ gzip:   0.54 kB
+2026-07-20T18:43:42.915Z	artifacts/nicemp-docs build: dist/public/assets/analysis.worker-GnsOnev2.js    115.30 kB
+2026-07-20T18:43:42.915Z	artifacts/nicemp-docs build: dist/public/assets/index-CVxjCLiU.css             142.69 kB │ gzip:  22.71 kB
+2026-07-20T18:43:42.915Z	artifacts/nicemp-docs build: dist/public/assets/index-DobNUBbW.js            1,607.54 kB │ gzip: 465.96 kB
+2026-07-20T18:43:42.915Z	artifacts/nicemp-docs build: ✓ built in 12.59s
+2026-07-20T18:43:42.915Z	artifacts/nicemp-docs build: 
+2026-07-20T18:43:42.915Z	artifacts/nicemp-docs build: (!) Some chunks are larger than 500 kB after minification. Consider:
+2026-07-20T18:43:42.922Z	artifacts/nicemp-docs build: - Using dynamic import() to code-split the application
+2026-07-20T18:43:42.923Z	artifacts/nicemp-docs build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2026-07-20T18:43:42.923Z	artifacts/nicemp-docs build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+2026-07-20T18:43:43.016Z	artifacts/nicemp-docs build: Done
+2026-07-20T18:43:43.040Z	Success: Build command completed
+2026-07-20T18:43:43.294Z	Executing user deploy command: npx wrangler deploy
+2026-07-20T18:43:44.622Z	npm warn exec The following package was not found and will be installed: wrangler@4.112.0
+2026-07-20T18:43:53.925Z	
+2026-07-20T18:43:53.925Z	 ⛅️ wrangler 4.112.0
+2026-07-20T18:43:53.926Z	────────────────────
+2026-07-20T18:43:54.657Z	
+2026-07-20T18:43:54.657Z	Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-07-20T18:43:54.658Z	
+2026-07-20T18:43:54.717Z	✘ [ERROR] The Cloudflare application detection logic has been run in the root of a workspace instead of targeting a specific project. Change your working directory to one of the applications in the workspace and try again.
+2026-07-20T18:43:54.718Z	
+2026-07-20T18:43:54.724Z	
+2026-07-20T18:43:54.758Z	🪵  Logs were written to "/opt/buildhome/.config/.wrangler/logs/wrangler-2026-07-20_18-43-53_447.log"
+2026-07-20T18:43:54.833Z	Failed: error occurred while running deploy command
