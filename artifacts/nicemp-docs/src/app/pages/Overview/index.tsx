@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { Network } from 'lucide-react';
 import { ReactFlow, ReactFlowProvider, Background, Controls, MiniMap, type NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -23,6 +22,7 @@ import {
 import DiagramNode from './DiagramNode';
 import { buildNavigationFlow } from './buildNavigationFlow';
 import { buildArchitectureFlow } from './buildArchitectureFlow';
+import { ViewModeContext, type ViewMode } from './diagramUtils';
 
 const nodeTypes: NodeTypes = { diagram: DiagramNode };
 
@@ -35,9 +35,10 @@ const ALL_MODULES = '__all__';
  *  - "Arquitetura por trás": layered Páginas → Componentes → Hooks/APIs →
  *    Banco de Dados diagram (built from resolved ImportEdgeEntity records).
  *
- * Both diagrams show only plain-language names on the boxes — the file path
- * only appears on hover, keeping the default view readable for non-technical
- * stakeholders while still giving engineers the technical detail on demand.
+ * Both diagrams share a view-mode toggle (Visão Simples / Visão Técnica).
+ * In Visão Simples (default) cards show name + description, colored by entity
+ * type. In Visão Técnica cards show the module pill and type label, exactly
+ * as before. The file path is tooltip-only in both modes.
  */
 export default function Overview() {
   const project = useMemo(() => ProjectRepository.findLatest(), []);
@@ -57,6 +58,7 @@ export default function Overview() {
   }, [navigationFlow.nodes, architectureFlow.nodes]);
 
   const [selectedModule, setSelectedModule] = useState<string>(ALL_MODULES);
+  const [viewMode, setViewMode] = useState<ViewMode>('simple');
 
   const filteredNavigation = useMemo(() => filterFlow(navigationFlow, selectedModule), [navigationFlow, selectedModule]);
   const filteredArchitecture = useMemo(() => filterFlow(architectureFlow, selectedModule), [architectureFlow, selectedModule]);
@@ -78,61 +80,88 @@ export default function Overview() {
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Organograma"
-        description="Diagrama visual do projeto: como as telas se conectam e o que fala com o quê por trás delas."
-        badge="Novo"
-        badgeVariant="info"
-      />
+    <ViewModeContext.Provider value={viewMode}>
+      <div>
+        <PageHeader
+          title="Organograma"
+          description="Diagrama visual do projeto: como as telas se conectam e o que fala com o quê por trás delas."
+          badge="Novo"
+          badgeVariant="info"
+        />
 
-      <div className="mb-4 flex items-center justify-end">
-        <Select value={selectedModule} onValueChange={setSelectedModule}>
-          <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="Todos os módulos" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_MODULES}>Todos os módulos</SelectItem>
-            {modules.map((m) => (
-              <SelectItem key={m} value={m}>{m}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          {/* View mode toggle */}
+          <div className="inline-flex rounded-lg border border-border bg-muted p-1 gap-1">
+            <button
+              onClick={() => setViewMode('simple')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'simple'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Visão simples
+            </button>
+            <button
+              onClick={() => setViewMode('technical')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'technical'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Visão técnica
+            </button>
+          </div>
+
+          {/* Module filter */}
+          <Select value={selectedModule} onValueChange={setSelectedModule}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Todos os módulos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_MODULES}>Todos os módulos</SelectItem>
+              {modules.map((m) => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Tabs defaultValue="navigation">
+          <TabsList>
+            <TabsTrigger value="navigation" className="gap-1.5">
+              Fluxo de Navegação
+              <TermHint termo="Fluxo de Navegação" />
+            </TabsTrigger>
+            <TabsTrigger value="architecture" className="gap-1.5">
+              Arquitetura por trás
+              <TermHint termo="Arquitetura por trás" />
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="navigation">
+            {filteredNavigation.nodes.length === 0 ? (
+              <InfoBox variant="info" title="Sem fluxos de navegação detectados">
+                Nenhuma navegação entre telas foi identificada para este filtro.
+              </InfoBox>
+            ) : (
+              <DiagramCanvas nodes={filteredNavigation.nodes} edges={filteredNavigation.edges} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="architecture">
+            {filteredArchitecture.nodes.length === 0 ? (
+              <InfoBox variant="info" title="Sem relações de arquitetura detectadas">
+                Nenhum import interno resolvido foi identificado para este filtro.
+              </InfoBox>
+            ) : (
+              <DiagramCanvas nodes={filteredArchitecture.nodes} edges={filteredArchitecture.edges} />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <Tabs defaultValue="navigation">
-        <TabsList>
-          <TabsTrigger value="navigation" className="gap-1.5">
-            Fluxo de Navegação
-            <TermHint termo="Fluxo de Navegação" />
-          </TabsTrigger>
-          <TabsTrigger value="architecture" className="gap-1.5">
-            Arquitetura por trás
-            <TermHint termo="Arquitetura por trás" />
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="navigation">
-          {filteredNavigation.nodes.length === 0 ? (
-            <InfoBox variant="info" title="Sem fluxos de navegação detectados">
-              Nenhuma navegação entre telas foi identificada para este filtro.
-            </InfoBox>
-          ) : (
-            <DiagramCanvas nodes={filteredNavigation.nodes} edges={filteredNavigation.edges} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="architecture">
-          {filteredArchitecture.nodes.length === 0 ? (
-            <InfoBox variant="info" title="Sem relações de arquitetura detectadas">
-              Nenhum import interno resolvido foi identificado para este filtro.
-            </InfoBox>
-          ) : (
-            <DiagramCanvas nodes={filteredArchitecture.nodes} edges={filteredArchitecture.edges} />
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
+    </ViewModeContext.Provider>
   );
 }
 

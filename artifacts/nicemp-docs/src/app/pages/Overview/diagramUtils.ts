@@ -6,6 +6,8 @@
  * diagram, and column/row layout for the layered architecture diagram.
  */
 
+import { createContext } from 'react';
+
 export type GraphCategory = 'page' | 'component' | 'hook' | 'api' | 'database';
 
 export const CATEGORY_META: Record<GraphCategory, { label: string; border: string; bg: string; text: string; dot: string }> = {
@@ -16,6 +18,15 @@ export const CATEGORY_META: Record<GraphCategory, { label: string; border: strin
   database:  { label: 'Banco de Dados', border: 'border-rose-500/40', bg: 'bg-rose-500/5',  text: 'text-rose-700 dark:text-rose-400',        dot: 'bg-rose-500' },
 };
 
+/** Solid colors per category type, used in Visão Simples. */
+export const SIMPLE_CATEGORY_STYLE: Record<GraphCategory, { bg: string; border: string; nameText: string; descText: string }> = {
+  page:      { bg: 'bg-blue-100 dark:bg-blue-900/50',     border: 'border-blue-300 dark:border-blue-600',     nameText: 'text-blue-900 dark:text-blue-100',    descText: 'text-blue-700 dark:text-blue-300' },
+  component: { bg: 'bg-violet-100 dark:bg-violet-900/50', border: 'border-violet-300 dark:border-violet-600', nameText: 'text-violet-900 dark:text-violet-100', descText: 'text-violet-700 dark:text-violet-300' },
+  hook:      { bg: 'bg-amber-100 dark:bg-amber-900/50',   border: 'border-amber-300 dark:border-amber-600',   nameText: 'text-amber-900 dark:text-amber-100',   descText: 'text-amber-700 dark:text-amber-300' },
+  api:       { bg: 'bg-emerald-100 dark:bg-emerald-900/50', border: 'border-emerald-300 dark:border-emerald-600', nameText: 'text-emerald-900 dark:text-emerald-100', descText: 'text-emerald-700 dark:text-emerald-300' },
+  database:  { bg: 'bg-rose-100 dark:bg-rose-900/50',     border: 'border-rose-300 dark:border-rose-600',     nameText: 'text-rose-900 dark:text-rose-100',    descText: 'text-rose-700 dark:text-rose-300' },
+};
+
 /** Deterministic HSL color derived from a module name — stable across renders/uploads. */
 export function moduleColor(mod: string): string {
   let hash = 0;
@@ -24,11 +35,17 @@ export function moduleColor(mod: string): string {
   return `hsl(${hue}, 65%, 55%)`;
 }
 
+export type ViewMode = 'simple' | 'technical';
+
+/** Context that propagates the current view mode (simple/technical) to DiagramNode. */
+export const ViewModeContext = createContext<ViewMode>('simple');
+
 export interface FlowNodeData extends Record<string, unknown> {
-  name:     string;
-  path:     string;
-  module:   string;
-  category: GraphCategory;
+  name:         string;
+  path:         string;
+  module:       string;
+  category:     GraphCategory;
+  description?: string;
 }
 
 /**
