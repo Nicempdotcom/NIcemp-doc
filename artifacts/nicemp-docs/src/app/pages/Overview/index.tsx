@@ -15,12 +15,13 @@ import {
 import {
   ProjectRepository,
   PageRepository,
+  ComponentRepository,
   InteractionRepository,
   ImportEdgeRepository,
 } from '@/services/storage';
 
 import DiagramNode from './DiagramNode';
-import PageCardList from './PageCardList';
+import PageMapView from './PageMapView';
 import { buildNavigationFlow } from './buildNavigationFlow';
 import { buildArchitectureFlow } from './buildArchitectureFlow';
 import { ViewModeContext, type ViewMode } from './diagramUtils';
@@ -33,9 +34,9 @@ const ALL_MODULES = '__all__';
  * Organograma (EPIC 11) — visual diagram of the app.
  *
  * Two view modes:
- *  - "Visão Simples" (default): a card list — one card per PageEntity — showing
- *    name, description, and first-level components. No graph. Readable for
- *    non-technical stakeholders.
+ *  - "Visão Simples" (default): Mapa de Páginas — a vertical list of expandable
+ *    page cards showing name, description, first-level sections, and an editable
+ *    annotation field. No graph. Designed for non-technical stakeholders.
  *  - "Visão Técnica": the original two-tab ReactFlow graph (Fluxo de Navegação
  *    + Arquitetura por trás), unchanged.
  *
@@ -44,17 +45,18 @@ const ALL_MODULES = '__all__';
 export default function Overview() {
   const project = useMemo(() => ProjectRepository.findLatest(), []);
 
-  const pages       = useMemo(() => (project ? PageRepository.findByProject(project.id)       : []), [project]);
+  const pages        = useMemo(() => (project ? PageRepository.findByProject(project.id)        : []), [project]);
+  const components   = useMemo(() => (project ? ComponentRepository.findByProject(project.id)   : []), [project]);
   const interactions = useMemo(() => (project ? InteractionRepository.findByProject(project.id) : []), [project]);
   const importEdges  = useMemo(() => (project ? ImportEdgeRepository.findByProject(project.id)  : []), [project]);
 
-  const navigationFlow  = useMemo(() => buildNavigationFlow(pages, interactions), [pages, interactions]);
-  const architectureFlow = useMemo(() => buildArchitectureFlow(importEdges),       [importEdges]);
+  const navigationFlow   = useMemo(() => buildNavigationFlow(pages, interactions),  [pages, interactions]);
+  const architectureFlow = useMemo(() => buildArchitectureFlow(importEdges),         [importEdges]);
 
-  // Modules: union of page modules + graph node modules so the filter covers all data in both views.
+  // Modules: union of page modules + graph node modules so the filter covers both views.
   const modules = useMemo(() => {
     const set = new Set<string>();
-    for (const p of pages) set.add(p.module);
+    for (const p of pages)                set.add(p.module);
     for (const n of navigationFlow.nodes)  set.add(n.data.module);
     for (const n of architectureFlow.nodes) set.add(n.data.module);
     return [...set].filter(Boolean).sort((a, b) => a.localeCompare(b));
@@ -132,16 +134,17 @@ export default function Overview() {
           </Select>
         </div>
 
-        {/* ── Visão Simples ── card list per page, no graph */}
+        {/* ── Visão Simples — Mapa de Páginas ── */}
         {viewMode === 'simple' && (
-          <PageCardList
+          <PageMapView
             pages={pages}
+            components={components}
             importEdges={importEdges}
             selectedModule={selectedModule}
           />
         )}
 
-        {/* ── Visão Técnica ── original two-tab ReactFlow graph, unchanged */}
+        {/* ── Visão Técnica — original two-tab ReactFlow graph, unchanged ── */}
         {viewMode === 'technical' && (
           <Tabs defaultValue="navigation">
             <TabsList>

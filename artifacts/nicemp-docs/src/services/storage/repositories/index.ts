@@ -7,3 +7,5 @@ export { ToolCategoryRepository } from './ToolCategoryRepository';
 export { CmsCategoryRepository } from './CmsCategoryRepository';
 export type { CmsCategory } from './CmsCategoryRepository';
 export { TableUsageRepository } from './TableUsageRepository';
+export { AnnotationRepository } from './AnnotationRepository';
+export type { AnnotationEntity } from './AnnotationRepository';

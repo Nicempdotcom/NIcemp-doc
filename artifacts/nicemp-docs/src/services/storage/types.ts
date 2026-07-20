@@ -46,7 +46,8 @@ export type StoreKey =
   | 'interactions'
   | 'importEdges'
   | 'toolCategories'
-  | 'tableUsages';
+  | 'tableUsages'
+  | 'annotations';
 
 /** Maps StoreKey → the logical JSON filename it corresponds to. */
 export const STORE_FILE_NAMES: Record<StoreKey, string> = {
@@ -65,6 +66,7 @@ export const STORE_FILE_NAMES: Record<StoreKey, string> = {
   importEdges:      'import-edges.json',
   toolCategories:   'tool-categories.json',
   tableUsages:      'table-usages.json',
+  annotations:      'annotations.json',
 };
 
 // ─── Base entity ──────────────────────────────────────────────────────────────
