@@ -1,0 +1,42 @@
+A "Visão simples" do Organograma ficou como uma fileira de cards com scroll horizontal,
+cortada na lateral, sem nenhuma linha conectando as páginas. Isso não é o que foi pedido —
+precisa ser um mapa de verdade, ocupando a tela inteira, com as páginas conectadas por
+linhas (igual à "Visão técnica" já faz hoje, só que com o visual simplificado).
+
+## 1. Usar o mesmo canvas da Visão técnica
+O PageMapView.tsx deve ser renderizado DENTRO do mesmo componente ReactFlow que a Visão
+técnica já usa em src/app/pages/Overview/index.tsx (o mesmo <ReactFlow> com Background,
+Controls, MiniMap, fitView) — ocupando 100% da largura e altura da área de conteúdo, com
+zoom e arraste (pan) normalmente, exatamente como a Visão técnica já se comporta hoje.
+Não criar um componente HTML separado com scroll horizontal.
+
+## 2. Usar as posições do dagre de verdade
+Confirmar que buildSimpleFlow.ts está calculando x/y de cada página via dagre (layout em
+árvore) e que essas posições estão sendo passadas para os nodes do ReactFlow — não uma
+lista em flexbox. As linhas de conexão (edges) do ReactFlow precisam aparecer entre as
+páginas que se conectam por navegação, do mesmo jeito que já aparecem na Visão técnica.
+
+## 3. Agrupamento por módulo dentro do canvas
+Cada módulo forma um bloco visual dentro do mapa (pode ser um retângulo de fundo colorido
+atrás do grupo de páginas daquele módulo, com o nome do módulo como rótulo no topo do
+bloco) — mas ainda dentro do MESMO canvas com zoom/arraste, não em abas ou carrosséis
+separados por módulo.
+
+## 4. Corrigir nome e descrição (ainda pendente)
+Confirmar de verdade que a extração de useSeo({ title, description }) está funcionando —
+o resultado atual ainda mostra "AboutPage", "AdminChoicePage" (nome de arquivo cru) e
+descrições em inglês tipo "stats is now built inside the component...". Depurar por que
+isso não está sendo aplicado antes de dar como concluído.
+
+## Teste obrigatório
+Depois de aplicar, tirar um print da tela inteira (não só uma parte) mostrando o mapa
+completo do projeto nicemp.com, com pelo menos 2 módulos diferentes visíveis ao mesmo
+tempo (usando zoom out se precisar), confirmando que dá pra ver linhas conectando as
+páginas e nenhum nome cru de arquivo aparecendo.
+
+## Checklist final
+- [ ] Mapa ocupa a tela inteira (mesmo canvas com zoom/arraste da Visão técnica)
+- [ ] Linhas conectando as páginas aparecem visualmente
+- [ ] Nenhum card com nome de arquivo cru (ex.: "AboutPage")
+- [ ] Nenhuma descrição em inglês
+- [ ] Print da tela cheia anexado na resposta antes de considerar concluído

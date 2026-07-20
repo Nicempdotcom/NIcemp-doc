@@ -21,12 +21,16 @@ import {
 } from '@/services/storage';
 
 import DiagramNode from './DiagramNode';
-import PageMapView from './PageMapView';
+import ModuleGroupNode from './ModuleGroupNode';
+import { buildSimpleFlow } from './buildSimpleFlow';
 import { buildNavigationFlow } from './buildNavigationFlow';
 import { buildArchitectureFlow } from './buildArchitectureFlow';
 import { ViewModeContext, type ViewMode } from './diagramUtils';
 
-const nodeTypes: NodeTypes = { diagram: DiagramNode };
+const nodeTypes: NodeTypes = {
+  diagram:     DiagramNode,
+  moduleGroup: ModuleGroupNode,
+};
 
 const ALL_MODULES = '__all__';
 
@@ -34,13 +38,9 @@ const ALL_MODULES = '__all__';
  * Organograma (EPIC 11) — visual diagram of the app.
  *
  * Two view modes:
- *  - "Visão Simples" (default): Mapa de Páginas — a vertical list of expandable
- *    page cards showing name, description, first-level sections, and an editable
- *    annotation field. No graph. Designed for non-technical stakeholders.
- *  - "Visão Técnica": the original two-tab ReactFlow graph (Fluxo de Navegação
- *    + Arquitetura por trás), unchanged.
- *
- * The module filter applies in both modes.
+ *  - "Visão Simples" (default): ReactFlow canvas, pages grouped by module via
+ *    dagre layout inside colored group nodes, navigation edges connecting pages.
+ *  - "Visão Técnica": two-tab ReactFlow graph (Fluxo de Navegação + Arquitetura).
  */
 export default function Overview() {
   const project = useMemo(() => ProjectRepository.findLatest(), []);
@@ -53,17 +53,23 @@ export default function Overview() {
   const navigationFlow   = useMemo(() => buildNavigationFlow(pages, interactions),  [pages, interactions]);
   const architectureFlow = useMemo(() => buildArchitectureFlow(importEdges),         [importEdges]);
 
-  // Modules: union of page modules + graph node modules so the filter covers both views.
+  // Modules: union across all data sources so the filter covers all views.
   const modules = useMemo(() => {
     const set = new Set<string>();
-    for (const p of pages)                set.add(p.module);
-    for (const n of navigationFlow.nodes)  set.add(n.data.module);
-    for (const n of architectureFlow.nodes) set.add(n.data.module);
+    for (const p of pages)                 set.add(p.module);
+    for (const n of navigationFlow.nodes)  set.add(n.data.module as string);
+    for (const n of architectureFlow.nodes) set.add(n.data.module as string);
     return [...set].filter(Boolean).sort((a, b) => a.localeCompare(b));
   }, [pages, navigationFlow.nodes, architectureFlow.nodes]);
 
   const [selectedModule, setSelectedModule] = useState<string>(ALL_MODULES);
   const [viewMode, setViewMode] = useState<ViewMode>('simple');
+
+  // Simple view flow — all pages, grouped by module, dagre layout
+  const simpleFlow = useMemo(
+    () => buildSimpleFlow(pages, interactions, selectedModule),
+    [pages, interactions, selectedModule],
+  );
 
   const filteredNavigation   = useMemo(() => filterFlow(navigationFlow,   selectedModule), [navigationFlow,   selectedModule]);
   const filteredArchitecture = useMemo(() => filterFlow(architectureFlow, selectedModule), [architectureFlow, selectedModule]);
@@ -134,15 +140,19 @@ export default function Overview() {
           </Select>
         </div>
 
-        {/* ── Visão Simples — Mapa de Páginas ── */}
+        {/* ── Visão Simples — ReactFlow canvas with module groups ── */}
         {viewMode === 'simple' && (
-          <PageMapView
-            pages={pages}
-            components={components}
-            importEdges={importEdges}
-            interactions={interactions}
-            selectedModule={selectedModule}
-          />
+          simpleFlow.nodes.length === 0 ? (
+            <InfoBox variant="info" title="Nenhuma página detectada">
+              Nenhuma página foi encontrada para este filtro.
+            </InfoBox>
+          ) : (
+            <DiagramCanvas
+              nodes={simpleFlow.nodes}
+              edges={simpleFlow.edges}
+              className="h-[calc(100vh-260px)] min-h-[520px]"
+            />
+          )
         )}
 
         {/* ── Visão Técnica — original two-tab ReactFlow graph, unchanged ── */}
@@ -185,7 +195,7 @@ export default function Overview() {
   );
 }
 
-function filterFlow<T extends { nodes: { id: string; data: { module: string } }[]; edges: { source: string; target: string }[] }>(
+function filterFlow<T extends { nodes: { id: string; data: { module: unknown } }[]; edges: { source: string; target: string }[] }>(
   flow: T,
   selectedModule: string,
 ): T {
@@ -198,19 +208,27 @@ function filterFlow<T extends { nodes: { id: string; data: { module: string } }[
   };
 }
 
-function DiagramCanvas({ nodes, edges }: { nodes: any[]; edges: any[] }) {
+function DiagramCanvas({
+  nodes,
+  edges,
+  className = 'h-[600px]',
+}: {
+  nodes: any[];
+  edges: any[];
+  className?: string;
+}) {
   return (
-    <div className="h-[600px] w-full rounded-lg border border-border bg-muted/20">
+    <div className={`w-full rounded-lg border border-border bg-muted/20 ${className}`}>
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={{ padding: 0.15 }}
           panOnScroll
           zoomOnScroll={false}
-          minZoom={0.2}
+          minZoom={0.1}
           maxZoom={1.5}
           proOptions={{ hideAttribution: true }}
         >

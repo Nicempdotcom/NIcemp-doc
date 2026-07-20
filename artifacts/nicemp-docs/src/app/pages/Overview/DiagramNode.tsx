@@ -39,8 +39,9 @@ export default function DiagramNode({ data }: { data: FlowNodeData }) {
           <div
             className={`w-[260px] rounded-xl border-2 ${simpleStyle.border} ${simpleStyle.bg} px-4 py-3 shadow-sm cursor-default`}
           >
-            <Handle type="target" position={Position.Left} className="!bg-muted-foreground/40 !w-1.5 !h-1.5" />
-            <Handle type="source" position={Position.Right} className="!bg-muted-foreground/40 !w-1.5 !h-1.5" />
+            {/* Top/bottom handles match the TB dagre layout direction */}
+            <Handle type="target" position={Position.Top}    className="!bg-muted-foreground/40 !w-1.5 !h-1.5" />
+            <Handle type="source" position={Position.Bottom} className="!bg-muted-foreground/40 !w-1.5 !h-1.5" />
             <p className={`text-sm font-bold leading-tight truncate ${simpleStyle.nameText}`}>
               {data.name}
             </p>
