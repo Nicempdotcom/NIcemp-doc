@@ -18,4 +18,6 @@ export {
   DependencyRepository,
   TechnologyRepository,
   ToolCategoryRepository,
+  CmsCategoryRepository,
 } from './repositories';
+export type { CmsCategory } from './repositories';

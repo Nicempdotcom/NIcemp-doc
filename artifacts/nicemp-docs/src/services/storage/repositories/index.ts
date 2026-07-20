@@ -4,3 +4,5 @@ export { VersionSnapshotRepository } from './VersionSnapshotRepository';
 export { HistoryRepository } from './HistoryRepository';
 export { DependencyRepository, TechnologyRepository } from './TechAndDepsRepository';
 export { ToolCategoryRepository } from './ToolCategoryRepository';
+export { CmsCategoryRepository } from './CmsCategoryRepository';
+export type { CmsCategory } from './CmsCategoryRepository';

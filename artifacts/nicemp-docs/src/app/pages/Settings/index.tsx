@@ -16,7 +16,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { StorageService } from '@/services/storage';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { SlidersHorizontal, Globe, Palette, Link2, Key, Webhook, Users, ShieldCheck, DatabaseZap, Trash2, Cloud, HardDrive, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, Globe, Palette, Link2, Key, Webhook, Users, ShieldCheck, DatabaseZap, Trash2, Cloud, HardDrive, Loader2, Database } from 'lucide-react';
 import type { StoreKey } from '@/services/storage/types';
 import SystemPreferencesDialog from './dialogs/SystemPreferencesDialog';
 import RegionalizationDialog from './dialogs/RegionalizationDialog';
@@ -26,11 +26,13 @@ import IntegrationsDialog from './dialogs/IntegrationsDialog';
 import WebhooksDialog from './dialogs/WebhooksDialog';
 import UsersDialog from './dialogs/UsersDialog';
 import RolesDialog from './dialogs/RolesDialog';
+import AnalyzedSupabaseDialog from './dialogs/AnalyzedSupabaseDialog';
 
 type SettingsDialog =
   | 'preferences' | 'regionalization' | 'theme'
   | 'apiKeys' | 'integrations' | 'webhooks'
   | 'users' | 'roles'
+  | 'analyzedSupabase'
   | null;
 
 const COUNT_LABELS: Record<string, string> = {
@@ -193,6 +195,7 @@ export default function Settings() {
           <DocCard icon={Link2} title="Chaves de API" description="Status real da conexão Supabase — sem chaves fictícias." onClick={() => setActiveDialog('apiKeys')} />
           <DocCard icon={Key} title="Integrações Ativas" description="Supabase e localStorage — as únicas fontes de dados do portal." onClick={() => setActiveDialog('integrations')} />
           <DocCard icon={Webhook} title="Webhooks Configurados" description="Endpoints planejados para notificações futuras." onClick={() => setActiveDialog('webhooks')} />
+          <DocCard icon={Database} title="Supabase do projeto analisado" description="Conecte ao Supabase do nicemp.com para carregar categorias reais no dropdown Criar Ferramenta." onClick={() => setActiveDialog('analyzedSupabase')} />
         </div>
       </Section>
 
@@ -211,6 +214,7 @@ export default function Settings() {
       <WebhooksDialog open={activeDialog === 'webhooks'} onOpenChange={(v) => !v && close()} />
       <UsersDialog open={activeDialog === 'users'} onOpenChange={(v) => !v && close()} />
       <RolesDialog open={activeDialog === 'roles'} onOpenChange={(v) => !v && close()} />
+      <AnalyzedSupabaseDialog open={activeDialog === 'analyzedSupabase'} onOpenChange={(v) => !v && close()} />
     </div>
   );
 }

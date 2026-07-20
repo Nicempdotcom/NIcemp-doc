@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Sparkles, Copy, Check, Plus } from 'lucide-react';
+import { Calculator, Sparkles, Copy, Check, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -15,7 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import {
   buildToolCreationPrompt,
 } from '@/services/prompts/ToolCreationPromptGenerator';
-import { ProjectRepository, ToolCategoryRepository } from '@/services/storage';
+import { ProjectRepository, ToolCategoryRepository, CmsCategoryRepository } from '@/services/storage';
 
 // ─── Fallback categories (used when no analysis has been done yet) ─────────────
 
@@ -77,17 +77,52 @@ export default function CreateToolPromptDialog() {
   const [newCategoryError, setNewCategoryError] = useState('');
 
   // ── Load categories when dialog opens ─────────────────────────────────────
+  // Priority: 1) CmsCategoryRepository (live from nicemp.com Supabase)
+  //           2) ToolCategoryRepository (heuristic, project-level fallback)
+  //           3) FALLBACK_CATEGORIES (static list)
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
   useEffect(() => {
     if (!open) return;
-    const project = ProjectRepository.findLatest();
-    if (!project) return;
-    const stored = ToolCategoryRepository.findByProject(project.id);
-    if (stored.length > 0) {
-      setCategoryOptions(stored.map((c) => ({ name: c.name, toolCount: c.toolCount })));
-      // Reset selection to the first real category
-      setCategory(stored[0].name);
-      setIsNewCategory(false);
-    }
+
+    let cancelled = false;
+    setLoadingCategories(true);
+
+    (async () => {
+      try {
+        // 1. Try the analyzed project Supabase (cms_categories on nicemp.com)
+        const cmsCategories = await CmsCategoryRepository.findAll();
+        if (cancelled) return;
+
+        if (cmsCategories.length > 0) {
+          const opts = cmsCategories.map((c) => ({ name: c.name, toolCount: null as null }));
+          setCategoryOptions(opts);
+          setCategory(opts[0].name);
+          setIsNewCategory(false);
+          return;
+        }
+
+        // 2. Fallback: heuristic categories from the last analyzed project
+        const project = ProjectRepository.findLatest();
+        if (project) {
+          const stored = ToolCategoryRepository.findByProject(project.id);
+          if (!cancelled && stored.length > 0) {
+            setCategoryOptions(stored.map((c) => ({ name: c.name, toolCount: c.toolCount })));
+            setCategory(stored[0].name);
+            setIsNewCategory(false);
+            return;
+          }
+        }
+
+        // 3. Static fallback — already set as initial state; nothing to do
+      } catch (err) {
+        console.warn('[CreateToolPromptDialog] Erro ao carregar categorias:', err);
+      } finally {
+        if (!cancelled) setLoadingCategories(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [open]);
 
   const effectiveSlug = routeTouched ? routeSlug : slugify(toolName);
@@ -264,9 +299,11 @@ export default function CreateToolPromptDialog() {
               )}
 
               {!isNewCategory && !showNewCategoryInput && (
-                <Select value={category} onValueChange={handleSelectCategory}>
+                <Select value={category} onValueChange={handleSelectCategory} disabled={loadingCategories}>
                   <SelectTrigger id="tool-category">
-                    <SelectValue />
+                    {loadingCategories
+                      ? <span className="flex items-center gap-1.5 text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Carregando categorias…</span>
+                      : <SelectValue />}
                   </SelectTrigger>
                   <SelectContent>
                     {categoryOptions.map((opt) => (

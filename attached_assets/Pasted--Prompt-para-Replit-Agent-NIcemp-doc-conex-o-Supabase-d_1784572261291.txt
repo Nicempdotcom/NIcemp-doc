@@ -1,0 +1,113 @@
+# Prompt para Replit Agent — NIcemp-doc: conexão Supabase do projeto analisado, configurável dentro do app
+
+## 1. Objetivo
+Hoje o dropdown "Categoria" do modal "Criar Ferramenta" (`CreateToolPromptDialog.tsx`) depende de um
+heurístico frágil (`ToolCategoryAnalyzer`, regex em `ToolsHome.tsx`) em vez da fonte real: a tabela
+`cms_categories` do banco Supabase do nicemp.com (13 categorias hoje: Construção, Departamento
+Pessoal, Empreendedorismo, Finanças, Gestão, Impostos, Logística, Marketing, Matemática, Recursos
+Humanos, Trabalhista, Tributário, Vendas).
+
+Quero autorizar o NIcemp-doc a se conectar, **somente leitura**, a esse Supabase — mas a URL e a
+anon key NÃO devem ser configuradas via variável de ambiente/Secrets do Replit. Elas devem ser
+inseridas **dentro do próprio app**, em Settings, e guardadas no localStorage do navegador (mesmo
+padrão de persistência local que o resto do app já usa). Isso é diferente do Supabase que o
+NIcemp-doc já usa para guardar suas próprias análises (`lib/supabase.ts`, configurado via
+`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`) — são duas conexões separadas.
+
+## 2. Passo a passo obrigatório
+
+a) Criar `src/lib/analyzedProjectSupabase.ts`:
+   - Constante `STORAGE_KEY = 'nicemp:analyzedSupabase:config'`.
+   - `getAnalyzedSupabaseConfig(): { url: string; anonKey: string } | null` — lê do localStorage,
+     `JSON.parse` com try/catch (retorna `null` em qualquer erro).
+   - `saveAnalyzedSupabaseConfig(url: string, anonKey: string): void` — valida que `url` começa com
+     `https://` e termina em `.supabase.co` (aviso simples, não bloqueante) antes de salvar; grava
+     `{ url, anonKey }` no localStorage.
+   - `clearAnalyzedSupabaseConfig(): void` — remove a chave do localStorage.
+   - `getAnalyzedSupabaseClient(): SupabaseClient | null` — lê a config atual e cria o client com
+     `createClient(url, anonKey)` sob demanda (NÃO cachear como singleton de módulo, já que o valor
+     pode mudar em runtime sem reload de página — recriar a cada chamada é aceitável, é uma operação
+     barata).
+   - `isAnalyzedSupabaseConfigured(): boolean` — `getAnalyzedSupabaseConfig() !== null`.
+   - `maskSecret` — reaproveitar a função já existente em `lib/supabase.ts` (exportá-la de lá se
+     ainda não for exportada), para nunca mostrar a anon key completa na UI.
+
+b) Criar `src/services/storage/repositories/CmsCategoryRepository.ts`:
+   - `async findAll(): Promise<{ id: string; name: string }[]>`, chamando
+     `getAnalyzedSupabaseClient()` a cada execução (não guardar client em variável de módulo).
+   - Se o client for `null` (não configurado) ou a query falhar, retornar `[]` com
+     `console.warn` — nunca lançar exceção.
+   - Query: `.from('cms_categories').select('id, name').order('name')`.
+   - Repositório 100% leitura — sem insert/update/delete.
+
+c) Criar `src/app/pages/Settings/dialogs/AnalyzedSupabaseDialog.tsx`, seguindo o padrão visual de
+   `ApiKeysDialog.tsx`:
+   - Dois campos: "URL do projeto Supabase" (`Input` texto) e "Anon key" (`Input` tipo password,
+     com botão de olho pra mostrar/esconder).
+   - Botão "Testar conexão": faz um `select('id').limit(1)` em `cms_categories` com os valores
+     digitados (antes de salvar) e mostra toast de sucesso ("Conectado — X categorias encontradas")
+     ou erro (mensagem de RLS/URL inválida/etc., sem expor detalhes técnicos sensíveis).
+   - Botão "Salvar conexão": chama `saveAnalyzedSupabaseConfig`.
+   - Se já houver config salva: mostrar URL (truncada, com copiar) e anon key mascarada (via
+     `maskSecret`), igual ao layout de `ApiKeysDialog`, com botão "Remover conexão"
+     (`clearAnalyzedSupabaseConfig`).
+   - Aviso fixo e visível: "Use apenas a anon/public key do Supabase — nunca a service_role key.
+     Essa chave fica salva neste navegador."
+
+d) Em `src/app/pages/Settings/index.tsx`, adicionar essa nova opção na lista de configurações
+   (novo item no mesmo estilo dos existentes — ex. ícone `Database`/`Link2`, título "Supabase do
+   projeto analisado"), abrindo `AnalyzedSupabaseDialog`. Adicionar `'analyzedSupabase'` ao union
+   type `SettingsDialog`.
+
+e) Em `CreateToolPromptDialog.tsx`, no `useEffect` de carregamento de categorias, buscar nesta
+   ordem:
+   1. `CmsCategoryRepository.findAll()` — se vier 1+ itens, usar essa lista (sem contagem de
+      ferramentas).
+   2. Se vazio: `ToolCategoryRepository.findByProject(projectId)` (heurístico atual, fallback).
+   3. Se também vazio: `FALLBACK_CATEGORIES` (lista fixa atual).
+   Loading state simples enquanto a consulta está pendente, sem travar o dropdown.
+
+f) Manter "+ Criar nova categoria" como está — só texto no prompt gerado, nenhuma escrita
+   automática em `cms_categories`. O aviso já existente deve deixar claro que o Replit Agent do
+   nicemp.com precisa inserir a linha nova manualmente.
+
+g) Exportar `CmsCategoryRepository` em `src/services/storage/index.ts`, junto aos demais.
+
+## 3. Arquivos permitidos
+- `src/lib/analyzedProjectSupabase.ts` (novo)
+- `src/lib/supabase.ts` (só se precisar exportar `maskSecret`)
+- `src/services/storage/repositories/CmsCategoryRepository.ts` (novo)
+- `src/services/storage/repositories/index.ts`
+- `src/services/storage/index.ts`
+- `src/app/components/prompts/CreateToolPromptDialog.tsx`
+- `src/services/prompts/ToolCreationPromptGenerator.ts` (só o texto do aviso)
+- `src/app/pages/Settings/dialogs/AnalyzedSupabaseDialog.tsx` (novo)
+- `src/app/pages/Settings/index.tsx`
+
+Nada além disso.
+
+## 4. Arquivos proibidos
+- `src/services/engine/ToolCategoryAnalyzer.ts` / `ToolCategoryRepository.ts` — continuam como
+  fallback, sem remover.
+- `src/services/storage/SupabaseBackend.ts` e o client em `lib/supabase.ts` — não misturar com a
+  conexão nova; são coisas separadas.
+- Nenhuma escrita (insert/update/delete) na conexão nova — só `SELECT`.
+- Não pedir nem aceitar `service_role key` em nenhum campo — só anon key. Se quiser, adicionar uma
+  checagem best-effort (ex. JWT decodificado tem `"role":"service_role"` → bloquear salvar e avisar).
+- Não alterar Header/Footer/rotas gerais.
+
+## 5. Checklist final
+- [ ] Em Settings, é possível colar URL + anon key do Supabase do nicemp.com, testar a conexão e
+      salvar — tudo dentro do app, sem precisar mexer em Secrets/env vars.
+- [ ] Com a conexão salva, o dropdown "Categoria" do modal "Criar Ferramenta" mostra as 13
+      categorias reais de `cms_categories`.
+- [ ] Sem conexão configurada, o app cai para o comportamento atual (heurístico → lista fixa), sem
+      erro nem tela quebrada.
+- [ ] A anon key nunca aparece em texto puro na tela (sempre mascarada, exceto no campo de input
+      enquanto o usuário digita/decide mostrar).
+- [ ] Nenhuma escrita ocorre na conexão nova em nenhum fluxo.
+- [ ] Nada do Supabase próprio do NIcemp-doc foi afetado.
+
+## 6. Ao concluir
+⚠️ Obrigatório: listar todos os arquivos criados/modificados, e confirmar explicitamente que
+nenhuma operação de escrita foi implementada na conexão nova com o Supabase do nicemp.com.
