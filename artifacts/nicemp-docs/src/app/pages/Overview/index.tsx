@@ -140,6 +140,7 @@ export default function Overview() {
             pages={pages}
             components={components}
             importEdges={importEdges}
+            interactions={interactions}
             selectedModule={selectedModule}
           />
         )}

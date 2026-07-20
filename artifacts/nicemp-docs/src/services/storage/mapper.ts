@@ -71,6 +71,21 @@ function inferRoute(path: string): string {
   return route === '' ? '/' : route;
 }
 
+/**
+ * Extract the `title` value from a `useSeo({ title: '…' })` call in page
+ * source — used to derive a friendly page name instead of the raw filename.
+ * Returns '' when not found or content is empty.
+ */
+function extractUseSeoTitle(content: string): string {
+  if (!content) return '';
+  const window = content.slice(0, 3_000);
+  const blockMatch = window.match(/useSeo\s*\(\s*\{([\s\S]{0,600}?)\}/);
+  if (!blockMatch) return '';
+  const titleMatch = blockMatch[1].match(/title\s*:\s*(['"`])([\s\S]*?)\1/);
+  if (titleMatch && titleMatch[2].trim().length > 1) return titleMatch[2].trim();
+  return '';
+}
+
 /** Derive the top-level module name from a file path. */
 function inferModule(path: string): string {
   const parts = path.split('/').filter(Boolean);
@@ -187,10 +202,11 @@ function toPageEntities(files: CategorizedFile[], projectId: string): PageEntity
     .filter((f) => f.category === 'page')
     .map((f) => {
       const componentName = f.name.replace(/\.(tsx?|jsx?)$/, '');
+      const useSeoTitle  = extractUseSeoTitle(f.content);
       return {
         id:            stableId('page', f.path),
         kind:          'page' as const,
-        name:          componentName,
+        name:          useSeoTitle || componentName,
         description:   f.description ?? '',
         location:      f.path,
         relationships: [],

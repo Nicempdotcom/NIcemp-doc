@@ -18,6 +18,38 @@
 
 import type { CategorizedFile } from './types';
 
+// ─── useSeo extraction ───────────────────────────────────────────────────────
+
+/**
+ * Look for a `useSeo({ title: '…', description: '…' })` call near the top of
+ * the file and return the description string when found. Returns '' otherwise.
+ * Handles both single/double quotes and template literals. The search window
+ * is limited to the first 3 000 characters so it stays fast on large files.
+ */
+function extractUseSeoDescription(content: string): string {
+  const window = content.slice(0, 3_000);
+  const blockMatch = window.match(/useSeo\s*\(\s*\{([\s\S]{0,600}?)\}/);
+  if (!blockMatch) return '';
+  const block = blockMatch[1];
+  const descMatch = block.match(/description\s*:\s*(['"`])([\s\S]*?)\1/);
+  if (descMatch && descMatch[2].trim().length > 3) return descMatch[2].trim();
+  return '';
+}
+
+/**
+ * Look for a `useSeo({ title: '…' … })` call and return the title string.
+ * Returns '' when not found.
+ */
+export function extractUseSeoTitle(content: string): string {
+  const window = content.slice(0, 3_000);
+  const blockMatch = window.match(/useSeo\s*\(\s*\{([\s\S]{0,600}?)\}/);
+  if (!blockMatch) return '';
+  const block = blockMatch[1];
+  const titleMatch = block.match(/title\s*:\s*(['"`])([\s\S]*?)\1/);
+  if (titleMatch && titleMatch[2].trim().length > 1) return titleMatch[2].trim();
+  return '';
+}
+
 // ─── Comment extraction ──────────────────────────────────────────────────────
 
 /**
@@ -217,11 +249,28 @@ export class DescriptionAnalyzer {
       if (file.isBinary) continue;
       if (!RELEVANT_CATEGORIES.has(file.category)) continue;
 
+      // ── Priority 0: useSeo({ description }) — only for pages ──────────────
+      if (file.category === 'page') {
+        const fromUseSeo = extractUseSeoDescription(file.content);
+        if (fromUseSeo) {
+          result.set(file.path, fromUseSeo);
+          continue;
+        }
+      }
+
       // ── Priority a: leading comment ────────────────────────────────────────
       const fromComment = extractLeadingComment(file.content);
       if (fromComment) {
-        result.set(file.path, fromComment);
-        continue;
+        // Never surface raw English comments — they must be rewritten to
+        // plain Portuguese. Detect English by the absence of common
+        // Portuguese words and presence of common English function words.
+        const looksEnglish = /\b(the|this|a|an|is|are|was|were|for|with|and|or|that|which|it|its|to|of|in|on|at|by|from|component|page|returns|renders|displays|shows|provides|manages|handles)\b/i.test(fromComment)
+          && !/\b(de|do|da|dos|das|em|um|uma|que|para|por|com|na|no|nas|nos|é|são|uma|tela|componente|página|seção)\b/i.test(fromComment);
+        if (!looksEnglish) {
+          result.set(file.path, fromComment);
+          continue;
+        }
+        // English comment — fall through to heuristic (which always produces Portuguese)
       }
 
       // ── Priority b: heuristic by category ─────────────────────────────────

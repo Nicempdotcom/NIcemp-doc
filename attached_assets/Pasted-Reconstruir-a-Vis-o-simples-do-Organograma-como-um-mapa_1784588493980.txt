@@ -1,0 +1,55 @@
+Reconstruir a "Visão simples" do Organograma como um mapa de site em árvore, no estilo
+de um diagrama estrutural de site (páginas conectadas por navegação, agrupadas por
+módulo/seção, layout limpo sem linhas cruzadas) — ver imagem de referência anexada
+nesta conversa com o Replit Agent [colar aqui a imagem que você me mandou].
+
+## 1. Extrair nome e descrição REAIS do código (prioridade sobre qualquer adivinhação)
+Ao ler cada arquivo de página, procurar uma chamada `useSeo({ title: '...', description: '...' })`
+(ou similar) perto do topo do componente. Se encontrar:
+- Usar o valor de `title` como nome amigável da página (não o nome do arquivo)
+- Usar o valor de `description` como a frase da página (traduzido/resumido em português
+  simples se estiver em inglês — nunca copiar um comentário de código em inglês direto)
+Se não encontrar `useSeo`, cair no comportamento atual do DescriptionAnalyzer, mas com uma
+regra nova: NUNCA copiar um comentário do código como está se ele estiver em inglês —
+sempre reescrever numa frase curta em português, mesmo que genérica.
+
+## 2. Instalar biblioteca de layout em árvore
+Adicionar a dependência `dagre` ao projeto (artifacts/nicemp-docs/package.json) e usar ela
+para calcular a posição dos nós do Fluxo de Navegação — layout hierárquico top-down,
+minimizando cruzamento de linhas. Isso substitui o `layoutByLevel` atual só para a Visão
+simples (a Visão técnica pode continuar com o layout de hoje).
+
+## 3. Agrupar visualmente por módulo (como "faixas")
+Na Visão simples, desenhar as páginas de um mesmo módulo dentro de uma faixa/coluna com um
+cabeçalho colorido com o nome do módulo (ex.: "Ferramentas", "Institucional"), igual ao
+exemplo de referência que agrupa "Work Floor Supplies" e "Admin" cada um numa área visual
+separada. Dentro da faixa, o dagre organiza a árvore de navegação daquele módulo.
+
+## 4. Card de cada página
+Caixa com cantos arredondados, cor de fundo por módulo, mostrando:
+- Nome amigável (do useSeo ou do fallback traduzido)
+- Descrição de uma linha embaixo
+Sem nome de arquivo/componente visível por padrão (só no hover, como já é hoje).
+
+## 5. Corrigir "Nenhum componente de primeiro nível detectado" aparecendo sempre
+Investigar por que a detecção de componentes de primeiro nível de cada página está
+retornando vazio em todos os casos testados — provavelmente o critério de "primeiro nível"
+está comparando caminho de import de um jeito rígido demais. Ajustar para não exigir
+correspondência exata de caminho quando o import já foi resolvido pelo ImportEdgeAnalyzer.
+Testar com pelo menos 3 páginas que claramente têm componentes (ex.: qualquer calculadora)
+antes de considerar concluído.
+
+## Teste obrigatório
+Subir o projeto real do nicemp.com. Confirmar visualmente que o resultado se parece com uma
+árvore organizada por módulo, sem linhas cruzando caixas, com nomes e descrições em
+português — não uma lista solta nem um grafo com linhas tortas.
+
+## Checklist final
+- [ ] Nomes vêm de useSeo quando existir, nunca nome de arquivo cru
+- [ ] Nenhuma descrição aparece em inglês
+- [ ] Nenhuma linha cruza por cima de uma caixa
+- [ ] Páginas agrupadas visualmente por módulo, com cabeçalho de cor por módulo
+- [ ] Pelo menos algumas páginas mostram componentes de primeiro nível (não "nenhum
+      detectado" em 100% dos casos)
+- [ ] Anotação por página continua funcionando como já estava
+- [ ] Listar todos os arquivos criados/modificados
