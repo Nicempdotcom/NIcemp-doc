@@ -498,7 +498,12 @@ export default function Database() {
                   <div key={t.id} className="rounded-lg border border-border bg-card overflow-hidden">
                     <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/30">
                       <DatabaseIcon className="h-4 w-4 text-primary" />
-                      <span className="font-mono text-sm font-semibold text-foreground">{t.tableName || t.name}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-mono text-sm font-semibold text-foreground">{t.tableName || t.name}</span>
+                        {t.description && (
+                          <div className="text-xs text-muted-foreground truncate" title={t.description}>{t.description}</div>
+                        )}
+                      </div>
                       {t.module && <Badge variant="outline" className="text-[10px] font-normal">{t.module}</Badge>}
                       <span className={`ml-auto inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[t.status]}`}>
                         {STATUS_LABEL[t.status]}

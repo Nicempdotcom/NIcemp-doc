@@ -1,0 +1,50 @@
+Preciso adicionar descrições automáticas em português simples para páginas, componentes,
+hooks e APIs no NicEmp Docs. Hoje isso não existe: em src/services/engine/StructureAnalyzer.ts
+o analisador só define a `category` de cada arquivo, nunca uma descrição, e por isso
+src/services/storage/mapper.ts sempre salva description: '' para esses tipos. O único lugar
+que já gera frase automática em português é o InteractionAnalyzer.ts (para cliques de botão)
+— seguir o MESMO estilo dele: heurística por regex, conservador (se não tiver certeza, usa um
+texto genérico em vez de inventar algo específico do negócio).
+
+## 1. Criar o novo analisador
+Arquivo novo: src/services/engine/DescriptionAnalyzer.ts
+
+Regra de prioridade:
+a) Se o arquivo já tem um comentário (bloco /** */ ou // logo acima do export principal),
+   usar a primeira frase desse comentário como descrição.
+b) Se não tiver comentário, usar heurística por pasta/nome de arquivo:
+   - Páginas: nomes com "login" → "Tela de login"; "dashboard" → "Tela inicial com resumo
+     geral"; "list"/"listagem" → "Tela de listagem"; "form"/"cadastro"/"new"/"create" →
+     "Tela de cadastro"; "detail" → "Tela de detalhes"; caso não bata em nada, gerar um
+     texto genérico a partir do nome do arquivo (ex.: "Pedidos.tsx" → "Tela de Pedidos").
+   - Componentes: se o nome terminar em Card/Modal/Table/Form/Button, usar isso
+     ("Cartão de exibição", "Janela modal", "Tabela de dados", "Formulário", "Botão de ação").
+   - Hooks: para useAlgumaCoisa, gerar "Lógica reutilizável para Alguma Coisa" separando o
+     nome por camelCase.
+   - APIs: se detectar GET/POST/PUT/DELETE no caminho ou no código, gerar "Busca/Cria/
+     Atualiza/Remove <recurso>" com base no nome do recurso na rota.
+   - Tabelas: "Tabela que guarda informações de <nome>".
+c) Nunca inventar o que a tela faz de específico do negócio (ex.: não afirmar "calcula ICMS"
+   sem evidência clara no nome/comentário) — prefira um texto genérico e honesto.
+
+## 2. Ligar ao pipeline
+Em src/services/engine/runAnalysisPipeline.ts, chamar o DescriptionAnalyzer logo depois do
+StructureAnalyzer e preencher o campo `description` de cada arquivo categorizado antes de
+seguir para as próximas etapas — sem remover nenhum passo existente.
+
+## 3. Exibir onde já faz sentido
+Conferir se as telas Projeto, Frontend, Backend, Banco de Dados, Componentes, Hooks e APIs
+já mostram esse campo `description` em algum lugar (card ou lista) — se não mostrarem,
+adicionar a descrição junto do nome de cada item, sem remover nenhuma coluna/informação
+que já existe hoje.
+
+## Arquivos permitidos
+- src/services/engine/DescriptionAnalyzer.ts (novo)
+- src/services/engine/runAnalysisPipeline.ts
+- As páginas de listagem citadas acima, só se a descrição ainda não aparecer nelas
+
+## Checklist final
+- [ ] Depois de subir um projeto real, a maioria das páginas/componentes aparece com uma
+      frase de descrição (não fica tudo em branco)
+- [ ] Nenhuma tela existente quebrou ou perdeu informação que já tinha
+- [ ] Liste todos os arquivos criados/modificados ao final

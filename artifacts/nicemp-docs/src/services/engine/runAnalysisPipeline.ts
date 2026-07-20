@@ -11,6 +11,7 @@
 
 import JSZip from 'jszip';
 import { StructureAnalyzer }    from './StructureAnalyzer';
+import { DescriptionAnalyzer }  from './DescriptionAnalyzer';
 import { DependencyAnalyzer }   from './DependencyAnalyzer';
 import { TechnologyAnalyzer }   from './TechnologyAnalyzer';
 import { InteractionAnalyzer }  from './InteractionAnalyzer';
@@ -208,6 +209,16 @@ export async function runAnalysisPipeline(
   counts.hooks      = categorized.filter((f) => f.category === 'hook').length;
   counts.apis       = categorized.filter((f) => f.category === 'api').length;
   counts.tables     = categorized.filter((f) => f.category === 'database').length;
+
+  // ── 2.5. Description generation (DescriptionAnalyzer) ───────────────────────
+  // Runs immediately after categorisation so every subsequent step (mapper,
+  // prompts, etc.) can read the plain-Portuguese description from the file.
+  const descriptionAnalyzer = new DescriptionAnalyzer();
+  const descriptions = descriptionAnalyzer.analyze(categorized);
+  for (const f of categorized) {
+    const d = descriptions.get(f.path);
+    if (d) f.description = d;
+  }
 
   checkCancelled();
   onProgress(70, 'Identificando páginas, componentes e hooks…', { ...counts });

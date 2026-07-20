@@ -68,6 +68,9 @@ export default function Hooks() {
                         <Zap className="h-3.5 w-3.5 text-primary shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-foreground font-mono truncate" title={h.name}>{h.name}</div>
+                          {h.description && (
+                            <div className="text-xs text-muted-foreground truncate" title={h.description}>{h.description}</div>
+                          )}
                           <div className="text-xs text-muted-foreground font-mono truncate" title={h.location}>{h.location}</div>
                         </div>
                       </div>
