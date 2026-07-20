@@ -20,6 +20,7 @@ import {
 } from '@/services/storage';
 
 import DiagramNode from './DiagramNode';
+import PageCardList from './PageCardList';
 import { buildNavigationFlow } from './buildNavigationFlow';
 import { buildArchitectureFlow } from './buildArchitectureFlow';
 import { ViewModeContext, type ViewMode } from './diagramUtils';
@@ -29,38 +30,40 @@ const nodeTypes: NodeTypes = { diagram: DiagramNode };
 const ALL_MODULES = '__all__';
 
 /**
- * Organograma (EPIC 11) — visual diagram of the app, in two tabs:
- *  - "Fluxo de Navegação": pages connected by the action that navigates
- *    between them (built from InteractionEntity records).
- *  - "Arquitetura por trás": layered Páginas → Componentes → Hooks/APIs →
- *    Banco de Dados diagram (built from resolved ImportEdgeEntity records).
+ * Organograma (EPIC 11) — visual diagram of the app.
  *
- * Both diagrams share a view-mode toggle (Visão Simples / Visão Técnica).
- * In Visão Simples (default) cards show name + description, colored by entity
- * type. In Visão Técnica cards show the module pill and type label, exactly
- * as before. The file path is tooltip-only in both modes.
+ * Two view modes:
+ *  - "Visão Simples" (default): a card list — one card per PageEntity — showing
+ *    name, description, and first-level components. No graph. Readable for
+ *    non-technical stakeholders.
+ *  - "Visão Técnica": the original two-tab ReactFlow graph (Fluxo de Navegação
+ *    + Arquitetura por trás), unchanged.
+ *
+ * The module filter applies in both modes.
  */
 export default function Overview() {
   const project = useMemo(() => ProjectRepository.findLatest(), []);
 
-  const pages = useMemo(() => (project ? PageRepository.findByProject(project.id) : []), [project]);
+  const pages       = useMemo(() => (project ? PageRepository.findByProject(project.id)       : []), [project]);
   const interactions = useMemo(() => (project ? InteractionRepository.findByProject(project.id) : []), [project]);
-  const importEdges = useMemo(() => (project ? ImportEdgeRepository.findByProject(project.id) : []), [project]);
+  const importEdges  = useMemo(() => (project ? ImportEdgeRepository.findByProject(project.id)  : []), [project]);
 
-  const navigationFlow = useMemo(() => buildNavigationFlow(pages, interactions), [pages, interactions]);
-  const architectureFlow = useMemo(() => buildArchitectureFlow(importEdges), [importEdges]);
+  const navigationFlow  = useMemo(() => buildNavigationFlow(pages, interactions), [pages, interactions]);
+  const architectureFlow = useMemo(() => buildArchitectureFlow(importEdges),       [importEdges]);
 
+  // Modules: union of page modules + graph node modules so the filter covers all data in both views.
   const modules = useMemo(() => {
     const set = new Set<string>();
-    for (const n of navigationFlow.nodes) set.add(n.data.module);
+    for (const p of pages) set.add(p.module);
+    for (const n of navigationFlow.nodes)  set.add(n.data.module);
     for (const n of architectureFlow.nodes) set.add(n.data.module);
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, [navigationFlow.nodes, architectureFlow.nodes]);
+    return [...set].filter(Boolean).sort((a, b) => a.localeCompare(b));
+  }, [pages, navigationFlow.nodes, architectureFlow.nodes]);
 
   const [selectedModule, setSelectedModule] = useState<string>(ALL_MODULES);
   const [viewMode, setViewMode] = useState<ViewMode>('simple');
 
-  const filteredNavigation = useMemo(() => filterFlow(navigationFlow, selectedModule), [navigationFlow, selectedModule]);
+  const filteredNavigation   = useMemo(() => filterFlow(navigationFlow,   selectedModule), [navigationFlow,   selectedModule]);
   const filteredArchitecture = useMemo(() => filterFlow(architectureFlow, selectedModule), [architectureFlow, selectedModule]);
 
   if (!project) {
@@ -89,6 +92,7 @@ export default function Overview() {
           badgeVariant="info"
         />
 
+        {/* Controls row */}
         <div className="mb-4 flex items-center justify-between gap-3">
           {/* View mode toggle */}
           <div className="inline-flex rounded-lg border border-border bg-muted p-1 gap-1">
@@ -128,38 +132,50 @@ export default function Overview() {
           </Select>
         </div>
 
-        <Tabs defaultValue="navigation">
-          <TabsList>
-            <TabsTrigger value="navigation" className="gap-1.5">
-              Fluxo de Navegação
-              <TermHint termo="Fluxo de Navegação" />
-            </TabsTrigger>
-            <TabsTrigger value="architecture" className="gap-1.5">
-              Arquitetura por trás
-              <TermHint termo="Arquitetura por trás" />
-            </TabsTrigger>
-          </TabsList>
+        {/* ── Visão Simples ── card list per page, no graph */}
+        {viewMode === 'simple' && (
+          <PageCardList
+            pages={pages}
+            importEdges={importEdges}
+            selectedModule={selectedModule}
+          />
+        )}
 
-          <TabsContent value="navigation">
-            {filteredNavigation.nodes.length === 0 ? (
-              <InfoBox variant="info" title="Sem fluxos de navegação detectados">
-                Nenhuma navegação entre telas foi identificada para este filtro.
-              </InfoBox>
-            ) : (
-              <DiagramCanvas nodes={filteredNavigation.nodes} edges={filteredNavigation.edges} />
-            )}
-          </TabsContent>
+        {/* ── Visão Técnica ── original two-tab ReactFlow graph, unchanged */}
+        {viewMode === 'technical' && (
+          <Tabs defaultValue="navigation">
+            <TabsList>
+              <TabsTrigger value="navigation" className="gap-1.5">
+                Fluxo de Navegação
+                <TermHint termo="Fluxo de Navegação" />
+              </TabsTrigger>
+              <TabsTrigger value="architecture" className="gap-1.5">
+                Arquitetura por trás
+                <TermHint termo="Arquitetura por trás" />
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="architecture">
-            {filteredArchitecture.nodes.length === 0 ? (
-              <InfoBox variant="info" title="Sem relações de arquitetura detectadas">
-                Nenhum import interno resolvido foi identificado para este filtro.
-              </InfoBox>
-            ) : (
-              <DiagramCanvas nodes={filteredArchitecture.nodes} edges={filteredArchitecture.edges} />
-            )}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="navigation">
+              {filteredNavigation.nodes.length === 0 ? (
+                <InfoBox variant="info" title="Sem fluxos de navegação detectados">
+                  Nenhuma navegação entre telas foi identificada para este filtro.
+                </InfoBox>
+              ) : (
+                <DiagramCanvas nodes={filteredNavigation.nodes} edges={filteredNavigation.edges} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="architecture">
+              {filteredArchitecture.nodes.length === 0 ? (
+                <InfoBox variant="info" title="Sem relações de arquitetura detectadas">
+                  Nenhum import interno resolvido foi identificado para este filtro.
+                </InfoBox>
+              ) : (
+                <DiagramCanvas nodes={filteredArchitecture.nodes} edges={filteredArchitecture.edges} />
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </ViewModeContext.Provider>
   );

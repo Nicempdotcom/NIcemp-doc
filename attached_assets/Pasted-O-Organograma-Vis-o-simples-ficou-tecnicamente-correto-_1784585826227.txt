@@ -1,0 +1,44 @@
+O Organograma (Visão simples) ficou tecnicamente correto mas ilegível pra quem não é
+programador: os cards mostram nomes crus de componente (ex.: AreaPerimetroCalculator,
+DashboardMockup, HeroSection) sem nenhuma descrição, e a aba "Arquitetura por trás" mistura
+peças internas do código com as telas principais, então faltam páginas que deveriam
+aparecer claramente (ex.: Home, com sua seção de destaque e carrossel).
+
+Trocar a "Visão simples" de um grafo de nós conectados para uma LISTA organizada por página
+(não mexer na "Visão técnica" nem nas abas atuais, que continuam existindo para quem quiser).
+
+## 1. Nova estrutura de dados
+Para cada Página (PageEntity) detectada no projeto, montar um resumo com:
+- Nome amigável da página (ex.: "Home", não "Index.tsx")
+- A descrição em uma frase (usar o campo `description` já gerado pelo DescriptionAnalyzer
+  — se ainda estiver vazio para alguma página, meta anterior precisa ser revisada antes
+  de continuar aqui)
+- Lista simples (texto, não nós) dos componentes/seções que essa página importa
+  diretamente (usar os ImportEdgeEntity já resolvidos, mas mostrando só o PRIMEIRO nível
+  de profundidade — os componentes usados direto na página — sem descer para hooks/APIs
+  internas de cada componente)
+
+## 2. Novo layout da "Visão simples"
+Em src/app/pages/Overview, quando "Visão simples" estiver selecionada, substituir o
+ReactFlow por uma lista/grade de cards (um por página), cada um mostrando:
+- Nome da página em destaque
+- Descrição de uma linha
+- Um bloco pequeno "Contém:" com os nomes amigáveis dos componentes de primeiro nível,
+  em texto corrido ou tags, sem setas nem grafo
+Manter busca/filtro por módulo já existente.
+Confirmar que TODAS as páginas do projeto aparecem na lista, sem exceção — inclusive Home,
+landing pages, e qualquer página com seção de destaque/carrossel.
+
+## 3. Visão técnica continua igual
+"Visão técnica" mantém exatamente o ReactFlow de hoje (grafo de nós), sem mudanças.
+
+## Arquivos permitidos
+- src/app/pages/Overview/index.tsx
+- Novo(s) arquivo(s) auxiliares dentro de src/app/pages/Overview/, se precisar
+
+## Checklist final
+- [ ] Subir o projeto real do nicemp.com e conferir que TODAS as páginas aparecem na lista,
+      incluindo Home com sua seção de destaque e carrossel
+- [ ] Cada página mostra nome amigável + descrição de uma linha (nunca vazio)
+- [ ] "Visão técnica" continua idêntica a antes
+- [ ] Liste todos os arquivos criados/modificados ao final
