@@ -1,11 +1,12 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Database as DatabaseIcon, KeyRound, Link2, Loader2, RefreshCw, Sparkles, ExternalLink } from 'lucide-react';
+import { Database as DatabaseIcon, KeyRound, Link2, Loader2, RefreshCw, Sparkles, ExternalLink, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import PageHeader from '@/app/layouts/PageHeader';
 import InfoBox from '@/app/components/docs/InfoBox';
 import EntityTableToolbar from '@/app/components/docs/EntityTableToolbar';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
+import { Input } from '@/app/components/ui/input';
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '@/app/components/ui/table';
@@ -16,9 +17,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/app/components/ui/dialog';
 import { ProjectRepository, TableRepository, TableUsageRepository } from '@/services/storage';
-import { isAnalyzedSupabaseConfigured } from '@/lib/analyzedProjectSupabase';
+import { isAnalyzedSupabaseConfigured, getTrackedTableNames, addTrackedTableName, removeTrackedTableName } from '@/lib/analyzedProjectSupabase';
 import { LiveSupabaseIntrospector } from '@/services/engine/LiveSupabaseIntrospector';
-import type { LiveTableSchema, TableSampleResult } from '@/services/engine/LiveSupabaseIntrospector';
+import type { LiveTableSchema, LiveTableDescribeResult, TableSampleResult } from '@/services/engine/LiveSupabaseIntrospector';
 import type { TableUsageEntry } from '@/services/engine/LiveTableUsageAnalyzer';
 import EditSupabaseTablePromptDialog from '@/app/components/prompts/EditSupabaseTablePromptDialog';
 
@@ -201,48 +202,44 @@ function TableDetailDialog({
   );
 }
 
-// ─── Live Supabase tab ─────────────────────────────────────────────────────────
+// ─── Tracked table card ────────────────────────────────────────────────────────
 
-function LiveTab({ projectId }: { projectId: string | null }) {
-  const [loading, setLoading]               = useState(false);
-  const [tables, setTables]                 = useState<LiveTableSchema[]>([]);
-  const [loaded, setLoaded]                 = useState(false);
+interface TrackedTableCardProps {
+  tableName:  string;
+  projectId:  string | null;
+  onRemove:   () => void;
+}
 
-  const [detailOpen, setDetailOpen]         = useState(false);
-  const [selectedSchema, setSelectedSchema] = useState<LiveTableSchema | null>(null);
-  const [sample, setSample]                 = useState<TableSampleResult | null>(null);
-  const [sampleLoading, setSampleLoading]   = useState(false);
-  const [usages, setUsages]                 = useState<TableUsageEntry[]>([]);
+function TrackedTableCard({ tableName, projectId, onRemove }: TrackedTableCardProps) {
+  const [result, setResult]           = useState<LiveTableDescribeResult | null>(null);
+  const [loading, setLoading]         = useState(false);
 
-  const [promptOpen, setPromptOpen]         = useState(false);
+  const [detailOpen, setDetailOpen]   = useState(false);
+  const [sample, setSample]           = useState<TableSampleResult | null>(null);
+  const [sampleLoading, setSampleLoading] = useState(false);
+  const [usages, setUsages]           = useState<TableUsageEntry[]>([]);
+  const [promptOpen, setPromptOpen]   = useState(false);
 
-  const configured = isAnalyzedSupabaseConfigured();
-
-  const loadTables = useCallback(async () => {
+  const loadDescribe = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await LiveSupabaseIntrospector.listTables();
-      setTables(result);
-      setLoaded(true);
+      const r = await LiveSupabaseIntrospector.describeTable(tableName);
+      setResult(r);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tableName]);
 
-  // Load on first mount if configured
-  useEffect(() => {
-    if (configured && !loaded) {
-      loadTables();
-    }
-  }, [configured, loaded, loadTables]);
+  // Auto-load on mount
+  useEffect(() => { loadDescribe(); }, [loadDescribe]);
 
-  async function handleSelectTable(schema: LiveTableSchema) {
-    setSelectedSchema(schema);
+  async function handleOpen() {
+    if (result?.permissionError) return; // do not open detail for error cards
+    const schema = result?.schema ?? { name: tableName, columns: [] };
     setSample(null);
     setSampleLoading(true);
     setDetailOpen(true);
 
-    // Load usages from repository (sync)
     if (projectId) {
       const entity = TableUsageRepository.findByTable(projectId, schema.name);
       setUsages(entity?.usages ?? []);
@@ -250,10 +247,132 @@ function LiveTab({ projectId }: { projectId: string | null }) {
       setUsages([]);
     }
 
-    // Load sample (async)
-    const result = await LiveSupabaseIntrospector.getTableSample(schema.name);
-    setSample(result);
+    const s = await LiveSupabaseIntrospector.getTableSample(schema.name);
+    setSample(s);
     setSampleLoading(false);
+  }
+
+  const schema = result?.schema ?? { name: tableName, columns: [] };
+  const isError = !!result?.permissionError;
+
+  return (
+    <>
+      <div
+        className={[
+          'rounded-lg border bg-card p-4 transition-all duration-150',
+          isError
+            ? 'border-amber-500/40 bg-amber-500/5'
+            : 'border-border hover:border-primary/40 hover:shadow-sm cursor-pointer',
+        ].join(' ')}
+        onClick={!isError ? handleOpen : undefined}
+        role={!isError ? 'button' : undefined}
+        tabIndex={!isError ? 0 : undefined}
+        onKeyDown={!isError ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleOpen(); } : undefined}
+      >
+        {/* Header */}
+        <div className="flex items-start gap-2 mb-2">
+          {loading ? (
+            <Loader2 className="h-4 w-4 text-muted-foreground animate-spin mt-0.5 shrink-0" />
+          ) : isError ? (
+            <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+          ) : (
+            <DatabaseIcon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          )}
+          <span className="font-mono text-sm font-semibold text-foreground truncate flex-1">
+            {tableName}
+          </span>
+          {/* Action buttons — stop propagation so they don't trigger handleOpen */}
+          <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6"
+              title="Atualizar"
+              onClick={loadDescribe}
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 text-destructive hover:text-destructive"
+              title="Remover tabela"
+              onClick={onRemove}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Body */}
+        {loading ? (
+          <p className="text-xs text-muted-foreground">Carregando…</p>
+        ) : isError ? (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+              Sem permissão de leitura. Rode no SQL Editor do Supabase:
+            </p>
+            <code className="block text-[11px] bg-amber-500/10 rounded px-2 py-1.5 text-amber-800 dark:text-amber-300 break-all">
+              {result!.permissionError}
+            </code>
+          </div>
+        ) : result?.warning ? (
+          <p className="text-xs text-muted-foreground italic">{result.warning}</p>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">
+              {schema.columns.length} coluna{schema.columns.length !== 1 ? 's' : ''}
+            </p>
+            {schema.columns.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {schema.columns.slice(0, 4).map((c) => c.name).join(', ')}
+                {schema.columns.length > 4 ? ` +${schema.columns.length - 4}` : ''}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      <TableDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        schema={schema}
+        sample={sample}
+        sampleLoading={sampleLoading}
+        usages={usages}
+        onGeneratePrompt={() => { setDetailOpen(false); setPromptOpen(true); }}
+      />
+
+      <EditSupabaseTablePromptDialog
+        open={promptOpen}
+        onOpenChange={setPromptOpen}
+        tableName={schema.name}
+        columns={schema.columns}
+        usages={usages}
+      />
+    </>
+  );
+}
+
+// ─── Live Supabase tab ─────────────────────────────────────────────────────────
+
+function LiveTab({ projectId }: { projectId: string | null }) {
+  const [trackedNames, setTrackedNames] = useState<string[]>(() => getTrackedTableNames());
+  const [newName, setNewName]           = useState('');
+
+  const configured = isAnalyzedSupabaseConfigured();
+
+  function handleAdd() {
+    const name = newName.trim();
+    if (!name) return;
+    addTrackedTableName(name);
+    setTrackedNames(getTrackedTableNames());
+    setNewName('');
+  }
+
+  function handleRemove(name: string) {
+    removeTrackedTableName(name);
+    setTrackedNames(getTrackedTableNames());
   }
 
   if (!configured) {
@@ -265,92 +384,46 @@ function LiveTab({ projectId }: { projectId: string | null }) {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-3 text-sm text-muted-foreground py-8">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        Carregando tabelas do Supabase…
-      </div>
-    );
-  }
-
-  if (loaded && tables.length === 0) {
-    return (
-      <InfoBox variant="tip" title="Nenhuma tabela encontrada">
-        O endpoint PostgREST não retornou tabelas públicas. Verifique se a anon key tem permissão
-        de leitura e se há tabelas no schema <code>public</code>.
-        <div className="mt-3">
-          <Button size="sm" variant="outline" onClick={loadTables} className="gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Tentar novamente
+  return (
+    <div className="space-y-6">
+      {/* Add table form */}
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+            placeholder="cms_categories"
+            className="font-mono text-sm max-w-xs"
+          />
+          <Button onClick={handleAdd} disabled={!newName.trim()} className="gap-1.5 shrink-0">
+            <Plus className="h-3.5 w-3.5" />
+            Adicionar tabela
           </Button>
         </div>
-      </InfoBox>
-    );
-  }
-
-  return (
-    <>
-      <div className="flex items-center justify-between mb-4">
-        {loaded && (
-          <p className="text-sm text-muted-foreground">
-            {tables.length} tabela{tables.length !== 1 ? 's' : ''} encontrada{tables.length !== 1 ? 's' : ''} no Supabase.
-          </p>
-        )}
-        <Button size="sm" variant="outline" onClick={loadTables} className="gap-1.5 ml-auto">
-          <RefreshCw className="h-3.5 w-3.5" />
-          Atualizar
-        </Button>
+        <p className="text-xs text-muted-foreground">
+          Digite o nome exato da tabela, igual aparece no Table Editor do Supabase (ex.: cms_categories).
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tables.map((t) => (
-          <button
-            key={t.name}
-            type="button"
-            onClick={() => handleSelectTable(t)}
-            className="text-left rounded-lg border border-border bg-card p-4 hover:border-primary/40 hover:shadow-sm transition-all duration-150 cursor-pointer"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <DatabaseIcon className="h-4 w-4 text-primary shrink-0" />
-              <span className="font-mono text-sm font-semibold text-foreground truncate">{t.name}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t.columns.length} coluna{t.columns.length !== 1 ? 's' : ''}
-            </p>
-            {t.columns.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-1 truncate">
-                {t.columns.slice(0, 4).map((c) => c.name).join(', ')}
-                {t.columns.length > 4 ? ` +${t.columns.length - 4}` : ''}
-              </p>
-            )}
-          </button>
-        ))}
-      </div>
-
-      <TableDetailDialog
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        schema={selectedSchema}
-        sample={sample}
-        sampleLoading={sampleLoading}
-        usages={usages}
-        onGeneratePrompt={() => {
-          setDetailOpen(false);
-          setPromptOpen(true);
-        }}
-      />
-
-      {selectedSchema && (
-        <EditSupabaseTablePromptDialog
-          open={promptOpen}
-          onOpenChange={setPromptOpen}
-          tableName={selectedSchema.name}
-          columns={selectedSchema.columns}
-          usages={usages}
-        />
+      {/* Table cards */}
+      {trackedNames.length === 0 ? (
+        <InfoBox variant="tip" title="Nenhuma tabela rastreada ainda">
+          Adicione o nome de uma tabela acima para visualizar suas colunas, amostra de dados e referências no código.
+        </InfoBox>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {trackedNames.map((name) => (
+            <TrackedTableCard
+              key={name}
+              tableName={name}
+              projectId={projectId}
+              onRemove={() => handleRemove(name)}
+            />
+          ))}
+        </div>
       )}
-    </>
+    </div>
   );
 }
 

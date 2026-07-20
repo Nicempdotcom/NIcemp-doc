@@ -71,3 +71,38 @@ export function getAnalyzedSupabaseClient(): SupabaseClient | null {
 export function isAnalyzedSupabaseConfigured(): boolean {
   return getAnalyzedSupabaseConfig() !== null;
 }
+
+// ─── Tracked table names ────────────────────────────────────────────────────────
+
+const TABLES_STORAGE_KEY = 'nicemp:analyzedSupabase:tables';
+
+/** Reads the list of manually-tracked table names from localStorage. */
+export function getTrackedTableNames(): string[] {
+  try {
+    const raw = localStorage.getItem(TABLES_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter((x): x is string => typeof x === 'string');
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/** Saves the list of tracked table names (trims, deduplicates, removes empties). */
+export function saveTrackedTableNames(names: string[]): void {
+  const normalized = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
+  localStorage.setItem(TABLES_STORAGE_KEY, JSON.stringify(normalized));
+}
+
+/** Adds a single table name to the tracked list (no-op if already present). */
+export function addTrackedTableName(name: string): void {
+  const current = getTrackedTableNames();
+  saveTrackedTableNames([...current, name]);
+}
+
+/** Removes a single table name from the tracked list. */
+export function removeTrackedTableName(name: string): void {
+  const current = getTrackedTableNames();
+  saveTrackedTableNames(current.filter((n) => n !== name));
+}
