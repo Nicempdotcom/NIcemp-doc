@@ -11,7 +11,8 @@
 // `ToolsCarousel.tsx` (carrossel da home) são listas manuais e separadas,
 // cada uma com sua própria estrutura de dados.
 
-export type ToolCategory = 'Financeiro' | 'Tributário' | 'Matemática' | 'Gestão';
+/** String category (union replaced by string to support dynamic categories). */
+export type ToolCategory = string;
 
 export interface ToolCreationPromptInput {
   /** Nome de exibição da ferramenta, ex: "Calculadora de Depreciação". */
@@ -27,6 +28,12 @@ export interface ToolCreationPromptInput {
   featureOnHome: boolean;
   /** O que a ferramenta calcula/faz. */
   objective: string;
+  /**
+   * Quando true, a categoria informada ainda não existe no projeto nicemp.com.
+   * O prompt gerado incluirá avisos extras para que o Replit Agent crie a
+   * categoria no catálogo e verifique os filtros de `/ferramentas`.
+   */
+  isNewCategory?: boolean;
 }
 
 function toPascalCase(routeKey: string): string {
@@ -62,7 +69,14 @@ function buildStepsSection(input: ToolCreationPromptInput, pascalName: string): 
     '',
     `d) Adicionar UM objeto novo no array \`allTools\` de \`src/pages/ToolsHome.tsx\`, com os campos` +
       ` title/description/href/icon/category ("${input.category}")` +
-      ' e popular/comingSoon se fizer sentido, sem remover nem reordenar os itens já existentes.',
+      ' e popular/comingSoon se fizer sentido, sem remover nem reordenar os itens já existentes.' +
+      (input.isNewCategory
+        ? ` ⚠️ ATENÇÃO: a categoria "${input.category}" ainda NÃO EXISTE no projeto nicemp.com.` +
+          ' Antes de finalizar: i) verifique se existe alguma lista/filtro de categorias separada em' +
+          ' `src/pages/ToolsHome.tsx` (além do campo `category` de cada item de `allTools`) e, se existir,' +
+          ` adicione "${input.category}" lá também; ii) confirme que a nova categoria aparece corretamente` +
+          ' no filtro da página `/ferramentas` após a implementação.'
+        : ''),
   ];
 
   if (input.featureOnHome) {
@@ -115,6 +129,12 @@ function buildChecklistSection(input: ToolCreationPromptInput): string {
   ];
   if (input.featureOnHome) {
     lines.push('- [ ] A ferramenta aparece na home (destaques em ToolsSection e/ou carrossel em ToolsCarousel)');
+  }
+  if (input.isNewCategory) {
+    lines.push(
+      `- [ ] A categoria "${input.category}" aparece corretamente no filtro de categorias da página \`/ferramentas\``,
+      `- [ ] Se existir uma lista separada de categorias em \`ToolsHome.tsx\` (além do campo \`category\` de cada item), a categoria "${input.category}" foi adicionada lá também`,
+    );
   }
   return lines.join('\n');
 }

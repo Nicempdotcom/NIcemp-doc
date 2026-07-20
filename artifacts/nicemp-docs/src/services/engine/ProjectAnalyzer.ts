@@ -15,11 +15,12 @@
  */
 
 import type { ProjectMap, ProjectStats, FileCategory } from './types';
-import { ProjectScanner }    from './ProjectScanner';
-import { StructureAnalyzer } from './StructureAnalyzer';
-import { DependencyAnalyzer } from './DependencyAnalyzer';
-import { TechnologyAnalyzer } from './TechnologyAnalyzer';
-import { InteractionAnalyzer } from './InteractionAnalyzer';
+import { ProjectScanner }       from './ProjectScanner';
+import { StructureAnalyzer }    from './StructureAnalyzer';
+import { DependencyAnalyzer }   from './DependencyAnalyzer';
+import { TechnologyAnalyzer }   from './TechnologyAnalyzer';
+import { InteractionAnalyzer }  from './InteractionAnalyzer';
+import { ToolCategoryAnalyzer } from './ToolCategoryAnalyzer';
 
 function makeId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -78,11 +79,12 @@ function detectRootName(map: Pick<ProjectMap, 'dependencies' | 'files'>): string
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 export class ProjectAnalyzer {
-  private scanner    = new ProjectScanner();
-  private structure  = new StructureAnalyzer();
-  private dependency = new DependencyAnalyzer();
-  private technology = new TechnologyAnalyzer();
-  private interaction = new InteractionAnalyzer();
+  private scanner       = new ProjectScanner();
+  private structure     = new StructureAnalyzer();
+  private dependency    = new DependencyAnalyzer();
+  private technology    = new TechnologyAnalyzer();
+  private interaction   = new InteractionAnalyzer();
+  private toolCategory  = new ToolCategoryAnalyzer();
 
   /**
    * Run the full pipeline.
@@ -113,8 +115,11 @@ export class ProjectAnalyzer {
     // ── Phase 4.5: Interactions ("o que este botão/tela faz") ─────────────
     const interactions = this.interaction.analyze(categorized);
 
+    // ── Phase 4.6: Tool categories (ToolCategoryAnalyzer) ─────────────────
+    const toolCategories = this.toolCategory.analyze(files);
+
     // ── Phase 5: Assemble (95–100%) ──────────────────────────────────────
-    const partial = { files: categorized, tree, dependencies, technology, interactions };
+    const partial = { files: categorized, tree, dependencies, technology, interactions, toolCategories };
     const rootName = detectRootName(partial);
     const stats    = buildStats({ ...partial, rootName });
 
@@ -127,6 +132,7 @@ export class ProjectAnalyzer {
       dependencies,
       technology,
       interactions,
+      toolCategories,
       stats,
     };
 

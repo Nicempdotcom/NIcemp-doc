@@ -144,6 +144,13 @@ export interface InteractionEntry {
   description: string;    // Plain-Portuguese sentence, e.g. "Botão 'Salvar' → executa handleSave → envia dados para POST /api/pedidos"
 }
 
+// ── Tool categories (ToolCategoryAnalyzer) ────────────────────────────────────
+
+export interface ToolCategoryRaw {
+  name: string;
+  toolCount: number;
+}
+
 // ── Final project map ─────────────────────────────────────────────────────────
 
 export interface ProjectMap {
@@ -156,4 +163,6 @@ export interface ProjectMap {
   technology: TechnologyProfile;
   interactions: InteractionEntry[];
   stats: ProjectStats;
+  /** Tool categories detected from an allTools catalog (e.g. nicemp.com ToolsHome.tsx). Empty when not found. */
+  toolCategories: ToolCategoryRaw[];
 }

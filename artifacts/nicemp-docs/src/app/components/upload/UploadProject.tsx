@@ -13,7 +13,9 @@ import {
   VersionSnapshotRepository,
   DocumentationRepository,
   HistoryRepository,
+  ToolCategoryRepository,
 } from '@/services/storage';
+import type { ToolCategoryEntity } from '@/services/storage';
 import { VersionComparator, type VersionComparisonResult } from '@/services/comparison';
 import FileDropZone       from './FileDropZone';
 import ProcessingScreen   from './ProcessingScreen';
@@ -223,6 +225,20 @@ export default function UploadProject() {
         StorageService.upsertMany('dependencies', entities.dependencies);
         StorageService.upsertMany('technologies', entities.technologies);
         HistoryRepository.append(entities.historyEntry);
+
+        // Persist tool categories detected by ToolCategoryAnalyzer.
+        if (projectMap.toolCategories.length > 0) {
+          const now = new Date().toISOString();
+          const toolCategoryEntities: ToolCategoryEntity[] = projectMap.toolCategories.map((raw) => ({
+            id:        `tool-category:${projectId}:${raw.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+            projectId,
+            kind:      'tool-category' as const,
+            name:      raw.name,
+            toolCount: raw.toolCount,
+            createdAt: now,
+          }));
+          ToolCategoryRepository.saveForProject(projectId, toolCategoryEntities);
+        }
 
         const newSnapshot = buildVersionSnapshot(projectId, entities.version.id, entities);
         VersionSnapshotRepository.save(newSnapshot);

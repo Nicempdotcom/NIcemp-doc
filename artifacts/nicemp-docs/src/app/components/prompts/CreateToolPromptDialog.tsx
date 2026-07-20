@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Calculator, Sparkles, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calculator, Sparkles, Copy, Check, Plus } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -14,10 +14,16 @@ import {
 import { toast } from '@/hooks/use-toast';
 import {
   buildToolCreationPrompt,
-  type ToolCategory,
 } from '@/services/prompts/ToolCreationPromptGenerator';
+import { ProjectRepository, ToolCategoryRepository } from '@/services/storage';
 
-const CATEGORY_OPTIONS: ToolCategory[] = ['Financeiro', 'Tributário', 'Matemática', 'Gestão'];
+// ─── Fallback categories (used when no analysis has been done yet) ─────────────
+
+const FALLBACK_CATEGORIES = ['Financeiro', 'Tributário', 'Matemática', 'Gestão'];
+
+const NEW_CATEGORY_SENTINEL = '__new__';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** "Calculadora de Depreciação" -> "calculadora-de-depreciacao" */
 function slugify(value: string): string {
@@ -30,6 +36,13 @@ function slugify(value: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface CategoryOption {
+  name: string;
+  toolCount: number | null; // null = fallback (no count known)
 }
 
 /**
@@ -45,15 +58,77 @@ export default function CreateToolPromptDialog() {
   const [toolName, setToolName] = useState('');
   const [routeSlug, setRouteSlug] = useState('');
   const [routeTouched, setRouteTouched] = useState(false);
-  const [category, setCategory] = useState<ToolCategory>('Financeiro');
+  const [category, setCategory] = useState('Financeiro');
   const [iconName, setIconName] = useState('');
   const [featureOnHome, setFeatureOnHome] = useState(false);
   const [objective, setObjective] = useState('');
 
   const [prompt, setPrompt] = useState<string | null>(null);
 
+  // ── Dynamic categories ─────────────────────────────────────────────────────
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(
+    FALLBACK_CATEGORIES.map((name) => ({ name, toolCount: null })),
+  );
+  // Whether the current category was typed by the user (not from the list)
+  const [isNewCategory, setIsNewCategory] = useState(false);
+  // Controls visibility of the inline "new category" text field
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryDraft, setNewCategoryDraft] = useState('');
+  const [newCategoryError, setNewCategoryError] = useState('');
+
+  // ── Load categories when dialog opens ─────────────────────────────────────
+  useEffect(() => {
+    if (!open) return;
+    const project = ProjectRepository.findLatest();
+    if (!project) return;
+    const stored = ToolCategoryRepository.findByProject(project.id);
+    if (stored.length > 0) {
+      setCategoryOptions(stored.map((c) => ({ name: c.name, toolCount: c.toolCount })));
+      // Reset selection to the first real category
+      setCategory(stored[0].name);
+      setIsNewCategory(false);
+    }
+  }, [open]);
+
   const effectiveSlug = routeTouched ? routeSlug : slugify(toolName);
-  const canGenerate = toolName.trim().length > 0 && effectiveSlug.trim().length > 0;
+  const canGenerate   = toolName.trim().length > 0 && effectiveSlug.trim().length > 0 && category.trim().length > 0;
+
+  const handleSelectCategory = (value: string) => {
+    if (value === NEW_CATEGORY_SENTINEL) {
+      setShowNewCategoryInput(true);
+      setNewCategoryDraft('');
+      setNewCategoryError('');
+      return;
+    }
+    setCategory(value);
+    setIsNewCategory(false);
+    setShowNewCategoryInput(false);
+  };
+
+  const handleConfirmNewCategory = () => {
+    const trimmed = newCategoryDraft.trim();
+    if (!trimmed) {
+      setNewCategoryError('Digite um nome para a categoria.');
+      return;
+    }
+    const existing = categoryOptions.some(
+      (c) => c.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) {
+      setNewCategoryError('Essa categoria já existe na lista. Selecione-a acima.');
+      return;
+    }
+    setCategory(trimmed);
+    setIsNewCategory(true);
+    setShowNewCategoryInput(false);
+    setNewCategoryError('');
+  };
+
+  const handleCancelNewCategory = () => {
+    setShowNewCategoryInput(false);
+    setNewCategoryDraft('');
+    setNewCategoryError('');
+  };
 
   const handleGenerate = () => {
     if (!canGenerate) return;
@@ -65,6 +140,7 @@ export default function CreateToolPromptDialog() {
       iconName: iconName.trim() || 'Calculator',
       featureOnHome,
       objective: objective.trim(),
+      isNewCategory,
     });
     setPrompt(generated);
   };
@@ -89,11 +165,17 @@ export default function CreateToolPromptDialog() {
       setRouteSlug('');
       setRouteTouched(false);
       setCategory('Financeiro');
+      setIsNewCategory(false);
+      setShowNewCategoryInput(false);
+      setNewCategoryDraft('');
+      setNewCategoryError('');
       setIconName('');
       setFeatureOnHome(false);
       setObjective('');
       setPrompt(null);
       setCopied(false);
+      // Reset categories to fallback — will reload on next open
+      setCategoryOptions(FALLBACK_CATEGORIES.map((name) => ({ name, toolCount: null })));
     }
   };
 
@@ -157,18 +239,87 @@ export default function CreateToolPromptDialog() {
               </p>
             </div>
 
+            {/* ── Categoria ── */}
             <div className="space-y-1.5">
               <Label htmlFor="tool-category">Categoria</Label>
-              <Select value={category} onValueChange={(value) => setCategory(value as ToolCategory)}>
-                <SelectTrigger id="tool-category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORY_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+              {/* Show selected new category as a badge when not editing */}
+              {isNewCategory && !showNewCategoryInput && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/5 px-2.5 py-1.5 text-sm font-medium text-primary">
+                    {category}
+                    <span className="text-[10px] font-normal text-muted-foreground">(nova)</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                    onClick={() => {
+                      setIsNewCategory(false);
+                      setCategory(categoryOptions[0]?.name ?? 'Financeiro');
+                    }}
+                  >
+                    Alterar
+                  </button>
+                </div>
+              )}
+
+              {!isNewCategory && !showNewCategoryInput && (
+                <Select value={category} onValueChange={handleSelectCategory}>
+                  <SelectTrigger id="tool-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((opt) => (
+                      <SelectItem key={opt.name} value={opt.name}>
+                        {opt.toolCount !== null
+                          ? `${opt.name} (${opt.toolCount})`
+                          : opt.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={NEW_CATEGORY_SENTINEL} className="text-primary font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <Plus className="h-3.5 w-3.5" />
+                        Criar nova categoria
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* Inline new-category input */}
+              {showNewCategoryInput && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      autoFocus
+                      placeholder="Nome da nova categoria, ex: Jurídico"
+                      value={newCategoryDraft}
+                      onChange={(e) => {
+                        setNewCategoryDraft(e.target.value);
+                        setNewCategoryError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); handleConfirmNewCategory(); }
+                        if (e.key === 'Escape') handleCancelNewCategory();
+                      }}
+                      className={newCategoryError ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    />
+                    <Button type="button" size="sm" onClick={handleConfirmNewCategory}>
+                      Confirmar
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={handleCancelNewCategory}>
+                      Cancelar
+                    </Button>
+                  </div>
+                  {newCategoryError && (
+                    <p className="text-xs text-destructive">{newCategoryError}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    O prompt gerado incluirá um aviso para que o Replit Agent crie a nova categoria
+                    no catálogo do nicemp.com e verifique o filtro de <code>/ferramentas</code>.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">

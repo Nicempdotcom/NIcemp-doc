@@ -17,4 +17,5 @@ export {
   HistoryRepository,
   DependencyRepository,
   TechnologyRepository,
+  ToolCategoryRepository,
 } from './repositories';

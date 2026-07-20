@@ -44,7 +44,8 @@ export type StoreKey =
   | 'technologies'
   | 'history'
   | 'interactions'
-  | 'importEdges';
+  | 'importEdges'
+  | 'toolCategories';
 
 /** Maps StoreKey → the logical JSON filename it corresponds to. */
 export const STORE_FILE_NAMES: Record<StoreKey, string> = {
@@ -61,6 +62,7 @@ export const STORE_FILE_NAMES: Record<StoreKey, string> = {
   history:          'history.json',
   interactions:     'interactions.json',
   importEdges:      'import-edges.json',
+  toolCategories:   'tool-categories.json',
 };
 
 // ─── Base entity ──────────────────────────────────────────────────────────────
@@ -332,6 +334,24 @@ export interface VersionSnapshotEntity {
   tables:     EntitySummary[];
 }
 
+// ─── Tool Category ────────────────────────────────────────────────────────────
+//
+// Represents a distinct tool/calculator category detected from an allTools
+// catalog (e.g. ToolsHome.tsx in the nicemp.com project). Stored per-project
+// so CreateToolPromptDialog can show the real category list instead of a
+// hardcoded fallback.
+
+export interface ToolCategoryEntity {
+  /** Stable id derived from projectId + category name. */
+  id:         string;
+  projectId:  string;
+  kind:       'tool-category';
+  name:       string;
+  /** Number of tools found in this category during analysis. */
+  toolCount:  number;
+  createdAt:  string;
+}
+
 // ─── Union type ───────────────────────────────────────────────────────────────
 
 export type AnyDocEntity =
@@ -344,4 +364,5 @@ export type AnyDocEntity =
   | TableEntity
   | DependencyEntity
   | TechnologyEntity
-  | InteractionEntity;
+  | InteractionEntity
+  | ToolCategoryEntity;
