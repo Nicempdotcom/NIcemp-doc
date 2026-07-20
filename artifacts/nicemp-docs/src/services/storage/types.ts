@@ -45,7 +45,8 @@ export type StoreKey =
   | 'history'
   | 'interactions'
   | 'importEdges'
-  | 'toolCategories';
+  | 'toolCategories'
+  | 'tableUsages';
 
 /** Maps StoreKey → the logical JSON filename it corresponds to. */
 export const STORE_FILE_NAMES: Record<StoreKey, string> = {
@@ -63,6 +64,7 @@ export const STORE_FILE_NAMES: Record<StoreKey, string> = {
   interactions:     'interactions.json',
   importEdges:      'import-edges.json',
   toolCategories:   'tool-categories.json',
+  tableUsages:      'table-usages.json',
 };
 
 // ─── Base entity ──────────────────────────────────────────────────────────────
@@ -352,6 +354,25 @@ export interface ToolCategoryEntity {
   createdAt:  string;
 }
 
+// ─── Table Usage (cross-reference: which entities reference each Supabase table) ─
+
+export interface TableUsageEntryRecord {
+  kind:     'page' | 'component' | 'api';
+  entityId: string;
+  /** Human-readable file/component name. */
+  label:    string;
+}
+
+export interface TableUsageEntity {
+  /** Stable id: `table-usage:{projectId}:{tableName}` */
+  id:        string;
+  projectId: string;
+  kind:      'table-usage';
+  tableName: string;
+  usages:    TableUsageEntryRecord[];
+  createdAt: string;
+}
+
 // ─── Union type ───────────────────────────────────────────────────────────────
 
 export type AnyDocEntity =
@@ -365,4 +386,5 @@ export type AnyDocEntity =
   | DependencyEntity
   | TechnologyEntity
   | InteractionEntity
-  | ToolCategoryEntity;
+  | ToolCategoryEntity
+  | TableUsageEntity;

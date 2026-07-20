@@ -6,3 +6,4 @@ export { DependencyRepository, TechnologyRepository } from './TechAndDepsReposit
 export { ToolCategoryRepository } from './ToolCategoryRepository';
 export { CmsCategoryRepository } from './CmsCategoryRepository';
 export type { CmsCategory } from './CmsCategoryRepository';
+export { TableUsageRepository } from './TableUsageRepository';

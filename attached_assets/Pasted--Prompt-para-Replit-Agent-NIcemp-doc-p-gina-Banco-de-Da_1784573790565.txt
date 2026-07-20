@@ -1,0 +1,122 @@
+# Prompt para Replit Agent — NIcemp-doc: página "Banco de Dados (Live)" + gerador de prompt por tabela + cruzamento com Páginas/Componentes/APIs
+
+## 1. Objetivo
+Hoje a página "Banco de Dados" (`src/app/pages/Database/index.tsx`) só mostra tabelas detectadas
+por análise estática de código (schema files, via `TableRepository`). Agora que o NIcemp-doc pode
+se conectar, somente leitura, ao Supabase real do projeto analisado (`analyzedProjectSupabase.ts` +
+`CmsCategoryRepository.ts`, já implementados), quero:
+
+1. Uma aba nova dentro dessa mesma página, mostrando TODAS as tabelas reais do Supabase conectado
+   (não só `cms_categories`), com colunas, contagem de linhas e amostra de dados.
+2. Um botão "Gerar prompt" em cada tabela, pra eu descrever uma mudança (schema ou dados) e receber
+   um prompt pronto pra colar no Replit Agent do projeto nicemp.com — sem que o NIcemp-doc altere
+   nada sozinho.
+3. Cruzamento: para cada tabela real, mostrar em quais Páginas/Componentes/APIs (já detectados na
+   análise estática do projeto) ela é referenciada no código (`supabase.from('nome_da_tabela')`),
+   com link direto para essas entidades.
+
+## 2. Passo a passo obrigatório
+
+### a) Introspecção do schema (lista de tabelas + colunas)
+Criar `src/services/engine/LiveSupabaseIntrospector.ts`:
+- `async listTables(): Promise<LiveTableSchema[]>` — usa `getAnalyzedSupabaseClient()` (ou a URL/
+  anon key salvas via `getAnalyzedSupabaseConfig()`) para fazer um `fetch` no endpoint raiz do
+  PostgREST: `GET {url}/rest/v1/` com headers `apikey` e `Authorization: Bearer {anonKey}`. Esse
+  endpoint retorna uma descrição OpenAPI-like do schema exposto (`public`), com os nomes das
+  tabelas/views e definições de colunas — funciona com anon key, sem precisar de service_role.
+- Parsear a resposta em `LiveTableSchema[]`: `{ name: string; columns: { name: string; type: string;
+  nullable: boolean }[] }`.
+- Se a conexão não estiver configurada, ou a chamada falhar, retornar `[]` e `console.warn` — nunca
+  lançar exceção.
+- `async getTableSample(tableName: string, limit = 10): Promise<{ rows: Record<string, unknown>[];
+  rowCount: number | null; error: string | null }>` — faz `select('*', { count: 'exact' })
+  .limit(limit)` na tabela. Se a policy de RLS não permitir leitura para o anon, capturar o erro e
+  devolver `error` preenchido (para exibir "Sem permissão de leitura nesta tabela" na UI) em vez de
+  quebrar a página.
+
+### b) Cruzamento com Páginas/Componentes/APIs já analisados
+Criar `src/services/engine/LiveTableUsageAnalyzer.ts`, seguindo o mesmo padrão do
+`ToolCategoryAnalyzer` (recebe `ScannedFile[]` já categorizados pelo `StructureAnalyzer`, roda
+DURANTE o pipeline de análise do ZIP, nunca guarda código-fonte bruto):
+- Regex `/\.from\(\s*['"]([a-zA-Z0-9_]+)['"]\s*\)/g` em cada arquivo escaneado.
+- Para cada ocorrência, associar o nome da tabela ao arquivo onde apareceu, junto com a categoria
+  do arquivo (`page` | `component` | `api` | outro, já resolvida pelo `StructureAnalyzer`) e o
+  nome/rota já conhecidos daquela entidade (mesmo mapeamento usado por `mapProjectMapToEntities`).
+- Resultado: `Map<tableName, { kind: 'page'|'component'|'api'; entityId: string; label: string }[]>`.
+- Persistir como uma entidade nova `TableUsageEntity { kind: 'table-usage'; tableName: string; usages:
+  {...}[] }`, com repositório `TableUsageRepository` (mesmo padrão de `ToolCategoryRepository`:
+  `findByProject`, `saveForProject`, `clearByProject`), guardado no Supabase PRÓPRIO do NIcemp-doc
+  (`SupabaseBackend`, tabela nova `table_usages` no `TABLE_NAME` map), não no Supabase do projeto
+  analisado.
+- Registrar a chamada desse analisador em `ProjectAnalyzer.ts`, junto aos demais `*Analyzer.ts`.
+
+### c) UI — aba "Live (Supabase)" na página Banco de Dados
+Em `src/app/pages/Database/index.tsx`:
+- Adicionar abas (`Tabs`/`TabsList` do design system já usado no projeto): "Detectado no código"
+  (comportamento atual, sem alterar) e "Live (Supabase)" (nova).
+- Na aba nova, se `!isAnalyzedSupabaseConfigured()`, mostrar `InfoBox` apontando para Settings >
+  "Supabase do projeto analisado" pra conectar primeiro.
+- Se configurado: listar as tabelas de `LiveSupabaseIntrospector.listTables()` em cards (mesmo
+  visual dos cards de `Database`/`Backend`), cada um mostrando: nome da tabela, nº de colunas, nº de
+  linhas (via `getTableSample`), e a lista de colunas com tipo.
+- Ao clicar numa tabela, abrir um painel/drawer com:
+  - Colunas detalhadas (nome, tipo, nullable).
+  - Amostra de até 10 linhas em uma `Table` (somente leitura, sem edição inline).
+  - Seção "Usado em", listando os resultados de `TableUsageRepository` para essa tabela, com link
+    (`react-router-dom` `Link`) para a Página/Componente/API correspondente já existente no site.
+    Se não houver nenhum uso detectado, mostrar "Nenhuma referência encontrada no código analisado".
+  - Botão "Gerar prompt" (abre o dialog do item d).
+
+### d) Gerador de prompt por tabela
+Criar `src/services/prompts/EditSupabaseTablePromptGenerator.ts` + dialog
+`src/app/components/prompts/EditSupabaseTablePromptDialog.tsx`, seguindo exatamente o padrão de
+`CreateToolPromptDialog.tsx`/`ToolCreationPromptGenerator.ts` (mesmo formato de texto final:
+Objetivo / Passo a passo / Arquivos permitidos / Arquivos proibidos / Checklist / Ao concluir):
+- Campos do formulário: tabela (pré-preenchida, vinda de onde o usuário clicou), tipo de mudança
+  (`Select`: "Adicionar coluna" | "Alterar dado existente" | "Inserir linha" | "Outra"), descrição
+  livre (`Textarea`) do que o usuário quer.
+- O prompt gerado deve OBRIGATORIAMENTE:
+  - Listar as colunas atuais da tabela (vindas da introspecção) como contexto, pra o Replit Agent do
+    nicemp.com não inventar schema.
+  - Deixar explícito que é uma mudança no banco de dados de PRODUÇÃO do nicemp.com — pedir pra
+    confirmar antes de aplicar, e considerar migração/backup se for alteração de schema.
+  - Incluir a lista de "Usado em" (páginas/componentes/APIs) daquela tabela, como aviso do que pode
+    quebrar se a mudança afetar colunas usadas por esse código.
+  - Nunca conter credenciais (URL/anon key) no texto do prompt.
+- O botão "Copiar prompt" já segue o padrão existente (mesmo componente usado no
+  `CreateToolPromptDialog`).
+
+### e) Nada disso escreve no Supabase do projeto analisado
+Reforçar: todas as chamadas de `LiveSupabaseIntrospector` são somente leitura (`select`, nunca
+`insert`/`update`/`delete`/DDL). A única "ação" que o NIcemp-doc realiza é gerar texto de prompt —
+quem aplica a mudança é o Replit Agent do lado do nicemp.com, manualmente, depois de revisão.
+
+## 3. Arquivos permitidos
+- `src/services/engine/LiveSupabaseIntrospector.ts` (novo)
+- `src/services/engine/LiveTableUsageAnalyzer.ts` (novo)
+- `src/services/storage/types.ts` (novo `TableUsageEntity`)
+- `src/services/storage/repositories/TableUsageRepository.ts` (novo)
+- `src/services/storage/repositories/index.ts`
+- `src/services/storage/index.ts`
+- `src/services/storage/SupabaseBackend.ts` (adicionar `tableUsages: 'table_usages'` ao `TABLE_NAME`)
+- `src/services/engine/ProjectAnalyzer.ts` (registrar chamada ao novo analisador)
+- `src/app/pages/Database/index.tsx`
+- `src/services/prompts/EditSupabaseTablePromptGenerator.ts` (novo)
+- `src/app/components/prompts/EditSupabaseTablePromptDialog.tsx` (novo)
+
+Nada além disso.
+
+## 4. Arquivos proibidos
+- `src/lib/analyzedProjectSupabase.ts` e `CmsCategoryRepository.ts` — reusar como estão, não
+  reescrever a lógica de conexão/config.
+- `src/services/engine/ToolCategoryAnalyzer.ts`/`ToolCategoryRepository.ts` — não mexer.
+- Nenhuma chamada de escrita (`insert`/`update`/`delete`/DDL) na conexão com o Supabase do projeto
+  analisado, em nenhum arquivo novo ou existente.
+- Não alterar Header/Footer/rotas gerais fora da página Banco de Dados.
+- Não expor a anon key em nenhum texto de prompt gerado ou log de console.
+
+## 5. Checklist final
+- [ ] Com a conexão configurada, a aba "Live (Supabase)" lista todas as tabelas reais do projeto
+      analisado, com colunas e contagem de linhas.
+- [ ] Clicar numa tabela mostra amostra de dados (até 10 linhas) e a seção "Usado em" com links
+      funcionando

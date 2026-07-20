@@ -35,6 +35,7 @@ const TABLE_NAME: Record<StoreKey, string> = {
   interactions:     'interactions',
   importEdges:      'import_edges',
   toolCategories:   'tool_categories',
+  tableUsages:      'table_usages',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -19,5 +19,6 @@ export {
   TechnologyRepository,
   ToolCategoryRepository,
   CmsCategoryRepository,
+  TableUsageRepository,
 } from './repositories';
 export type { CmsCategory } from './repositories';

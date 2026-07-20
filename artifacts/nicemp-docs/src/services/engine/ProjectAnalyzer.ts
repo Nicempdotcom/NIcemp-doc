@@ -15,12 +15,15 @@
  */
 
 import type { ProjectMap, ProjectStats, FileCategory } from './types';
-import { ProjectScanner }       from './ProjectScanner';
-import { StructureAnalyzer }    from './StructureAnalyzer';
-import { DependencyAnalyzer }   from './DependencyAnalyzer';
-import { TechnologyAnalyzer }   from './TechnologyAnalyzer';
-import { InteractionAnalyzer }  from './InteractionAnalyzer';
-import { ToolCategoryAnalyzer } from './ToolCategoryAnalyzer';
+import { ProjectScanner }          from './ProjectScanner';
+import { StructureAnalyzer }       from './StructureAnalyzer';
+import { DependencyAnalyzer }      from './DependencyAnalyzer';
+import { TechnologyAnalyzer }      from './TechnologyAnalyzer';
+import { InteractionAnalyzer }     from './InteractionAnalyzer';
+import { ToolCategoryAnalyzer }    from './ToolCategoryAnalyzer';
+import { LiveTableUsageAnalyzer }  from './LiveTableUsageAnalyzer';
+import { TableUsageRepository }    from '@/services/storage/repositories/TableUsageRepository';
+import type { TableUsageEntity }   from '@/services/storage/types';
 
 function makeId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -78,6 +81,15 @@ function detectRootName(map: Pick<ProjectMap, 'dependencies' | 'files'>): string
 
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
+/** Stable project ID — mirrors the formula in mapper.ts. Must stay in sync. */
+function stableProjectId(rootName: string): string {
+  return ('project:' + rootName)
+    .toLowerCase()
+    .replace(/[^a-z0-9:./\-_]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 80);
+}
+
 export class ProjectAnalyzer {
   private scanner       = new ProjectScanner();
   private structure     = new StructureAnalyzer();
@@ -85,6 +97,7 @@ export class ProjectAnalyzer {
   private technology    = new TechnologyAnalyzer();
   private interaction   = new InteractionAnalyzer();
   private toolCategory  = new ToolCategoryAnalyzer();
+  private tableUsage    = new LiveTableUsageAnalyzer();
 
   /**
    * Run the full pipeline.
@@ -118,6 +131,9 @@ export class ProjectAnalyzer {
     // ── Phase 4.6: Tool categories (ToolCategoryAnalyzer) ─────────────────
     const toolCategories = this.toolCategory.analyze(files);
 
+    // ── Phase 4.7: Table usages (LiveTableUsageAnalyzer) ──────────────────
+    const tableUsageRaw = this.tableUsage.analyze(categorized);
+
     // ── Phase 5: Assemble (95–100%) ──────────────────────────────────────
     const partial = { files: categorized, tree, dependencies, technology, interactions, toolCategories };
     const rootName = detectRootName(partial);
@@ -135,6 +151,25 @@ export class ProjectAnalyzer {
       toolCategories,
       stats,
     };
+
+    // ── Persist table usages (main-thread only — not in web worker) ───────
+    if (tableUsageRaw.length > 0) {
+      const projectId  = stableProjectId(rootName);
+      const ts         = new Date().toISOString();
+      const entities: TableUsageEntity[] = tableUsageRaw.map((raw) => ({
+        id:        `table-usage:${projectId}:${raw.tableName}`,
+        projectId,
+        kind:      'table-usage' as const,
+        tableName: raw.tableName,
+        usages:    raw.usages,
+        createdAt: ts,
+      }));
+      try {
+        TableUsageRepository.saveForProject(projectId, entities);
+      } catch {
+        // localStorage may not be available in worker context — silently skip
+      }
+    }
 
     onProgress(100);
     return projectMap;
