@@ -1,0 +1,89 @@
+# Prompt para Replit Agent — NIcemp-doc: corrigir "Live (Supabase)" — trocar auto-descoberta por lista manual de tabelas
+
+## 1. Contexto do bug
+A implementação atual de `LiveSupabaseIntrospector.listTables()` tenta descobrir as tabelas
+automaticamente chamando `GET {url}/rest/v1/` (endpoint raiz do PostgREST) com a anon key, esperando
+receber de volta um schema OpenAPI com a lista de tabelas.
+
+Isso NÃO funciona mais: o Supabase descontinuou o acesso a esse endpoint de schema usando anon key
+— agora ele responde com erro (`"Access to schema is forbidden"`), exigindo uma secret/service key,
+que NÃO vamos usar aqui (é o motivo da tela mostrar "Nenhuma tabela encontrada" mesmo com a conexão
+correta). Além disso, tabelas mais recentes no Supabase podem exigir GRANT explícito (`GRANT SELECT
+ON public.tabela TO anon;`), separado da RLS — se faltar, o PostgREST retorna um erro claro com o
+comando exato a rodar.
+
+Solução: abandonar a auto-descoberta via endpoint raiz. Passar a usar uma **lista de tabelas
+informada manualmente pelo usuário**, e para cada uma delas fazer consulta direta (que continua
+funcionando normalmente com anon key + RLS/grants corretos).
+
+## 2. Passo a passo obrigatório
+
+a) Em `src/lib/analyzedProjectSupabase.ts`, adicionar:
+   - `getTrackedTableNames(): string[]` — lê do localStorage (`nicemp:analyzedSupabase:tables`,
+     array de strings).
+   - `saveTrackedTableNames(names: string[]): void` — salva a lista (normalizar: trim, remover
+     vazios e duplicados).
+   - `addTrackedTableName(name: string): void` / `removeTrackedTableName(name: string): void` —
+     helpers de conveniência sobre as duas funções acima.
+
+b) Reescrever `src/services/engine/LiveSupabaseIntrospector.ts`:
+   - REMOVER a chamada ao endpoint raiz `GET /rest/v1/` (não usar mais essa abordagem).
+   - `async describeTable(tableName: string): Promise<LiveTableSchema | null>` — em vez de pedir
+     schema separado, inferir colunas a partir da PRÓPRIA amostra de dados: fazer
+     `select('*').limit(1)` e, se vier ao menos 1 linha, derivar `columns` a partir das chaves do
+     objeto retornado (nome + tipo inferido do valor JS: `string`→text/uuid heurístico se parecer
+     UUID, `number`, `boolean`, `object`→jsonb, etc.). Se a tabela existir mas estiver vazia (0
+     linhas), retornar `{ name: tableName, columns: [] }` com um aviso separado de "tabela vazia,
+     colunas não puderam ser inferidas".
+   - Tratar erro 42501 (permissão) de forma explícita: capturar `error.code === '42501'` (ou a
+     mensagem equivalente) e devolver um objeto de erro com o `hint` original do Postgres (que já
+     vem com o comando GRANT exato) para mostrar na tela — não esconder essa mensagem, ela é
+     acionável.
+   - Manter `getTableSample(tableName, limit)` como já estava (select com count), só ajustando pra
+     também repassar o `hint` de erro do Postgres quando existir.
+
+c) Em `src/app/pages/Database/index.tsx`, na aba "Live (Supabase)":
+   - Se `getTrackedTableNames()` estiver vazia, mostrar um formulário simples: campo de texto +
+     botão "Adicionar tabela" (chama `addTrackedTableName`), com dica: "Digite o nome exato da
+     tabela, igual aparece no Table Editor do Supabase (ex.: cms_categories)."
+   - Se houver tabelas rastreadas, mostrar um card por tabela (nome + botão "Remover" +
+     botão "Atualizar"), chamando `describeTable` + `getTableSample` pra cada uma.
+   - Quando uma tabela retornar erro 42501, mostrar o card em estado de alerta com o texto: "Sem
+     permissão de leitura. Rode no SQL Editor do Supabase: `GRANT SELECT ON public.{tabela} TO
+     anon;`" (usando o hint retornado, se disponível, em vez de um texto genérico).
+   - Manter, dentro de cada card, o mesmo drawer/detalhe de colunas + amostra + seção "Usado em"
+     (via `TableUsageRepository`, já implementado) + botão "Gerar prompt", exatamente como já estava.
+   - Remover a mensagem antiga "Nenhuma tabela encontrada... verifique anon key/schema public" —
+     ela não se aplica mais nesse fluxo.
+
+d) `LiveTableUsageAnalyzer` e `TableUsageRepository` continuam como estão (usam nomes de tabela
+   detectados por regex no código, independente de como a lista de tabelas rastreadas é montada) —
+   nenhuma mudança necessária aqui.
+
+## 3. Arquivos permitidos
+- `src/lib/analyzedProjectSupabase.ts`
+- `src/services/engine/LiveSupabaseIntrospector.ts`
+- `src/app/pages/Database/index.tsx`
+
+Nada além disso — é um fix cirúrgico, não mexer em `LiveTableUsageAnalyzer`,
+`TableUsageRepository`, geradores de prompt, nem na conexão em si (`CmsCategoryRepository`
+continua igual).
+
+## 4. Arquivos proibidos
+- Qualquer tentativa de voltar a chamar `GET /rest/v1/` (endpoint raiz) — está descontinuado para
+  anon key, não readicionar essa lógica.
+- Não usar `service_role key` em nenhum momento, mesmo pra "resolver" a descoberta automática.
+- Não alterar `LiveTableUsageAnalyzer.ts`, `TableUsageRepository.ts`, geradores de prompt.
+
+## 5. Checklist final
+- [ ] É possível adicionar manualmente o nome de uma tabela (ex.: `cms_categories`) e ver colunas +
+      amostra de dados + contagem de linhas.
+- [ ] Uma tabela sem GRANT/RLS pra anon mostra mensagem clara com o comando SQL exato a rodar (hint
+      do Postgres), em vez de "nenhuma tabela encontrada".
+- [ ] Remover uma tabela da lista rastreada some com o card correspondente.
+- [ ] "Usado em" e "Gerar prompt" continuam funcionando por tabela, sem alterações.
+- [ ] A aba "Detectado no código" continua intacta.
+
+## 6. Ao concluir
+⚠️ Obrigatório: listar todos os arquivos modificados e confirmar que a chamada ao endpoint raiz
+`/rest/v1/` foi removida.
