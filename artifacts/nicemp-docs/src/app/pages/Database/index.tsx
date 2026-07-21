@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Database as DatabaseIcon, KeyRound, Link2, Loader2, RefreshCw, Sparkles, ExternalLink, AlertTriangle, Plus, Trash2 } from 'lucide-react';
+import { Database as DatabaseIcon, KeyRound, Link2, Loader2, RefreshCw, Sparkles, ExternalLink, AlertTriangle, Plus, Trash2, ChevronRight } from 'lucide-react';
 import PageHeader from '@/app/layouts/PageHeader';
 import InfoBox from '@/app/components/docs/InfoBox';
 import EntityTableToolbar from '@/app/components/docs/EntityTableToolbar';
@@ -26,6 +26,9 @@ import { LiveSupabaseIntrospector } from '@/services/engine/LiveSupabaseIntrospe
 import type { LiveColumn, LiveTableSchema, LiveTableDescribeResult, TableSampleResult, DiscoveredTable } from '@/services/engine/LiveSupabaseIntrospector';
 import type { TableUsageEntry } from '@/services/engine/LiveTableUsageAnalyzer';
 import EditSupabaseTablePromptDialog from '@/app/components/prompts/EditSupabaseTablePromptDialog';
+import { DuplicateTableAnalyzer } from '@/services/engine/DuplicateTableAnalyzer';
+import type { DuplicateAlert } from '@/services/engine/DuplicateTableAnalyzer';
+import DuplicateTableCompareDialog from '@/app/components/database/DuplicateTableCompareDialog';
 
 // ─── Static tab ────────────────────────────────────────────────────────────────
 
@@ -387,6 +390,8 @@ function TrackedTableCard({ tableName, projectId, onRemove, isAuto, prefetchedCo
 
 // ─── Live Supabase tab ─────────────────────────────────────────────────────────
 
+const _duplicateAnalyzer = new DuplicateTableAnalyzer();
+
 type AutoSyncStatus = 'idle' | 'loading' | 'success' | 'error' | 'unavailable';
 
 function LiveTab({ projectId }: { projectId: string | null }) {
@@ -405,9 +410,52 @@ function LiveTab({ projectId }: { projectId: string | null }) {
   const [trackedNames, setTrackedNames] = useState<string[]>(() => getTrackedTableNames());
   const [newName, setNewName]           = useState('');
 
+  const [selectedAlert, setSelectedAlert]        = useState<DuplicateAlert | null>(null);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
+
   // All table names visible: union of auto-discovered + manually tracked
   const autoTableNames = new Set(autoTables.map((t) => t.name));
   const manualOnlyNames = trackedNames.filter((n) => !autoTableNames.has(n));
+
+  /** Schema completo: tabelas auto-descobertas + tabelas rastreadas manualmente. */
+  const allSchemaTables = useMemo<DiscoveredTable[]>(() => {
+    const manual: DiscoveredTable[] = manualOnlyNames.map((n) => ({ name: n, columns: [] }));
+    return [...autoTables, ...manual];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTables, trackedNames]);
+
+  /** Mapas auxiliares para o dialog de comparação */
+  const schemaByName = useMemo<Map<string, DiscoveredTable>>(
+    () => new Map(allSchemaTables.map((t) => [t.name, t])),
+    [allSchemaTables],
+  );
+  const usagesByName = useMemo<Map<string, TableUsageEntry[]>>(() => {
+    const map = new Map<string, TableUsageEntry[]>();
+    if (!projectId) return map;
+    for (const entity of TableUsageRepository.findByProject(projectId)) {
+      map.set(entity.tableName, entity.usages);
+    }
+    return map;
+  }, [projectId]);
+
+  /**
+   * Alertas de duplicidade — recalculados de forma reativa sempre que
+   * autoTables (schema real do Supabase) ou projectId mudarem.
+   *
+   * IMPORTANTE: apenas autoTables é usado como schema de entrada — tabelas
+   * rastreadas manualmente são placeholders sem colunas verificadas e não
+   * representam o schema real, por isso não são passadas ao analisador.
+   * Cada regra gera seu próprio alerta independentemente.
+   */
+  const duplicateAlerts = useMemo<DuplicateAlert[]>(() => {
+    const usageRaws = projectId
+      ? TableUsageRepository.findByProject(projectId).map((e) => ({
+          tableName: e.tableName,
+          usages:    e.usages,
+        }))
+      : [];
+    return _duplicateAnalyzer.analyze(autoTables, usageRaws);
+  }, [autoTables, projectId]);
 
   async function runAutoSync() {
     setAutoSyncStatus('loading');
@@ -479,8 +527,65 @@ function LiveTab({ projectId }: { projectId: string | null }) {
 
   const totalVisible = autoTables.length + manualOnlyNames.length;
 
+  function handleAlertClick(alert: DuplicateAlert) {
+    setSelectedAlert(alert);
+    setCompareDialogOpen(true);
+  }
+
+  const alertaAlta  = duplicateAlerts.filter((a) => a.severity === 'alta');
+  const alertaMedia = duplicateAlerts.filter((a) => a.severity === 'media');
+
+  const TYPE_LABELS: Record<string, string> = {
+    similar_name:      'Nome parecido',
+    similar_structure: 'Estrutura similar',
+    orphan:            'Tabela órfã',
+    ghost:             'Tabela fantasma',
+  };
+
   return (
+    <>
     <div className="space-y-6">
+      {/* ── Card de alertas de duplicidade ── */}
+      {duplicateAlerts.length > 0 && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-sm font-semibold text-foreground">
+              ⚠️ {duplicateAlerts.length} possíve{duplicateAlerts.length !== 1 ? 'is' : 'l'} duplicidade{duplicateAlerts.length !== 1 ? 's' : ''} encontrada{duplicateAlerts.length !== 1 ? 's' : ''}
+            </span>
+            {alertaAlta.length > 0 && (
+              <Badge variant="outline" className="text-[10px] text-red-700 dark:text-red-400 border-red-500/30 bg-red-500/10 ml-1">
+                {alertaAlta.length} alta{alertaAlta.length !== 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {[...alertaAlta, ...alertaMedia].map((alert, i) => (
+              <button
+                key={i}
+                onClick={() => handleAlertClick(alert)}
+                className="flex items-center gap-2 text-left rounded-md hover:bg-amber-500/10 px-2 py-1.5 transition-colors w-full group"
+              >
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] shrink-0 ${
+                    alert.severity === 'alta'
+                      ? 'text-red-700 dark:text-red-400 border-red-500/30 bg-red-500/10'
+                      : 'text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10'
+                  }`}
+                >
+                  {TYPE_LABELS[alert.type] ?? alert.type}
+                </Badge>
+                <span className="text-xs text-muted-foreground flex-1 truncate">
+                  {alert.tables.join(' × ')}
+                </span>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Auto-sync status bar */}
       <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
         {autoSyncStatus === 'loading' ? (
@@ -604,6 +709,16 @@ function LiveTab({ projectId }: { projectId: string | null }) {
         </div>
       </details>
     </div>
+
+    {/* Dialog de comparação de tabelas duplicadas */}
+    <DuplicateTableCompareDialog
+      open={compareDialogOpen}
+      onOpenChange={setCompareDialogOpen}
+      alert={selectedAlert}
+      schemaByName={schemaByName}
+      usagesByName={usagesByName}
+    />
+    </>
   );
 }
 
