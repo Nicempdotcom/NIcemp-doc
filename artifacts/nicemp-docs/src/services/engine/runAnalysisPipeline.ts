@@ -16,6 +16,7 @@ import { DependencyAnalyzer }   from './DependencyAnalyzer';
 import { TechnologyAnalyzer }   from './TechnologyAnalyzer';
 import { InteractionAnalyzer }  from './InteractionAnalyzer';
 import { ToolCategoryAnalyzer } from './ToolCategoryAnalyzer';
+import { IntegrationAnalyzer }  from './IntegrationAnalyzer';
 import type { ScannedFile, ProjectMap } from './types';
 import { isExcludedPath } from './pathExclusions';
 
@@ -276,6 +277,13 @@ export async function runAnalysisPipeline(
   const toolCategoryAnalyzer = new ToolCategoryAnalyzer();
   const toolCategories = toolCategoryAnalyzer.analyze(scanned);
 
+  // ── 6.6. Integration detection (IntegrationAnalyzer) ─────────────────────────
+  onProgress(95, 'Detectando integrações externas...', { ...counts });
+  const integrationAnalyzer = new IntegrationAnalyzer();
+  const integrations = integrationAnalyzer.analyze(scanned, dependencies);
+  checkCancelled();
+  await tick();
+
   const projectMap: ProjectMap = {
     id:         Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
     rootName,
@@ -285,6 +293,7 @@ export async function runAnalysisPipeline(
     dependencies,
     technology,
     interactions,
+    integrations,
     toolCategories,
     stats,
   };

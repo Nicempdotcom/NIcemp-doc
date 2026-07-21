@@ -100,6 +100,79 @@ function extractLeadingComment(content: string): string {
   return '';
 }
 
+// ─── Props interface extraction (components) ──────────────────────────────────
+
+/**
+ * Finds the first TypeScript `interface Props` or `type Props` near the top of
+ * a component file and returns a Portuguese description of its key props.
+ * E.g. `{ title: string; onClose: () => void }` → "Recebe title (string) e onClose".
+ */
+function extractPropsDescription(content: string): string {
+  const window = content.slice(0, 4_000);
+  // Match: interface XxxProps { ... } or type XxxProps = { ... }
+  const blockMatch = window.match(/(?:interface|type)\s+\w*Props\w*\s*(?:=\s*)?\{([\s\S]{0,600}?)\}/);
+  if (!blockMatch) return '';
+
+  const body = blockMatch[1];
+  // Extract each `propName: type` pair (ignore optional marker `?`)
+  const propRe = /\b(\w+)\??\s*:\s*([^;,\n]+)/g;
+  const props: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = propRe.exec(body)) !== null && props.length < 4) {
+    const propName = m[1];
+    const propType = m[2].trim().replace(/\s+/g, ' ');
+    // Skip internal-looking props (children, className, style)
+    if (/^(children|className|style|ref|key)$/.test(propName)) continue;
+    props.push(`${propName} (${propType.slice(0, 30)})`);
+  }
+
+  if (props.length === 0) return '';
+  if (props.length === 1) return `Componente que recebe ${props[0]}`;
+  const last = props[props.length - 1];
+  const rest = props.slice(0, -1).join(', ');
+  return `Componente que recebe ${rest} e ${last}`;
+}
+
+// ─── JSDoc tag extraction (hooks + APIs) ─────────────────────────────────────
+
+/**
+ * Extracts `@param` / `@returns` / `@description` tags from JSDoc blocks and
+ * assembles a short plain-text sentence. Returns '' if nothing useful is found.
+ */
+function extractJsDocTags(content: string): string {
+  const window = content.slice(0, 4_000);
+  const jsdocMatch = window.match(/\/\*\*\s*([\s\S]*?)\s*\*\//);
+  if (!jsdocMatch) return '';
+
+  const lines = jsdocMatch[1]
+    .split('\n')
+    .map((l) => l.replace(/^\s*\*\s?/, '').trim())
+    .filter(Boolean);
+
+  const descriptionLine = lines.find((l) => !l.startsWith('@') && l.length > 6);
+  const returnsLine = lines.find((l) => /^@returns?\b/.test(l));
+  const paramLines  = lines.filter((l) => /^@param\b/.test(l)).slice(0, 3);
+
+  const parts: string[] = [];
+  if (descriptionLine) parts.push(descriptionLine.split(/[.!?]/)[0].trim());
+
+  if (paramLines.length > 0) {
+    const paramNames = paramLines
+      .map((l) => l.replace(/@param\s*(?:\{[^}]+\})?\s*/, '').split(/\s/)[0])
+      .filter(Boolean)
+      .join(', ');
+    if (paramNames) parts.push(`Parâmetros: ${paramNames}`);
+  }
+
+  if (returnsLine) {
+    const ret = returnsLine.replace(/@returns?\s*(?:\{[^}]+\})?\s*/, '').trim();
+    if (ret.length > 2) parts.push(`Retorna ${ret.slice(0, 60)}`);
+  }
+
+  const result = parts.join('. ').trim();
+  return result.length > 8 ? result : '';
+}
+
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 /** Splits a camelCase string into individual words lowercased. */
@@ -258,19 +331,29 @@ export class DescriptionAnalyzer {
         }
       }
 
-      // ── Priority a: leading comment ────────────────────────────────────────
+      // ── Priority a: leading JSDoc/comment ────────────────────────────────
       const fromComment = extractLeadingComment(file.content);
       if (fromComment) {
-        // Never surface raw English comments — they must be rewritten to
-        // plain Portuguese. Detect English by the absence of common
-        // Portuguese words and presence of common English function words.
-        const looksEnglish = /\b(the|this|a|an|is|are|was|were|for|with|and|or|that|which|it|its|to|of|in|on|at|by|from|component|page|returns|renders|displays|shows|provides|manages|handles)\b/i.test(fromComment)
-          && !/\b(de|do|da|dos|das|em|um|uma|que|para|por|com|na|no|nas|nos|é|são|uma|tela|componente|página|seção)\b/i.test(fromComment);
-        if (!looksEnglish) {
-          result.set(file.path, fromComment);
+        result.set(file.path, fromComment);
+        continue;
+      }
+
+      // ── Priority a2: TypeScript prop interface (components only) ──────────
+      if (file.category === 'component') {
+        const fromProps = extractPropsDescription(file.content);
+        if (fromProps) {
+          result.set(file.path, fromProps);
           continue;
         }
-        // English comment — fall through to heuristic (which always produces Portuguese)
+      }
+
+      // ── Priority a3: JSDoc @param / @returns (hooks + APIs) ───────────────
+      if (file.category === 'hook' || file.category === 'api') {
+        const fromTags = extractJsDocTags(file.content);
+        if (fromTags) {
+          result.set(file.path, fromTags);
+          continue;
+        }
       }
 
       // ── Priority b: heuristic by category ─────────────────────────────────

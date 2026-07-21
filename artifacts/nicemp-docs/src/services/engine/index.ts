@@ -12,14 +12,17 @@ export type {
   ProjectStats,
   ProjectMap,
   InteractionEntry,
+  IntegrationCategory,
+  DetectedIntegration,
 } from './types';
 
-export { CATEGORY_LABELS } from './types';
-export { ProjectScanner }    from './ProjectScanner';
-export { StructureAnalyzer } from './StructureAnalyzer';
+export { CATEGORY_LABELS, INTEGRATION_CATEGORY_LABELS } from './types';
+export { ProjectScanner }      from './ProjectScanner';
+export { StructureAnalyzer }   from './StructureAnalyzer';
 export { DescriptionAnalyzer } from './DescriptionAnalyzer';
-export { DependencyAnalyzer } from './DependencyAnalyzer';
-export { TechnologyAnalyzer } from './TechnologyAnalyzer';
+export { DependencyAnalyzer }  from './DependencyAnalyzer';
+export { TechnologyAnalyzer }  from './TechnologyAnalyzer';
 export { InteractionAnalyzer } from './InteractionAnalyzer';
-export { ProjectAnalyzer }   from './ProjectAnalyzer';
-export { resolveRealRoutes } from './RouteResolver';
+export { IntegrationAnalyzer } from './IntegrationAnalyzer';
+export { ProjectAnalyzer }     from './ProjectAnalyzer';
+export { resolveRealRoutes }   from './RouteResolver';

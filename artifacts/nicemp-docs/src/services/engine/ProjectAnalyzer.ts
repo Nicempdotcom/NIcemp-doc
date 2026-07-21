@@ -135,7 +135,7 @@ export class ProjectAnalyzer {
     const tableUsageRaw = this.tableUsage.analyze(categorized);
 
     // ── Phase 5: Assemble (95–100%) ──────────────────────────────────────
-    const partial = { files: categorized, tree, dependencies, technology, interactions, toolCategories };
+    const partial = { files: categorized, tree, dependencies, technology, interactions, integrations: [] as import('./types').DetectedIntegration[], toolCategories };
     const rootName = detectRootName(partial);
     const stats    = buildStats({ ...partial, rootName });
 
@@ -148,6 +148,7 @@ export class ProjectAnalyzer {
       dependencies,
       technology,
       interactions,
+      integrations: [],   // populated by runAnalysisPipeline (Worker path)
       toolCategories,
       stats,
     };

@@ -14,6 +14,7 @@ export const ROUTES = {
   hooks:        '/hooks',
   apis:         '/apis',
   dependencies: '/dependencies',
+  integrations: '/integrations',
   modules:      '/modules',
   prompts:      '/prompts',
   explorer:     '/explorer',

@@ -108,14 +108,17 @@ export interface DetectedTechnology {
 }
 
 export interface TechnologyProfile {
-  languages:   DetectedTechnology[];
-  frameworks:  DetectedTechnology[];
-  styling:     DetectedTechnology[];
-  backend:     DetectedTechnology[];
-  database:    DetectedTechnology[];
-  testing:     DetectedTechnology[];
-  buildTools:  DetectedTechnology[];
-  runtime:     DetectedTechnology[];
+  languages:        DetectedTechnology[];
+  frameworks:       DetectedTechnology[];
+  styling:          DetectedTechnology[];
+  backend:          DetectedTechnology[];
+  database:         DetectedTechnology[];
+  testing:          DetectedTechnology[];
+  buildTools:       DetectedTechnology[];
+  runtime:          DetectedTechnology[];
+  stateManagement?: DetectedTechnology[];
+  auth?:            DetectedTechnology[];
+  graphql?:         DetectedTechnology[];
 }
 
 // ── Project stats ─────────────────────────────────────────────────────────────
@@ -157,6 +160,54 @@ export interface ToolCategoryRaw {
   toolCount: number;
 }
 
+// ── External integrations (IntegrationAnalyzer) ───────────────────────────────
+
+export type IntegrationCategory =
+  | 'payments'
+  | 'database'
+  | 'auth'
+  | 'storage'
+  | 'email'
+  | 'ai'
+  | 'analytics'
+  | 'monitoring'
+  | 'messaging'
+  | 'graphql'
+  | 'state'
+  | 'other';
+
+export const INTEGRATION_CATEGORY_LABELS: Record<IntegrationCategory, string> = {
+  payments:   'Pagamentos',
+  database:   'Banco de Dados / BaaS',
+  auth:       'Autenticação',
+  storage:    'Armazenamento',
+  email:      'E-mail',
+  ai:         'Inteligência Artificial',
+  analytics:  'Analytics',
+  monitoring: 'Monitoramento',
+  messaging:  'Mensageria',
+  graphql:    'GraphQL',
+  state:      'Gerenciamento de Estado',
+  other:      'Outros',
+};
+
+export interface DetectedIntegration {
+  /** Human-readable service name, e.g. "Stripe", "Supabase" */
+  name: string;
+  category: IntegrationCategory;
+  confidence: 'high' | 'medium' | 'low';
+  /** Installed version from package.json, if available */
+  version?: string;
+  /** Primary npm package name that triggered detection */
+  packageName: string;
+  /** File paths inside the project that import this package */
+  usedInFiles: string[];
+  /** Env var names (STRIPE_KEY, etc.) actually found in source code */
+  detectedEnvVars: string[];
+  /** Env vars this service typically requires (informational) */
+  expectedEnvVars: string[];
+}
+
 // ── Final project map ─────────────────────────────────────────────────────────
 
 export interface ProjectMap {
@@ -168,6 +219,7 @@ export interface ProjectMap {
   dependencies: DependencyMap;
   technology: TechnologyProfile;
   interactions: InteractionEntry[];
+  integrations: DetectedIntegration[];
   stats: ProjectStats;
   /** Tool categories detected from an allTools catalog (e.g. nicemp.com ToolsHome.tsx). Empty when not found. */
   toolCategories: ToolCategoryRaw[];

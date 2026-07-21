@@ -87,7 +87,7 @@ const TECH_GROUPS: Array<{
 ];
 
 function TechProfile({ tech }: { tech: TechnologyProfile }) {
-  const groups = TECH_GROUPS.filter((g) => tech[g.key].length > 0);
+  const groups = TECH_GROUPS.filter((g) => (tech[g.key] ?? []).length > 0);
   if (groups.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma tecnologia detectada.</p>;
 
   return (
@@ -99,7 +99,7 @@ function TechProfile({ tech }: { tech: TechnologyProfile }) {
             <span className="text-xs text-muted-foreground">{label}</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {tech[key].map((t) => <TechBadge key={t.name} name={t.name} version={t.version} />)}
+            {(tech[key] ?? []).map((t) => <TechBadge key={t.name} name={t.name} version={t.version} />)}
           </div>
         </div>
       ))}

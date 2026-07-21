@@ -212,6 +212,66 @@ export class TechnologyAnalyzer {
       buildTools.push(detected('Turborepo', 'high', deps, 'turbo'));
     }
 
+    // ── State Management ─────────────────────────────────────────────────────
+    const stateManagement: DetectedTechnology[] = [];
+    if (hasDep(depNames, '@tanstack/react-query', '@tanstack/vue-query', '@tanstack/solid-query')) {
+      stateManagement.push(detected('TanStack Query', 'high', deps, '@tanstack/react-query'));
+    }
+    if (hasDep(depNames, 'zustand')) {
+      stateManagement.push(detected('Zustand', 'high', deps, 'zustand'));
+    }
+    if (hasDep(depNames, '@reduxjs/toolkit', 'redux')) {
+      stateManagement.push(detected('Redux Toolkit', 'high', deps, '@reduxjs/toolkit'));
+    }
+    if (hasDep(depNames, 'swr')) {
+      stateManagement.push(detected('SWR', 'high', deps, 'swr'));
+    }
+    if (hasDep(depNames, 'jotai')) {
+      stateManagement.push(detected('Jotai', 'high', deps, 'jotai'));
+    }
+    if (hasDep(depNames, 'recoil')) {
+      stateManagement.push(detected('Recoil', 'high', deps, 'recoil'));
+    }
+    if (hasDep(depNames, 'mobx', 'mobx-react', 'mobx-react-lite')) {
+      stateManagement.push(detected('MobX', 'high', deps, 'mobx'));
+    }
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    const auth: DetectedTechnology[] = [];
+    if (hasDep(depNames, '@clerk/nextjs', '@clerk/clerk-react', '@clerk/remix')) {
+      auth.push(detected('Clerk', 'high', deps, '@clerk/nextjs'));
+    }
+    if (hasDep(depNames, 'next-auth', '@auth/core')) {
+      auth.push(detected('NextAuth / Auth.js', 'high', deps, 'next-auth'));
+    }
+    if (hasDep(depNames, 'lucia')) {
+      auth.push(detected('Lucia', 'high', deps, 'lucia'));
+    }
+    if (hasDep(depNames, 'better-auth')) {
+      auth.push(detected('Better Auth', 'high', deps, 'better-auth'));
+    }
+    if (hasDep(depNames, '@auth0/nextjs-auth0', '@auth0/auth0-react')) {
+      auth.push(detected('Auth0', 'high', deps, '@auth0/nextjs-auth0'));
+    }
+    if (hasDep(depNames, 'passport', 'passport-local')) {
+      auth.push(detected('Passport.js', 'high', deps, 'passport'));
+    }
+
+    // ── GraphQL ──────────────────────────────────────────────────────────────
+    const graphql: DetectedTechnology[] = [];
+    if (hasDep(depNames, '@apollo/client', 'apollo-client')) {
+      graphql.push(detected('Apollo Client', 'high', deps, '@apollo/client'));
+    }
+    if (hasDep(depNames, 'urql', '@urql/core')) {
+      graphql.push(detected('urql', 'high', deps, 'urql'));
+    }
+    if (hasDep(depNames, 'graphql', 'graphql-tag')) {
+      graphql.push(detected('GraphQL', 'high', deps, 'graphql'));
+    }
+    if (hasDep(depNames, '@graphql-codegen/cli')) {
+      graphql.push(detected('GraphQL Codegen', 'high', deps, '@graphql-codegen/cli'));
+    }
+
     // ── Runtime ──────────────────────────────────────────────────────────────
     const runtime: DetectedTechnology[] = [];
     const pm = deps.packageManager;
@@ -228,6 +288,6 @@ export class TechnologyAnalyzer {
       runtime.push({ name: 'Node.js', confidence: 'high' });
     }
 
-    return { languages, frameworks, styling, backend, database, testing, buildTools, runtime };
+    return { languages, frameworks, styling, backend, database, testing, buildTools, runtime, stateManagement, auth, graphql };
   }
 }

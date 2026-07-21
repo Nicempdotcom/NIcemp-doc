@@ -23,6 +23,7 @@ import {
   BookOpen,
   ChevronDown,
   ChevronRight,
+  Plug,
 } from 'lucide-react';
 import { ROUTES } from '@/routes';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -61,6 +62,7 @@ const NAV_GROUPS = [
       { label: 'Hooks',          icon: Zap,       href: ROUTES.hooks        },
       { label: 'APIs',           icon: Globe,     href: ROUTES.apis         },
       { label: 'Dependências',   icon: Package,   href: ROUTES.dependencies },
+      { label: 'Integrações',    icon: Plug,      href: ROUTES.integrations },
       { label: 'Módulos',        icon: Package,   href: ROUTES.modules      },
     ],
   },

@@ -21,8 +21,9 @@ import Database     from '@/app/pages/Database';
 import Components   from '@/app/pages/Components';
 import Hooks        from '@/app/pages/Hooks';
 import Apis         from '@/app/pages/Apis';
-import Dependencies from '@/app/pages/Dependencies';
-import Modules      from '@/app/pages/Modules';
+import Dependencies  from '@/app/pages/Dependencies';
+import Integrations  from '@/app/pages/Integrations';
+import Modules       from '@/app/pages/Modules';
 import Prompts      from '@/app/pages/Prompts';
 import Settings     from '@/app/pages/Settings';
 import Login        from '@/app/pages/Login';
@@ -139,8 +140,9 @@ function Layout() {
               <Route path={ROUTES.components}   element={<Components />}   />
               <Route path={ROUTES.hooks}        element={<Hooks />}        />
               <Route path={ROUTES.apis}         element={<Apis />}         />
-              <Route path={ROUTES.dependencies} element={<Dependencies />} />
-              <Route path={ROUTES.modules}      element={<Modules />}      />
+              <Route path={ROUTES.dependencies}  element={<Dependencies />}  />
+              <Route path={ROUTES.integrations}  element={<Integrations />}  />
+              <Route path={ROUTES.modules}       element={<Modules />}       />
               <Route path={ROUTES.overview}     element={<Overview />}     />
               <Route path={ROUTES.explorer}     element={<Explorer />}     />
               <Route path={ROUTES.glossario}    element={<Glossario />}    />
