@@ -1,0 +1,38 @@
+PROMPT MESTRE – FINALIZAÇÃO DO
+INTEGRATION ENGINE DO NIcemp-doc
+MISSÃO
+Continue a implementação existente; não recrie funcionalidades.
+AUDITORIA
+Leia completamente: IntegrationAnalyzer.ts, TechnologyAnalyzer.ts,
+DescriptionAnalyzer.ts, runAnalysisPipeline.ts, types.ts, index.ts, ProjectAnalyzer.ts,
+ProjectMapView.tsx, App.tsx, Sidebar.tsx, routes.tsx e a página Integrations. Localize
+TODOs, imports quebrados, tipos inconsistentes, código morto e duplicações.
+CORREÇÕES
+Corrija todos os erros TypeScript sem usar any. Preserve a arquitetura existente.
+INTEGRATION ANALYZER
+Detecte integrações por package.json, imports, SDKs, URLs, env vars
+(process.env/import.meta.env), arquivos de configuração e padrões conhecidos
+(Supabase, Stripe, Firebase, AWS, OpenAI, Anthropic, Clerk, NextAuth, Prisma, Drizzle,
+Resend, Cloudinary, Socket.io, Pusher, Sentry etc.).
+MODELO
+Cada integração deve conter: id, name, provider, category, description, confidence,
+detectedBy, files, imports, dependencies, environmentVariables, services, hooks,
+pages, components, routes, apiCalls, configurationFiles, documentation,
+recommendations e risks.
+DESCRIPTION ANALYZER
+Extrair README.md, docs/, ADR/, CONTRIBUTING.md, CHANGELOG.md, @param,
+@returns, @throws, @example, comentários de classes, interfaces e enums. Nunca
+substituir documentação humana por texto inferior.
+PÁGINA INTEGRAÇÕES
+Mostrar nome, categoria, descrição, arquivos, dependências, env vars, APIs, hooks,
+componentes, páginas, confiança, riscos e recomendações.
+PIPELINE
+Structure → Technology → Dependency → Interaction → Description → Integration →
+ProjectAnalyzer → ProjectMap. Enriquecer dados sem sobrescrever etapas anteriores.
+REGRAS
+Não duplicar lógica. Não quebrar APIs. Não usar any. Não recriar módulos existentes.
+Refatorar quando necessário.
+VALIDAÇÃO FINAL
+Build sem erros, navegação funcionando, sidebar, rota Integrações, ProjectMap, parser
+e análise de um projeto real validados. Entregar relatório final com arquivos alterados,
+correções, melhorias e pendências.
