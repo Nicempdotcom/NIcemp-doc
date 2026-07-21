@@ -75,6 +75,7 @@ export default function CreateToolPromptDialog() {
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryDraft, setNewCategoryDraft] = useState('');
   const [newCategoryError, setNewCategoryError] = useState('');
+  const [insertingCategory, setInsertingCategory] = useState(false);
 
   // ── Load categories when dialog opens ─────────────────────────────────────
   // Priority: 1) CmsCategoryRepository (live from nicemp.com Supabase)
@@ -140,23 +141,48 @@ export default function CreateToolPromptDialog() {
     setShowNewCategoryInput(false);
   };
 
-  const handleConfirmNewCategory = () => {
+  const handleConfirmNewCategory = async () => {
     const trimmed = newCategoryDraft.trim();
     if (!trimmed) {
       setNewCategoryError('Digite um nome para a categoria.');
       return;
     }
-    const existing = categoryOptions.some(
+    const existing = categoryOptions.find(
       (c) => c.name.toLowerCase() === trimmed.toLowerCase(),
     );
     if (existing) {
-      setNewCategoryError('Essa categoria já existe na lista. Selecione-a acima.');
+      // Already in the list — just select it
+      setCategory(existing.name);
+      setIsNewCategory(false);
+      setShowNewCategoryInput(false);
+      setNewCategoryDraft('');
+      setNewCategoryError('');
       return;
     }
-    setCategory(trimmed);
-    setIsNewCategory(true);
-    setShowNewCategoryInput(false);
+
+    setInsertingCategory(true);
     setNewCategoryError('');
+
+    try {
+      const created = await CmsCategoryRepository.create(trimmed);
+      // Add to top of list (sorted insertion) and auto-select
+      const newOpt: CategoryOption = { name: created.name, toolCount: null };
+      setCategoryOptions((prev) => {
+        const merged = [...prev, newOpt];
+        merged.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+        return merged;
+      });
+      setCategory(created.name);
+      setIsNewCategory(false); // it's now persisted in the DB — not "new" anymore
+      setShowNewCategoryInput(false);
+      setNewCategoryDraft('');
+      toast({ title: 'Categoria criada', description: `"${created.name}" foi adicionada ao banco com sucesso.` });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro inesperado ao criar categoria.';
+      setNewCategoryError(msg);
+    } finally {
+      setInsertingCategory(false);
+    }
   };
 
   const handleCancelNewCategory = () => {
@@ -341,10 +367,23 @@ export default function CreateToolPromptDialog() {
                       }}
                       className={newCategoryError ? 'border-destructive focus-visible:ring-destructive' : ''}
                     />
-                    <Button type="button" size="sm" onClick={handleConfirmNewCategory}>
-                      Confirmar
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleConfirmNewCategory}
+                      disabled={insertingCategory}
+                      className="gap-1.5"
+                    >
+                      {insertingCategory && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {insertingCategory ? 'Salvando…' : 'Confirmar'}
                     </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={handleCancelNewCategory}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCancelNewCategory}
+                      disabled={insertingCategory}
+                    >
                       Cancelar
                     </Button>
                   </div>
