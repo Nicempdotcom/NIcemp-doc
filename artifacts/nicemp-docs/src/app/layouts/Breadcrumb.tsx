@@ -24,6 +24,7 @@ const getRouteLabel = (pathname: string) => {
     case ROUTES.glossario:    return 'Glossário';
     case ROUTES.prompts:      return 'Prompts Replit';
     case ROUTES.settings:     return 'Configurações';
+    case ROUTES.github:       return 'Importar do GitHub';
     default: return 'Página não encontrada';
   }
 };

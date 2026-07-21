@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronRight,
   Plug,
+  Github,
 } from 'lucide-react';
 import { ROUTES } from '@/routes';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -37,6 +38,7 @@ const NAV_GROUPS = [
       { label: 'Glossário',          icon: BookOpen,        href: ROUTES.glossario    },
       { label: 'Dashboard',          icon: LayoutDashboard, href: ROUTES.dashboard    },
       { label: 'Upload',             icon: UploadCloud,     href: ROUTES.upload       },
+      { label: 'Importar do GitHub', icon: Github,          href: ROUTES.github       },
       { label: 'Projeto',            icon: FolderKanban,    href: ROUTES.project      },
       { label: 'Histórico',          icon: History,         href: ROUTES.history      },
       { label: 'Comparação',         icon: GitCompare,      href: ROUTES.comparison   },

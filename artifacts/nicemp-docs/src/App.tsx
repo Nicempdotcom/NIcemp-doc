@@ -28,6 +28,7 @@ import Prompts      from '@/app/pages/Prompts';
 import Settings     from '@/app/pages/Settings';
 import Login        from '@/app/pages/Login';
 import Overview     from '@/app/pages/Overview';
+import GitHub       from '@/app/pages/GitHub';
 import Explorer     from '@/app/pages/Explorer';
 import Glossario    from '@/app/pages/Glossario';
 import NotFound     from '@/app/pages/not-found';
@@ -148,6 +149,7 @@ function Layout() {
               <Route path={ROUTES.glossario}    element={<Glossario />}    />
               <Route path={ROUTES.prompts}      element={<Prompts />}      />
               <Route path={ROUTES.settings}     element={<Settings />}     />
+              <Route path={ROUTES.github}       element={<GitHub />}       />
               <Route path="*"                   element={<NotFound />}     />
             </Routes>
           </div>
