@@ -26,6 +26,7 @@
  */
 
 import { parse } from '@babel/parser';
+import type { ParserPlugin } from '@babel/parser';
 import type { CategorizedFile, InteractionEntry } from './types';
 
 // ─── AST node types (minimal subset we care about) ────────────────────────────
@@ -74,7 +75,7 @@ function tryParse(content: string, path: string): ASTNode | null {
         'classProperties',
         'optionalChaining',
         'nullishCoalescingOperator',
-      ],
+      ] as ParserPlugin[],
     }) as unknown as ASTNode;
   } catch {
     // Parse error — skip file rather than crash the whole pipeline
