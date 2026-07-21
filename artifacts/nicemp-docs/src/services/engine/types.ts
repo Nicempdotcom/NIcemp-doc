@@ -131,9 +131,13 @@ export interface ProjectStats {
 
 // ── Interactions (EPIC 10 — "what happens when I click X") ──────────────────
 //
-// Heuristic, regex-based extraction — no AST parser. When nothing can be
-// inferred with confidence, InteractionAnalyzer omits the interaction rather
-// than inventing a description.
+// Detected by InteractionAnalyzer via regex over page/component/layout source:
+//   • <Link to="…"> / <NavLink to="…">   — declarative navigation (primary)
+//   • <Link to={ROUTES.key}>              — constant reference, resolved to path
+//   • navigate('/route') / router.push()  — programmatic navigation
+//   • <a href="/internal">               — internal anchor tags
+//   • onClick → fetch/axios              — API call interactions
+// When nothing can be inferred with confidence the interaction is omitted.
 
 export interface InteractionEntry {
   id: string;             // `${filePath}:${matchIndex}` — stable within one analysis

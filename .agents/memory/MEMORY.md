@@ -1,4 +1,6 @@
 - [NicEmp Docs versioning model](nicemp-docs-versioning.md) — entities are upserted in-place per project; version comparison/history requires separate per-version snapshots.
+- [InteractionAnalyzer v2 — navigation detection](nicemp-interaction-analyzer-v2.md) — regex-based (not babel); detects Link/NavLink/anchor/navigate; ROUTES constant resolution via buildRouteKeyMap().
+- [buildSimpleFlow grid layout](nicemp-buildSimpleFlow-grid-layout.md) — module groups in MAX_COLS=4 grid; wrap after 4 columns to avoid single-row strip.
 - [File input reselect bug](file-input-reselect-bug.md) — `<input type="file">` won't refire 'change' on repeated same-file selection; reset value in onChange.
 - [setState updater return value is stale](setstate-updater-return-value.md) — can't synchronously read a value out of a setState updater callback; it runs async, so the read is always stale.
 - [NicEmp Docs entity relationship arrays are unpopulated](nicemp-docs-relationships-unpopulated.md) — PageEntity.components/hooks/apis are always []; group by `module` string instead of these arrays.

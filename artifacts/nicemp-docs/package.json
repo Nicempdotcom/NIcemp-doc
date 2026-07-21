@@ -76,6 +76,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@babel/parser": "^8.0.4",
     "@dagrejs/dagre": "^1.1.4",
     "@supabase/supabase-js": "^2.110.2",
     "@xyflow/react": "^12.11.2",

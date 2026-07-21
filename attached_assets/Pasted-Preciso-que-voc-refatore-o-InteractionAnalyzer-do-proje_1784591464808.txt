@@ -1,0 +1,30 @@
+Preciso que você refatore o InteractionAnalyzer do projeto para resolver o problema de detecção de navegação. Hoje ele usa uma regex que só captura navigate() dentro de onClick={...}, e isso faz o organograma ficar praticamente vazio, porque a navegação real do app é feita majoritariamente via <Link to={...}> e <NavLink to={...}> declarativos, sem onClick.
+
+Faça as seguintes mudanças:
+
+1. Trocar a regex por parsing de AST
+Substitua a extração baseada em regex por um parser real usando @babel/parser + @babel/traverse (ou a TypeScript compiler API, se for mais simples de integrar no projeto). O analyzer precisa detectar de forma confiável todos esses padrões de navegação:
+
+<Link to={...}>
+<NavLink to={...}>
+<a href={...}> (quando apontar para rota interna)
+navigate(...)
+router.push(...)
+
+2. Resolver rotas dinâmicas via constantes
+Muitos to={...} usam constantes como ROUTES.apis em vez de string literal. Implemente:
+
+Leitura do arquivo de rotas (onde ROUTES é definido) para montar um mapa nome da constante → path real
+Resolução dessas referências durante a análise da AST, para que to={ROUTES.apis} vire a rota real e não fique invisível pro analyzer
+
+3. Gerar o grafo em build-time, não em runtime
+Hoje as interações só existem depois que alguém usa o app no navegador e ficam salvas em localStorage/Supabase. Isso é frágil e deixa o organograma sempre incompleto. Mude para: varrer o código-fonte estaticamente (usando a AST do item 1) e gerar o grafo de navegação direto do código, em build-time. O organograma deve refletir o código-fonte real, sem depender de tráfego de usuário.
+
+4. Corrigir o layout visual do organograma
+Separadamente do problema de dados, o painel está com os nós todos espremidos numa única fileira. Ajuste para:
+
+Usar uma lib de layout automático de grafos, como dagre ou elkjs (ou o layout automático nativo do React Flow), em vez de posicionamento manual
+Agrupar visualmente os nós por seção (auth, dashboard, employees, financeiro, relatorios, comunicacao, configuracoes) como clusters ou swimlanes
+Só desenhar uma aresta quando a rota de destino realmente existir no pages.json, pra evitar nós órfãos ou links quebrados
+
+Ao final, quero conseguir ver, no organograma, a maioria (idealmente todas) das 20 páginas do pages.json conectadas entre si de forma coerente, refletindo a navegação real do app, com um layout hierárquico legível e agrupado por seção — não mais uma fileira única de caixinhas.
