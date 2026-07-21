@@ -105,235 +105,89 @@ function isPermissionError(error: { code?: string; message?: string }): boolean 
   );
 }
 
-// ─── Auto-discovery helpers ────────────────────────────────────────────────────
+// ─── RPC response types ────────────────────────────────────────────────────────
 
-/** Raw row from information_schema.columns */
-interface ISColumn {
-  table_name: string;
-  column_name: string;
-  data_type: string;
-  is_nullable: string; // 'YES' | 'NO'
-  udt_name: string;
+/** Shape of each column object returned by get_schema_metadata() */
+interface RpcColumn {
+  name:          string;
+  type:          string;
+  nullable:      boolean;
+  is_primary_key: boolean;
+  foreign_key:   string | null;
 }
 
-/** Raw row from information_schema.key_column_usage (joined with table_constraints) */
-interface ISKeyColumn {
-  table_name: string;
-  column_name: string;
-  constraint_name: string;
-  constraint_type: string; // 'PRIMARY KEY' | 'FOREIGN KEY' | 'UNIQUE'
-}
-
-/** Raw row from information_schema.referential_constraints joined with key_column_usage */
-interface ISForeignKey {
-  from_table: string;
-  from_column: string;
-  to_table: string;
-  to_column: string;
-}
-
-/**
- * Fetch a JSON array from information_schema via PostgREST's Accept-Profile header.
- * Returns null when the schema is not exposed (non-2xx) or on network error.
- */
-async function fetchInfoSchema<T>(
-  baseUrl: string,
-  anonKey: string,
-  path: string,
-): Promise<T[] | null> {
-  try {
-    const res = await fetch(`${baseUrl}/rest/v1/${path}`, {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-        'Accept-Profile': 'information_schema',
-        Accept: 'application/json',
-      },
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T[];
-  } catch {
-    return null;
-  }
+/** Shape of each table object returned by get_schema_metadata() */
+interface RpcTable {
+  name:    string;
+  columns: RpcColumn[];
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────────
 
+/** SQL to create the get_schema_metadata() function. Shown in the UI when the RPC is missing. */
+export const GET_SCHEMA_METADATA_SQL_HINT =
+  'Execute o script get_schema_metadata.sql no SQL Editor do Supabase para habilitar a auto-detecção.';
+
 export const LiveSupabaseIntrospector = {
   /**
-   * Auto-discover all tables in the public schema using information_schema.
+   * Auto-discover all tables in the public schema via the get_schema_metadata() RPC.
    *
-   * Uses PostgREST's Accept-Profile header to switch to information_schema.
-   * Includes column types (real Postgres types), nullability, primary keys,
-   * and foreign key relationships.
+   * The RPC must exist in the target Supabase project (see get_schema_metadata.sql).
+   * It runs with SECURITY DEFINER so the anon key can call it without needing
+   * direct access to information_schema.
    *
-   * Returns method='none' with an error message when information_schema is not
-   * accessible — callers should fall back to manual entry.
+   * Returns method='none' with a descriptive error when the function is missing
+   * or the connection is not configured — callers should fall back to manual entry.
    *
    * Never throws.
    */
   async discoverTables(): Promise<DiscoverTablesResult> {
-    const config = getAnalyzedSupabaseConfig();
-    if (!config) {
+    const client = getAnalyzedSupabaseClient();
+    if (!client) {
       return { tables: [], method: 'none', error: 'Conexão não configurada.' };
     }
 
     try {
-      // 1. Fetch all user tables in public schema
-      const tableRows = await fetchInfoSchema<{ table_name: string }>(
-        config.url,
-        config.anonKey,
-        "tables?table_schema=eq.public&table_type=eq.BASE TABLE&select=table_name&order=table_name",
-      );
+      const { data, error } = await client.rpc('get_schema_metadata');
 
-      if (!tableRows) {
+      if (error) {
+        // PGRST202 = function not found; 42883 = undefined function (Postgres)
+        const isMissing =
+          (error as { code?: string }).code === 'PGRST202' ||
+          (error as { code?: string }).code === '42883' ||
+          error.message?.toLowerCase().includes('could not find the function') ||
+          error.message?.toLowerCase().includes('function') && error.message?.toLowerCase().includes('does not exist');
+
+        if (isMissing) {
+          return {
+            tables: [],
+            method: 'none',
+            error:
+              'Função get_schema_metadata() não encontrada no banco. ' +
+              GET_SCHEMA_METADATA_SQL_HINT,
+          };
+        }
+
         return {
           tables: [],
           method: 'none',
-          error:
-            'information_schema não acessível via PostgREST. Para habilitar, adicione ' +
-            '"information_schema" na lista de schemas expostos no Supabase (API Settings → Extra search path). ' +
-            'Use a adição manual de tabelas como alternativa.',
+          error: `Erro ao chamar RPC: ${error.message}`,
         };
       }
 
-      const tableNames = tableRows.map((r) => r.table_name);
-      if (tableNames.length === 0) {
-        return { tables: [], method: 'information_schema' };
-      }
+      // The RPC returns jsonb — Supabase JS deserialises it to a JS value.
+      const rpcTables = (data ?? []) as RpcTable[];
 
-      // 2. Fetch columns for all public tables
-      const [columnRows, keyRows, fkRows] = await Promise.all([
-        fetchInfoSchema<ISColumn>(
-          config.url,
-          config.anonKey,
-          "columns?table_schema=eq.public&select=table_name,column_name,data_type,is_nullable,udt_name&order=table_name,ordinal_position",
-        ),
-        fetchInfoSchema<ISKeyColumn>(
-          config.url,
-          config.anonKey,
-          "table_constraints?table_schema=eq.public&constraint_type=in.(PRIMARY KEY,FOREIGN KEY)&select=table_name,constraint_name,constraint_type" +
-          "&key_column_usage(table_name,column_name,constraint_name)",
-        ),
-        // Fetch FK mappings via referential_constraints + key_column_usage join
-        fetchInfoSchema<{ constraint_name: string; unique_constraint_name: string }>(
-          config.url,
-          config.anonKey,
-          "referential_constraints?constraint_schema=eq.public&select=constraint_name,unique_constraint_name",
-        ),
-      ]);
-
-      // Build PK set: tableName -> Set<columnName>
-      const pkCols = new Map<string, Set<string>>();
-      // Build FK map: "tableName.colName" -> "refTable.refCol"
-      const fkMap = new Map<string, string>();
-
-      // Query key_column_usage directly (simpler, no join needed)
-      const [kcuPK, kcuFK, kcuRefFK] = await Promise.all([
-        fetchInfoSchema<{ table_name: string; column_name: string; constraint_name: string }>(
-          config.url,
-          config.anonKey,
-          "key_column_usage?table_schema=eq.public&select=table_name,column_name,constraint_name" +
-          "&table_constraints(constraint_type=eq.PRIMARY KEY)&order=table_name,ordinal_position",
-        ),
-        fetchInfoSchema<{ table_name: string; column_name: string; constraint_name: string }>(
-          config.url,
-          config.anonKey,
-          "key_column_usage?table_schema=eq.public&select=table_name,column_name,constraint_name&order=table_name,ordinal_position",
-        ),
-        // Get referenced columns for FK constraints
-        fetchInfoSchema<{ table_name: string; column_name: string; constraint_name: string }>(
-          config.url,
-          config.anonKey,
-          "key_column_usage?constraint_schema=eq.public&select=table_name,column_name,constraint_name&order=ordinal_position",
-        ),
-      ]);
-
-      // Simpler approach: fetch pk and fk constraint names via table_constraints, then look up columns
-      const tcRows = await fetchInfoSchema<{ table_name: string; constraint_name: string; constraint_type: string }>(
-        config.url,
-        config.anonKey,
-        "table_constraints?table_schema=eq.public&constraint_type=in.(PRIMARY KEY,FOREIGN KEY)&select=table_name,constraint_name,constraint_type",
-      );
-
-      const pkConstraintNames = new Set<string>();
-      const fkConstraintNames = new Set<string>();
-
-      if (tcRows) {
-        for (const tc of tcRows) {
-          if (tc.constraint_type === 'PRIMARY KEY') pkConstraintNames.add(tc.constraint_name);
-          if (tc.constraint_type === 'FOREIGN KEY') fkConstraintNames.add(tc.constraint_name);
-        }
-      }
-
-      // Map constraint_name -> FK ref (from referential_constraints + unique_constraint_name -> table)
-      // Build: fkConstraintName -> uniqueConstraintName (which holds the referenced table/col)
-      const fkToRefConstraint = new Map<string, string>();
-      if (fkRows) {
-        for (const row of fkRows) {
-          fkToRefConstraint.set(row.constraint_name, row.unique_constraint_name);
-        }
-      }
-
-      // key_column_usage: all rows (kcuFK is all public kcu rows)
-      const allKcu = kcuFK ?? [];
-      const kcuByConstraint = new Map<string, { table_name: string; column_name: string }[]>();
-      for (const row of allKcu) {
-        if (!kcuByConstraint.has(row.constraint_name)) kcuByConstraint.set(row.constraint_name, []);
-        kcuByConstraint.get(row.constraint_name)!.push(row);
-      }
-
-      // Build PK set
-      for (const cn of pkConstraintNames) {
-        const cols = kcuByConstraint.get(cn) ?? [];
-        for (const c of cols) {
-          if (!pkCols.has(c.table_name)) pkCols.set(c.table_name, new Set());
-          pkCols.get(c.table_name)!.add(c.column_name);
-        }
-      }
-
-      // Build FK map
-      for (const [fkCn, refCn] of fkToRefConstraint) {
-        const fromCols = kcuByConstraint.get(fkCn) ?? [];
-        const toCols = kcuByConstraint.get(refCn) ?? [];
-        // Usually 1:1 column pairs
-        for (let i = 0; i < fromCols.length; i++) {
-          const from = fromCols[i];
-          const to = toCols[i];
-          if (from && to) {
-            fkMap.set(`${from.table_name}.${from.column_name}`, `${to.table_name}.${to.column_name}`);
-          }
-        }
-      }
-
-      // Build final table list
-      const colsByTable = new Map<string, ISColumn[]>();
-      if (columnRows) {
-        for (const col of columnRows) {
-          if (!colsByTable.has(col.table_name)) colsByTable.set(col.table_name, []);
-          colsByTable.get(col.table_name)!.push(col);
-        }
-      }
-
-      const tables: DiscoveredTable[] = tableNames.map((tName) => {
-        const cols = colsByTable.get(tName) ?? [];
-        const pk = pkCols.get(tName) ?? new Set();
-        const columns: LiveColumn[] = cols.map((col) => {
-          const fk = fkMap.get(`${tName}.${col.column_name}`);
-          // Prefer udt_name for enum/custom types, fallback to data_type
-          const pgType = col.udt_name && !col.udt_name.startsWith('_')
-            ? col.udt_name
-            : col.data_type;
-          return {
-            name:         col.column_name,
-            type:         pgType,
-            nullable:     col.is_nullable === 'YES',
-            isPrimaryKey: pk.has(col.column_name) || undefined,
-            foreignKey:   fk,
-          };
-        });
-        return { name: tName, columns };
-      });
+      const tables: DiscoveredTable[] = rpcTables.map((t) => ({
+        name: t.name,
+        columns: (t.columns ?? []).map((col) => ({
+          name:         col.name,
+          type:         col.type,
+          nullable:     col.nullable,
+          isPrimaryKey: col.is_primary_key || undefined,
+          foreignKey:   col.foreign_key ?? undefined,
+        })),
+      }));
 
       return { tables, method: 'information_schema' };
     } catch (err) {
@@ -341,7 +195,7 @@ export const LiveSupabaseIntrospector = {
       return {
         tables: [],
         method: 'none',
-        error: 'Erro inesperado ao descobrir tabelas.',
+        error: 'Erro inesperado ao chamar RPC de descoberta.',
       };
     }
   },
