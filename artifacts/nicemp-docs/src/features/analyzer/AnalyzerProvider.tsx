@@ -4,7 +4,7 @@ import React, {
 } from 'react';
 import { EMPTY_COUNTS }                        from '@/workers/types';
 import type { WorkerOutMsg, WorkerInMsg }      from '@/workers/types';
-import { runAnalysisPipeline, AnalysisCancelledError } from '@/services/engine/runAnalysisPipeline';
+import { runAnalysisPipeline, runAnalysisPipelineFromFiles, AnalysisCancelledError } from '@/services/engine/runAnalysisPipeline';
 import type { AnalyzerState, AnalysisPhase }  from './types';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -16,6 +16,11 @@ interface AnalyzerContextValue extends AnalyzerState {
    * reference becomes detached immediately after this call.
    */
   startAnalysis: (buffer: ArrayBuffer, fileName: string, fileSize: number) => void;
+  /**
+   * Run the analysis pipeline directly from an already-built ScannedFile[].
+   * Used by the GitHub import path — no ZIP buffer required.
+   */
+  startAnalysisFromFiles: (files: import('@/services/engine/types').ScannedFile[], projectName: string) => void;
   /** Send a cancel signal to the running worker. */
   cancelAnalysis: () => void;
   /** Terminate worker (if running) and reset to idle. */
@@ -233,6 +238,49 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
     worker.postMessage(startMsg, [buffer]);
   }, [runOnMainThread]);
 
+  // ── startAnalysisFromFiles ────────────────────────────────────────────────
+  const startAnalysisFromFiles = useCallback((
+    files:       import('@/services/engine/types').ScannedFile[],
+    projectName: string,
+  ) => {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
+    cancelFlagRef.current = null;
+    const runId = ++runIdRef.current;
+
+    setState({
+      ...INITIAL,
+      phase:    'scanning',
+      label:    'Preparando análise…',
+      fileName: projectName,
+      fileSize: files.reduce((s, f) => s + f.size, 0),
+    });
+
+    let cancelledLocal = false;
+    cancelFlagRef.current = () => { cancelledLocal = true; };
+
+    runAnalysisPipelineFromFiles(files, projectName, {
+      onProgress: (pct, label, counts) => {
+        if (runIdRef.current !== runId) return;
+        setState((s) => ({ ...s, pct, label, counts, phase: phasFromPct(pct) }));
+      },
+      isCancelled: () => cancelledLocal,
+    }).then((projectMap) => {
+      if (runIdRef.current !== runId) return;
+      setState((s) => ({ ...s, phase: 'completed', pct: 100, label: 'Concluído', projectMap }));
+    }).catch((err) => {
+      if (runIdRef.current !== runId) return;
+      if (err instanceof AnalysisCancelledError) {
+        setState((s) => ({ ...s, phase: 'cancelled', label: 'Análise cancelada pelo usuário.' }));
+        return;
+      }
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido durante a análise.';
+      setState((s) => ({ ...s, phase: 'failed', label: msg, error: msg }));
+    });
+  }, []);
+
   // ── cancelAnalysis ────────────────────────────────────────────────────────
   const cancelAnalysis = useCallback(() => {
     if (workerRef.current) {
@@ -255,7 +303,7 @@ export function AnalyzerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AnalyzerContext.Provider value={{ ...state, startAnalysis, cancelAnalysis, reset }}>
+    <AnalyzerContext.Provider value={{ ...state, startAnalysis, startAnalysisFromFiles, cancelAnalysis, reset }}>
       {children}
     </AnalyzerContext.Provider>
   );

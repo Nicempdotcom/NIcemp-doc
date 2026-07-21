@@ -1,0 +1,365 @@
+Objetivo
+
+Implementar suporte completo para analisar projetos diretamente de repositórios GitHub, sem necessidade de upload de arquivos ZIP.
+
+A implementação deve ser modular, escalável e preparada para suportar futuramente GitLab, Bitbucket e Azure DevOps.
+
+Não alterar a lógica existente do parser ou do pipeline de análise. Apenas criar uma nova fonte de entrada de arquivos.
+
+ETAPA 1 – Auditoria
+
+Antes de escrever qualquer código:
+
+localizar onde atualmente ocorre o upload do ZIP
+localizar onde os arquivos são convertidos para ProjectFile[]
+localizar onde runAnalysisPipeline() recebe os arquivos
+identificar todos os pontos de integração
+
+Não modificar nada antes dessa análise.
+
+ETAPA 2 – Criar arquitetura Repository Provider
+
+Criar a seguinte estrutura:
+
+src/services/repositories/
+
+RepositoryProvider.ts
+
+GitHubProvider.ts
+
+ZipProvider.ts
+
+RepositoryFactory.ts
+
+types.ts
+
+Criar a interface:
+
+export interface RepositoryProvider {
+
+listRepositories()
+
+listBranches()
+
+getDefaultBranch()
+
+downloadRepository()
+
+loadFiles()
+
+}
+
+Toda nova origem de projeto deverá implementar essa interface.
+
+ETAPA 3 – GitHub OAuth
+
+Implementar autenticação OAuth com GitHub.
+
+Fluxo:
+
+Usuário
+
+↓
+
+Conectar GitHub
+
+↓
+
+OAuth
+
+↓
+
+Receber Access Token
+
+↓
+
+Salvar sessão
+
+↓
+
+Listar repositórios
+
+Não armazenar token em local inseguro.
+
+Usar boas práticas de autenticação.
+
+ETAPA 4 – Listar repositórios
+
+Após login:
+
+Exibir:
+
+Nome
+Organização
+Branch padrão
+Último commit
+Linguagens
+Visibilidade
+Data de atualização
+
+Permitir busca.
+
+Permitir paginação.
+
+ETAPA 5 – Seleção
+
+Fluxo:
+
+Selecionar repositório
+
+↓
+
+Selecionar branch
+
+↓
+
+Selecionar commit (opcional)
+
+↓
+
+Analisar
+
+Caso nenhum commit seja escolhido:
+
+Utilizar HEAD da branch.
+
+ETAPA 6 – Download
+
+Não utilizar Git Clone.
+
+Utilizar a API oficial do GitHub.
+
+Baixar:
+
+árvore
+blobs
+arquivos
+
+Reconstruir internamente:
+
+ProjectFile[]
+
+Exatamente igual ao fluxo do ZIP.
+
+Assim:
+
+ZIP
+
+↓
+
+ProjectFile[]
+
+↓
+
+Pipeline
+
+e
+
+GitHub
+
+↓
+
+ProjectFile[]
+
+↓
+
+Mesmo Pipeline
+
+Nenhuma diferença no restante do sistema.
+
+ETAPA 7 – Cache
+
+Criar cache.
+
+Se o commit já foi analisado:
+
+Não baixar novamente.
+
+Utilizar hash do commit.
+
+ETAPA 8 – Comparação
+
+Adicionar suporte para:
+
+Comparar:
+
+Commit A
+
+↓
+
+Commit B
+
+Gerar:
+
+Arquivos adicionados
+
+Arquivos removidos
+
+Arquivos modificados
+
+Tecnologias adicionadas
+
+Dependências adicionadas
+
+Componentes novos
+
+Hooks novos
+
+Rotas novas
+
+APIs novas
+
+Integrações novas
+
+Mudanças arquiteturais
+
+ETAPA 9 – Branches
+
+Permitir:
+
+main
+
+develop
+
+release
+
+feature
+
+hotfix
+
+Selecionar qualquer branch.
+
+ETAPA 10 – Segurança
+
+Nunca baixar:
+
+node_modules
+
+dist
+
+build
+
+coverage
+
+.next
+
+.cache
+
+.git
+
+tmp
+
+logs
+
+ETAPA 11 – Interface
+
+Adicionar nova tela:
+
+Repository Import
+
+Fluxo:
+
+Escolha a origem
+
+( ) Upload ZIP
+
+( ) GitHub
+
+
+Se GitHub:
+
+Mostrar botão:
+
+Conectar GitHub
+
+Depois:
+
+Lista de Repositórios
+
+↓
+
+Lista de Branches
+
+↓
+
+Analisar
+ETAPA 12 – Integração com o Pipeline
+
+Após carregar os arquivos:
+
+Executar exatamente:
+
+StructureAnalyzer
+
+↓
+
+TechnologyAnalyzer
+
+↓
+
+DependencyAnalyzer
+
+↓
+
+InteractionAnalyzer
+
+↓
+
+DescriptionAnalyzer
+
+↓
+
+IntegrationAnalyzer
+
+↓
+
+ProjectAnalyzer
+
+Nenhum parser deverá saber se o projeto veio do GitHub ou de um ZIP.
+
+ETAPA 13 – Tratamento de erros
+
+Implementar mensagens claras para:
+
+repositório privado sem permissão
+token expirado
+limite da API do GitHub
+branch inexistente
+commit inexistente
+falha de rede
+repositório muito grande
+ETAPA 14 – Extensibilidade
+
+Toda a implementação deve ser preparada para adicionar posteriormente:
+
+GitLab
+Bitbucket
+Azure DevOps
+
+Sem alterar o pipeline.
+
+Apenas criando novos Providers.
+
+ETAPA 15 – Testes
+
+Validar:
+
+repositório público
+repositório privado
+branch alternativa
+projeto React
+projeto Next.js
+projeto Node.js
+projeto monorepo (pnpm workspace)
+projeto com mais de 10.000 arquivos
+Critérios de aceite
+
+A implementação estará concluída quando:
+
+O usuário puder conectar sua conta GitHub.
+O sistema listar os repositórios disponíveis.
+O usuário puder escolher um repositório e uma branch.
+O código-fonte for obtido pela API do GitHub e convertido para ProjectFile[].
+O pipeline de análise existente funcionar sem qualquer alteração.
+A interface oferecer uma experiência equivalente ao upload de ZIP.
+A arquitetura estiver preparada para adicionar novos provedores (GitLab, Bitbucket e Azure DevOps) sem modificar o pipeline.

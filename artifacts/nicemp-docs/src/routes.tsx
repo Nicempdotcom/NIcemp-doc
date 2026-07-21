@@ -20,4 +20,5 @@ export const ROUTES = {
   explorer:     '/explorer',
   glossario:    '/glossario',
   settings:     '/settings',
+  github:       '/github',
 };
