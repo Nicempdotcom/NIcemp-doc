@@ -6,9 +6,11 @@ import GlobalSearch from '@/app/components/search/GlobalSearch';
 
 interface TopbarProps {
   onMenuClick: () => void;
+  /** Oculta o botão de menu mobile (usado na home sem sidebar). */
+  hideMenu?: boolean;
 }
 
-export default function Topbar({ onMenuClick }: TopbarProps) {
+export default function Topbar({ onMenuClick, hideMenu = false }: TopbarProps) {
   const { theme, setTheme } = useTheme();
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -27,13 +29,15 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-8">
       <div className="flex items-center gap-4">
-        <button 
-          className="md:hidden p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors" 
-          onClick={onMenuClick}
-          aria-label="Toggle Menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        {!hideMenu && (
+          <button
+            className="md:hidden p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
+            onClick={onMenuClick}
+            aria-label="Toggle Menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
         
         <div className="hidden sm:block">
           <Breadcrumb />

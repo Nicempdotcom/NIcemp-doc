@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/app/components/ui/toaster';
 import { TooltipProvider } from '@/app/components/ui/tooltip';
@@ -115,43 +115,85 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
-function Layout() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+const SIDEBAR_COLLAPSED_KEY = 'sidebar:layout:collapsed';
 
+function Layout() {
+  const location = useLocation();
+  const isHome = location.pathname === ROUTES.dashboard;
+
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'; } catch { return false; }
+  });
+
+  const toggleCollapse = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  const sidebarWidth = sidebarCollapsed ? 'md:pl-[56px]' : 'md:pl-60';
+
+  const allRoutes = (
+    <Routes>
+      <Route path={ROUTES.dashboard}    element={<Dashboard />}    />
+      <Route path={ROUTES.upload}       element={<Upload />}       />
+      <Route path={ROUTES.project}      element={<Project />}      />
+      <Route path={ROUTES.history}      element={<History />}      />
+      <Route path={ROUTES.comparison}   element={<Comparison />}   />
+      <Route path={ROUTES.impact}       element={<Impact />}       />
+      <Route path={ROUTES.architecture} element={<Architecture />} />
+      <Route path={ROUTES.frontend}     element={<Frontend />}     />
+      <Route path={ROUTES.backend}      element={<Backend />}      />
+      <Route path={ROUTES.database}     element={<Database />}     />
+      <Route path={ROUTES.components}   element={<Components />}   />
+      <Route path={ROUTES.hooks}        element={<Hooks />}        />
+      <Route path={ROUTES.apis}         element={<Apis />}         />
+      <Route path={ROUTES.dependencies} element={<Dependencies />} />
+      <Route path={ROUTES.integrations} element={<Integrations />} />
+      <Route path={ROUTES.modules}      element={<Modules />}      />
+      <Route path={ROUTES.overview}     element={<Overview />}     />
+      <Route path={ROUTES.explorer}     element={<Explorer />}     />
+      <Route path={ROUTES.glossario}    element={<Glossario />}    />
+      <Route path={ROUTES.prompts}      element={<Prompts />}      />
+      <Route path={ROUTES.settings}     element={<Settings />}     />
+      <Route path={ROUTES.github}       element={<GitHub />}       />
+      <Route path="*"                   element={<NotFound />}     />
+    </Routes>
+  );
+
+  // ── Home: layout full-width sem sidebar ────────────────────────────────────
+  if (isHome) {
+    return (
+      <div className="flex min-h-[100dvh] w-full bg-background text-foreground">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <Topbar onMenuClick={() => {}} hideMenu />
+          <div className="mx-auto max-w-5xl px-6 py-8 md:px-10">
+            {allRoutes}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ── Inner pages: layout com sidebar retrátil ───────────────────────────────
   return (
     <div className="flex min-h-[100dvh] w-full bg-background text-foreground">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleCollapse}
+      />
 
-      <div className="flex-1 flex flex-col md:pl-60 min-w-0">
-        <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
+      <div className={`flex-1 flex flex-col transition-[padding] duration-300 ease-in-out ${sidebarWidth} min-w-0`}>
+        <Topbar onMenuClick={() => setIsMobileSidebarOpen(true)} />
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto max-w-4xl px-8 py-8">
-            <Routes>
-              <Route path={ROUTES.dashboard}    element={<Dashboard />}    />
-              <Route path={ROUTES.upload}       element={<Upload />}       />
-              <Route path={ROUTES.project}      element={<Project />}      />
-              <Route path={ROUTES.history}      element={<History />}      />
-              <Route path={ROUTES.comparison}   element={<Comparison />}   />
-              <Route path={ROUTES.impact}       element={<Impact />}       />
-              <Route path={ROUTES.architecture} element={<Architecture />} />
-              <Route path={ROUTES.frontend}     element={<Frontend />}     />
-              <Route path={ROUTES.backend}      element={<Backend />}      />
-              <Route path={ROUTES.database}     element={<Database />}     />
-              <Route path={ROUTES.components}   element={<Components />}   />
-              <Route path={ROUTES.hooks}        element={<Hooks />}        />
-              <Route path={ROUTES.apis}         element={<Apis />}         />
-              <Route path={ROUTES.dependencies}  element={<Dependencies />}  />
-              <Route path={ROUTES.integrations}  element={<Integrations />}  />
-              <Route path={ROUTES.modules}       element={<Modules />}       />
-              <Route path={ROUTES.overview}     element={<Overview />}     />
-              <Route path={ROUTES.explorer}     element={<Explorer />}     />
-              <Route path={ROUTES.glossario}    element={<Glossario />}    />
-              <Route path={ROUTES.prompts}      element={<Prompts />}      />
-              <Route path={ROUTES.settings}     element={<Settings />}     />
-              <Route path={ROUTES.github}       element={<GitHub />}       />
-              <Route path="*"                   element={<NotFound />}     />
-            </Routes>
+          <div className="mx-auto max-w-4xl px-6 py-8 md:px-8">
+            {allRoutes}
           </div>
         </main>
       </div>
