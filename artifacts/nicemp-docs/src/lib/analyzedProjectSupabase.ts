@@ -72,6 +72,53 @@ export function isAnalyzedSupabaseConfigured(): boolean {
   return getAnalyzedSupabaseConfig() !== null;
 }
 
+// ─── Discovered schema persistence ─────────────────────────────────────────────
+
+const SCHEMA_STORAGE_KEY = 'nicemp:analyzedSupabase:schema';
+
+export interface PersistedColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  isPrimaryKey?: boolean;
+  foreignKey?: string;
+}
+
+export interface PersistedTableSchema {
+  name: string;
+  columns: PersistedColumn[];
+  /** ISO timestamp of when this schema was last synced. */
+  syncedAt: string;
+  /** How the schema was obtained. */
+  source: 'auto' | 'manual';
+}
+
+export interface PersistedSchema {
+  tables: PersistedTableSchema[];
+  /** ISO timestamp of the last full auto-sync. */
+  lastAutoSync: string | null;
+}
+
+export function getPersistedSchema(): PersistedSchema {
+  try {
+    const raw = localStorage.getItem(SCHEMA_STORAGE_KEY);
+    if (!raw) return { tables: [], lastAutoSync: null };
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed?.tables)) return parsed as PersistedSchema;
+    return { tables: [], lastAutoSync: null };
+  } catch {
+    return { tables: [], lastAutoSync: null };
+  }
+}
+
+export function savePersistedSchema(schema: PersistedSchema): void {
+  localStorage.setItem(SCHEMA_STORAGE_KEY, JSON.stringify(schema));
+}
+
+export function clearPersistedSchema(): void {
+  localStorage.removeItem(SCHEMA_STORAGE_KEY);
+}
+
 // ─── Tracked table names ────────────────────────────────────────────────────────
 
 const TABLES_STORAGE_KEY = 'nicemp:analyzedSupabase:tables';

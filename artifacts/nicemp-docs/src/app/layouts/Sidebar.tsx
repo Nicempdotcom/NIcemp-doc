@@ -41,6 +41,7 @@ const NAV_GROUPS = [
       { label: 'Comparação',         icon: GitCompare,      href: ROUTES.comparison   },
       { label: 'Impacto',            icon: AlertTriangle,   href: ROUTES.impact       },
       { label: 'Organograma',        icon: Network,         href: ROUTES.overview     },
+      { label: 'Prompts Replit',     icon: Bot,             href: ROUTES.prompts      },
       { label: 'Explorador ao vivo', icon: Search,          href: ROUTES.explorer     },
     ],
   },
@@ -61,12 +62,6 @@ const NAV_GROUPS = [
       { label: 'APIs',           icon: Globe,     href: ROUTES.apis         },
       { label: 'Dependências',   icon: Package,   href: ROUTES.dependencies },
       { label: 'Módulos',        icon: Package,   href: ROUTES.modules      },
-    ],
-  },
-  {
-    label: 'Ferramentas',
-    items: [
-      { label: 'Prompts Replit', icon: Bot,       href: ROUTES.prompts      },
     ],
   },
   {

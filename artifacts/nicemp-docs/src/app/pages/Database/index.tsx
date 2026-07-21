@@ -17,9 +17,13 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/app/components/ui/dialog';
 import { ProjectRepository, TableRepository, TableUsageRepository } from '@/services/storage';
-import { isAnalyzedSupabaseConfigured, getTrackedTableNames, addTrackedTableName, removeTrackedTableName } from '@/lib/analyzedProjectSupabase';
+import {
+  isAnalyzedSupabaseConfigured,
+  getTrackedTableNames, addTrackedTableName, removeTrackedTableName,
+  getPersistedSchema, savePersistedSchema,
+} from '@/lib/analyzedProjectSupabase';
 import { LiveSupabaseIntrospector } from '@/services/engine/LiveSupabaseIntrospector';
-import type { LiveTableSchema, LiveTableDescribeResult, TableSampleResult } from '@/services/engine/LiveSupabaseIntrospector';
+import type { LiveColumn, LiveTableSchema, LiveTableDescribeResult, TableSampleResult, DiscoveredTable } from '@/services/engine/LiveSupabaseIntrospector';
 import type { TableUsageEntry } from '@/services/engine/LiveTableUsageAnalyzer';
 import EditSupabaseTablePromptDialog from '@/app/components/prompts/EditSupabaseTablePromptDialog';
 
@@ -205,22 +209,31 @@ function TableDetailDialog({
 // ─── Tracked table card ────────────────────────────────────────────────────────
 
 interface TrackedTableCardProps {
-  tableName:  string;
-  projectId:  string | null;
-  onRemove:   () => void;
+  tableName:         string;
+  projectId:         string | null;
+  onRemove:          () => void;
+  /** When true: table came from auto-discovery; skip describeTable, hide remove button. */
+  isAuto?:           boolean;
+  /** Columns already known from auto-discovery — skips the describeTable network call. */
+  prefetchedColumns?: LiveColumn[];
 }
 
-function TrackedTableCard({ tableName, projectId, onRemove }: TrackedTableCardProps) {
-  const [result, setResult]           = useState<LiveTableDescribeResult | null>(null);
-  const [loading, setLoading]         = useState(false);
+function TrackedTableCard({ tableName, projectId, onRemove, isAuto, prefetchedColumns }: TrackedTableCardProps) {
+  const hasPrefetch = isAuto && prefetchedColumns && prefetchedColumns.length > 0;
 
-  const [detailOpen, setDetailOpen]   = useState(false);
-  const [sample, setSample]           = useState<TableSampleResult | null>(null);
+  const [result, setResult]               = useState<LiveTableDescribeResult | null>(
+    hasPrefetch ? { schema: { name: tableName, columns: prefetchedColumns! } } : null,
+  );
+  const [loading, setLoading]             = useState(!hasPrefetch);
+
+  const [detailOpen, setDetailOpen]       = useState(false);
+  const [sample, setSample]               = useState<TableSampleResult | null>(null);
   const [sampleLoading, setSampleLoading] = useState(false);
-  const [usages, setUsages]           = useState<TableUsageEntry[]>([]);
-  const [promptOpen, setPromptOpen]   = useState(false);
+  const [usages, setUsages]               = useState<TableUsageEntry[]>([]);
+  const [promptOpen, setPromptOpen]       = useState(false);
 
   const loadDescribe = useCallback(async () => {
+    // For auto tables with prefetched columns, still allow a manual refresh
     setLoading(true);
     try {
       const r = await LiveSupabaseIntrospector.describeTable(tableName);
@@ -230,11 +243,14 @@ function TrackedTableCard({ tableName, projectId, onRemove }: TrackedTableCardPr
     }
   }, [tableName]);
 
-  // Auto-load on mount
-  useEffect(() => { loadDescribe(); }, [loadDescribe]);
+  // Auto-load on mount only when no prefetched data
+  useEffect(() => {
+    if (!hasPrefetch) { loadDescribe(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleOpen() {
-    if (result?.permissionError) return; // do not open detail for error cards
+    if (result?.permissionError) return;
     const schema = result?.schema ?? { name: tableName, columns: [] };
     setSample(null);
     setSampleLoading(true);
@@ -252,7 +268,7 @@ function TrackedTableCard({ tableName, projectId, onRemove }: TrackedTableCardPr
     setSampleLoading(false);
   }
 
-  const schema = result?.schema ?? { name: tableName, columns: [] };
+  const schema  = result?.schema ?? { name: tableName, columns: [] };
   const isError = !!result?.permissionError;
 
   return (
@@ -281,6 +297,9 @@ function TrackedTableCard({ tableName, projectId, onRemove }: TrackedTableCardPr
           <span className="font-mono text-sm font-semibold text-foreground truncate flex-1">
             {tableName}
           </span>
+          {isAuto && (
+            <Badge variant="outline" className="text-[10px] shrink-0 font-normal">auto</Badge>
+          )}
           {/* Action buttons — stop propagation so they don't trigger handleOpen */}
           <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             <Button
@@ -292,15 +311,17 @@ function TrackedTableCard({ tableName, projectId, onRemove }: TrackedTableCardPr
             >
               <RefreshCw className="h-3 w-3" />
             </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6 text-destructive hover:text-destructive"
-              title="Remover tabela"
-              onClick={onRemove}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
+            {!isAuto && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-destructive hover:text-destructive"
+                title="Remover tabela"
+                onClick={onRemove}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         </div>
 
@@ -322,6 +343,16 @@ function TrackedTableCard({ tableName, projectId, onRemove }: TrackedTableCardPr
           <>
             <p className="text-xs text-muted-foreground">
               {schema.columns.length} coluna{schema.columns.length !== 1 ? 's' : ''}
+              {schema.columns.some((c) => c.isPrimaryKey) && (
+                <span className="ml-2 inline-flex items-center gap-0.5">
+                  <KeyRound className="h-3 w-3" /> PK
+                </span>
+              )}
+              {schema.columns.some((c) => c.foreignKey) && (
+                <span className="ml-2 inline-flex items-center gap-0.5">
+                  <Link2 className="h-3 w-3" /> FK
+                </span>
+              )}
             </p>
             {schema.columns.length > 0 && (
               <p className="text-xs text-muted-foreground mt-1 truncate">
@@ -356,17 +387,79 @@ function TrackedTableCard({ tableName, projectId, onRemove }: TrackedTableCardPr
 
 // ─── Live Supabase tab ─────────────────────────────────────────────────────────
 
+type AutoSyncStatus = 'idle' | 'loading' | 'success' | 'error' | 'unavailable';
+
 function LiveTab({ projectId }: { projectId: string | null }) {
+  const configured = isAnalyzedSupabaseConfigured();
+
+  // Auto-discovered tables (from information_schema)
+  const [autoTables, setAutoTables] = useState<DiscoveredTable[]>(() => {
+    const cached = getPersistedSchema();
+    return cached.tables.filter((t) => t.source === 'auto').map((t) => ({ name: t.name, columns: t.columns }));
+  });
+  const [autoSyncStatus, setAutoSyncStatus] = useState<AutoSyncStatus>('idle');
+  const [autoSyncError, setAutoSyncError]   = useState<string | null>(null);
+  const [lastSync, setLastSync]             = useState<string | null>(() => getPersistedSchema().lastAutoSync);
+
+  // Manually tracked table names (fallback for tables not caught by auto-discovery)
   const [trackedNames, setTrackedNames] = useState<string[]>(() => getTrackedTableNames());
   const [newName, setNewName]           = useState('');
 
-  const configured = isAnalyzedSupabaseConfigured();
+  // All table names visible: union of auto-discovered + manually tracked
+  const autoTableNames = new Set(autoTables.map((t) => t.name));
+  const manualOnlyNames = trackedNames.filter((n) => !autoTableNames.has(n));
+
+  async function runAutoSync() {
+    setAutoSyncStatus('loading');
+    setAutoSyncError(null);
+    const result = await LiveSupabaseIntrospector.discoverTables();
+    if (result.method === 'none') {
+      setAutoSyncStatus(result.tables.length === 0 ? 'unavailable' : 'success');
+      setAutoSyncError(result.error ?? null);
+    } else {
+      setAutoTables(result.tables);
+      setAutoSyncStatus('success');
+      // Persist the discovered schema
+      const now = new Date().toISOString();
+      setLastSync(now);
+      const existing = getPersistedSchema();
+      const manualTables = existing.tables.filter((t) => t.source === 'manual');
+      const autoPersistedTables = result.tables.map((t) => ({
+        name: t.name,
+        columns: t.columns,
+        syncedAt: now,
+        source: 'auto' as const,
+      }));
+      savePersistedSchema({
+        tables: [...autoPersistedTables, ...manualTables],
+        lastAutoSync: now,
+      });
+    }
+  }
+
+  // Auto-sync on mount when configured
+  useEffect(() => {
+    if (configured) {
+      runAutoSync();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configured]);
 
   function handleAdd() {
     const name = newName.trim();
     if (!name) return;
     addTrackedTableName(name);
     setTrackedNames(getTrackedTableNames());
+    // Also persist as manual entry
+    const now = new Date().toISOString();
+    const existing = getPersistedSchema();
+    const alreadyExists = existing.tables.some((t) => t.name === name);
+    if (!alreadyExists) {
+      savePersistedSchema({
+        ...existing,
+        tables: [...existing.tables, { name, columns: [], syncedAt: now, source: 'manual' }],
+      });
+    }
     setNewName('');
   }
 
@@ -384,36 +477,94 @@ function LiveTab({ projectId }: { projectId: string | null }) {
     );
   }
 
+  const totalVisible = autoTables.length + manualOnlyNames.length;
+
   return (
     <div className="space-y-6">
-      {/* Add table form */}
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <Input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
-            placeholder="cms_categories"
-            className="font-mono text-sm max-w-xs"
-          />
-          <Button onClick={handleAdd} disabled={!newName.trim()} className="gap-1.5 shrink-0">
-            <Plus className="h-3.5 w-3.5" />
-            Adicionar tabela
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Digite o nome exato da tabela, igual aparece no Table Editor do Supabase (ex.: cms_categories).
-        </p>
+      {/* Auto-sync status bar */}
+      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+        {autoSyncStatus === 'loading' ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+            <span className="text-sm text-muted-foreground">Detectando tabelas automaticamente…</span>
+          </>
+        ) : autoSyncStatus === 'success' ? (
+          <>
+            <DatabaseIcon className="h-4 w-4 text-emerald-500 shrink-0" />
+            <span className="text-sm text-foreground">
+              <strong>{autoTables.length}</strong> tabela{autoTables.length !== 1 ? 's' : ''} detectada{autoTables.length !== 1 ? 's' : ''} automaticamente
+              {lastSync && (
+                <span className="text-muted-foreground text-xs ml-2">
+                  · sincronizado {new Date(lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto gap-1.5 h-7 text-xs"
+              onClick={runAutoSync}
+            >
+              <RefreshCw className="h-3 w-3" />
+              Sincronizar
+            </Button>
+          </>
+        ) : autoSyncStatus === 'unavailable' ? (
+          <>
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">Auto-detecção indisponível</p>
+              {autoSyncError && (
+                <p className="text-xs text-muted-foreground mt-0.5">{autoSyncError}</p>
+              )}
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto gap-1.5 h-7 text-xs shrink-0"
+              onClick={runAutoSync}
+            >
+              <RefreshCw className="h-3 w-3" />
+              Tentar novamente
+            </Button>
+          </>
+        ) : autoSyncStatus === 'error' ? (
+          <>
+            <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+            <span className="text-sm text-foreground">{autoSyncError ?? 'Erro ao sincronizar.'}</span>
+            <Button size="sm" variant="ghost" className="ml-auto gap-1.5 h-7 text-xs" onClick={runAutoSync}>
+              <RefreshCw className="h-3 w-3" />
+              Tentar novamente
+            </Button>
+          </>
+        ) : (
+          <>
+            <DatabaseIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-muted-foreground">Aguardando conexão…</span>
+          </>
+        )}
       </div>
 
-      {/* Table cards */}
-      {trackedNames.length === 0 ? (
-        <InfoBox variant="tip" title="Nenhuma tabela rastreada ainda">
-          Adicione o nome de uma tabela acima para visualizar suas colunas, amostra de dados e referências no código.
+      {/* Table cards — auto-discovered */}
+      {totalVisible === 0 && autoSyncStatus !== 'loading' ? (
+        <InfoBox variant="tip" title="Nenhuma tabela encontrada">
+          {autoSyncStatus === 'unavailable'
+            ? 'Adicione tabelas manualmente abaixo como alternativa à auto-detecção.'
+            : 'Nenhuma tabela encontrada no schema public.'}
         </InfoBox>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {trackedNames.map((name) => (
+          {autoTables.map((t) => (
+            <TrackedTableCard
+              key={t.name}
+              tableName={t.name}
+              projectId={projectId}
+              onRemove={() => {/* auto tables cannot be removed — only re-sync removes them */}}
+              isAuto
+              prefetchedColumns={t.columns}
+            />
+          ))}
+          {manualOnlyNames.map((name) => (
             <TrackedTableCard
               key={name}
               tableName={name}
@@ -423,6 +574,35 @@ function LiveTab({ projectId }: { projectId: string | null }) {
           ))}
         </div>
       )}
+
+      {/* Manual add — fallback */}
+      <details className="group rounded-lg border border-border">
+        <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-foreground select-none">
+          <Plus className="h-3.5 w-3.5 text-muted-foreground group-open:rotate-45 transition-transform" />
+          Adicionar tabela manualmente
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            (fallback — para tabelas não detectadas automaticamente)
+          </span>
+        </summary>
+        <div className="px-4 pb-4 space-y-2 border-t border-border pt-3">
+          <div className="flex gap-2">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+              placeholder="cms_categories"
+              className="font-mono text-sm max-w-xs"
+            />
+            <Button onClick={handleAdd} disabled={!newName.trim()} className="gap-1.5 shrink-0">
+              <Plus className="h-3.5 w-3.5" />
+              Adicionar
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Digite o nome exato da tabela, igual aparece no Table Editor do Supabase.
+          </p>
+        </div>
+      </details>
     </div>
   );
 }
