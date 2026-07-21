@@ -1,0 +1,99 @@
+# Prompt para o Replit Agent — Projeto NIcemp-doc
+
+> Cole o texto abaixo (a partir de "Preciso que você implemente...") direto no chat
+> do Replit Agent, dentro do workspace do **NIcemp-doc** (não do nicemp.com).
+
+---
+
+Preciso que você implemente um novo analisador chamado **DuplicateTableAnalyzer**
+dentro de `artifacts/nicemp-docs/src/services/engine/`, seguindo exatamente o
+mesmo padrão de código dos analisadores que já existem nessa pasta
+(`LiveTableUsageAnalyzer.ts` e `ToolCategoryAnalyzer.ts` são as referências de
+estilo: classe simples, comentário de cabeçalho em português explicando o
+propósito, nunca lança exceção, sempre retorna array vazio como fallback seguro).
+
+## Objetivo
+
+Detectar possíveis tabelas duplicadas ou obsoletas no banco de dados **do
+projeto analisado** (nicemp.com), cruzando dados que a ferramenta já coleta:
+
+- `LiveSupabaseIntrospector` já lê o schema real via `information_schema`
+  (nomes de tabela + colunas + tipos).
+- `LiveTableUsageAnalyzer` já sabe, por tabela, quais páginas/componentes/APIs
+  do código referenciam ela via `.from('nome_da_tabela')`.
+
+Não crie um novo pipeline de coleta — reutilize o que os dois analisadores
+acima já produzem. O `DuplicateTableAnalyzer` só recebe esses dois resultados
+como entrada e cruza os dados.
+
+## Regras de detecção (cada uma gera um "alerta" separado, com tipo próprio)
+
+1. **Nome parecido** — duas tabelas cujo nome normalizado (minúsculo, sem
+   acento, singular/plural equivalente, ignorando sufixos como `_old`, `_bak`,
+   `_backup`, `_v2`, `_copy`, `_temp`) bate ou é muito similar (distância de
+   Levenshtein baixa). Ex.: `usuario` / `usuarios`, `tools` / `ferramentas_bak`.
+2. **Estrutura quase idêntica** — duas tabelas com 80% ou mais das colunas
+   iguais (mesmo nome + mesmo tipo), independente do nome da tabela.
+3. **Tabela órfã (sem uso)** — existe no banco mas tem **zero** ocorrências no
+   `LiveTableUsageAnalyzer` (nenhuma página/componente/API a referencia).
+4. **Tabela fantasma (referenciada mas não existe)** — o código faz
+   `.from('nome')` para uma tabela que **não aparece** no schema retornado pelo
+   `LiveSupabaseIntrospector`. Isso é um alerta de severidade alta (erro
+   silencioso em produção).
+
+Cada alerta deve ter: tipo (`similar_name` | `similar_structure` | `orphan` |
+`ghost`), as tabelas envolvidas, uma explicação curta em português do motivo, e
+uma severidade (`alta` para `ghost`, `media` para as outras três).
+
+## Onde exibir (reaproveitar a UI existente, não criar página nova)
+
+Na página `artifacts/nicemp-docs/src/app/pages/Database/index.tsx`, na aba
+"Live" que já existe: adicionar um card de alerta no topo (acima da lista de
+tabelas), no estilo do `InfoBox` variant `warning` que já é usado na mesma
+página, mostrando "⚠️ N possíveis duplicidades encontradas" com uma lista
+resumida. Ao clicar em um alerta, abrir um dialog comparando as tabelas
+envolvidas lado a lado — pode reaproveitar a estrutura do `TableDetailDialog`
+que já existe no mesmo arquivo, adaptando para mostrar duas tabelas.
+
+## Geração de prompt de limpeza (reaproveitar o padrão existente)
+
+Crie `DuplicateTableCleanupPromptGenerator.ts` em
+`artifacts/nicemp-docs/src/services/prompts/`, seguindo o mesmo estilo de
+`EditSupabaseTablePromptGenerator.ts` (comentário de cabeçalho, nunca inclui
+credenciais no texto gerado, seção de objetivo + seção de schema atual + seção
+de avisos). O prompt gerado deve:
+
+- Deixar claro que é uma operação **destrutiva** e pedir confirmação explícita
+  antes de qualquer DROP.
+- Sugerir os passos na ordem seguro: (1) conferir se os dados das duas tabelas
+  batem, (2) migrar as linhas da tabela considerada obsoleta para a tabela
+  "boa", (3) atualizar todo lugar no código que referencia a tabela antiga
+  (usar a lista de usages já coletada), (4) só então dropar a tabela antiga.
+- Nunca gerar e executar o DROP sozinho — o botão só **gera texto** para o
+  usuário colar manualmente no Replit Agent do projeto nicemp.com, exatamente
+  como já funciona hoje o `EditSupabaseTablePromptDialog`.
+
+Adicione um botão "Gerar prompt de limpeza" no dialog de comparação, que abre
+um dialog de preview do texto gerado (copiável), reaproveitando o componente
+de dialog de prompt que já existe para edição de tabela.
+
+## Persistência
+
+Não é necessário criar tabela nova no Supabase do NIcemp-doc para isso — o
+resultado do `DuplicateTableAnalyzer` pode ser recalculado sob demanda a
+partir dos dados já persistidos (schema + usages), sem precisar de
+`updated_at`/histórico próprio por enquanto.
+
+## Regras gerais do projeto (não quebrar)
+
+- `data` das tabelas do Supabase do NIcemp-doc nunca deve conter código-fonte
+  bruto — só metadados.
+- Nenhuma operação deve escrever no banco do projeto analisado (nicemp.com) —
+  tudo aqui é leitura (introspecção) + geração de texto.
+- Siga o padrão de comentários em português já usado em todo `services/engine/`
+  e `services/prompts/`.
+- Não crie uma nova página/rota para isso — é uma extensão da página Database
+  que já existe.
+
+Ao final, me mostre um resumo do que foi criado/alterado (arquivos novos e
+arquivos modificados) antes de eu revisar.
