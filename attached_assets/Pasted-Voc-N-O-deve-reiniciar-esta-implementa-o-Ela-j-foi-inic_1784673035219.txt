@@ -1,0 +1,322 @@
+Você NÃO deve reiniciar esta implementação.
+
+Ela já foi iniciada e ficou incompleta porque a execução foi interrompida por limite de créditos.
+
+Seu trabalho é continuar exatamente do ponto onde ela parou.
+
+IMPORTANTE
+
+Antes de alterar qualquer arquivo:
+
+Leia completamente tudo que já foi implementado.
+
+Principalmente:
+
+src/services/repositories/
+
+Leia:
+
+RepositoryFactory.ts
+GitHubProvider.ts
+ZipProvider.ts
+RepositoryProvider.ts (caso exista)
+types.ts
+
+Depois leia novamente:
+
+AnalyzerProvider.tsx
+
+runAnalysisPipeline.ts
+
+routes.tsx
+
+Descubra exatamente o que já está pronto.
+
+Não recrie nada.
+
+Não substitua código funcionando.
+
+Não apague nenhuma implementação.
+
+Continue somente o que ficou incompleto.
+
+PRIMEIRO PASSO
+
+Faça uma auditoria.
+
+Responda internamente:
+
+o que já foi implementado
+o que falta implementar
+onde existem TODOs
+onde existem funções incompletas
+onde existem imports quebrados
+onde existem erros TypeScript
+
+Somente depois comece a editar.
+
+NÃO recrie a arquitetura.
+
+Ela já existe.
+
+Utilize exatamente a arquitetura criada anteriormente.
+
+RepositoryFactory
+
+↓
+
+RepositoryProvider
+
+↓
+
+GitHubProvider
+
+↓
+
+ZipProvider
+
+↓
+
+Pipeline existente
+O objetivo agora NÃO é criar Providers.
+
+Eles já existem.
+
+O objetivo agora é finalizar a integração.
+
+ETAPA 1
+
+Finalizar o AnalyzerProvider.
+
+Ele deve conseguir iniciar análises tanto por:
+
+ZIP
+
+quanto por
+
+RepositoryProvider
+
+Sem duplicar lógica.
+
+ETAPA 2
+
+Criar o fluxo completo de análise.
+
+GitHub
+
+↓
+
+RepositoryProvider
+
+↓
+
+ProjectFile[]
+
+↓
+
+runAnalysisPipeline()
+
+↓
+
+Resultado existente
+
+Sem alterar os parsers.
+
+ETAPA 3
+
+Criar a tela Repository Import.
+
+Fluxo:
+
+Escolha origem
+
+( ) ZIP
+
+( ) GitHub
+
+Quando GitHub estiver selecionado:
+
+Mostrar:
+
+Conectar GitHub
+
+Após autenticação:
+
+Lista de Repositórios
+
+↓
+
+Lista de Branches
+
+↓
+
+Selecionar
+
+↓
+
+Analisar
+ETAPA 4
+
+Implementar OAuth GitHub corretamente.
+
+Utilizar OAuth oficial.
+
+Não criar autenticação manual.
+
+Não armazenar token em local inseguro.
+
+ETAPA 5
+
+Listar:
+
+organizações
+repositórios
+branch padrão
+última atualização
+linguagem principal
+privado/público
+ETAPA 6
+
+Ao selecionar um repositório.
+
+Baixar utilizando API do GitHub.
+
+Não utilizar git clone.
+
+Converter tudo para:
+
+ProjectFile[]
+
+Utilizando exatamente o formato já usado pelo Upload ZIP.
+
+ETAPA 7
+
+Garantir que:
+
+ZIP
+
+↓
+
+ProjectFile[]
+
+↓
+
+Pipeline
+
+e
+
+GitHub
+
+↓
+
+ProjectFile[]
+
+↓
+
+Mesmo Pipeline
+
+Utilizem exatamente o mesmo fluxo.
+
+Nenhum parser pode saber de onde veio o projeto.
+
+ETAPA 8
+
+Corrigir todos os erros TypeScript.
+
+Não utilizar any.
+
+Não remover tipagem.
+
+ETAPA 9
+
+Executar build completo.
+
+Corrigir:
+
+imports
+tipos
+lint
+navegação
+rotas
+ETAPA 10
+
+Criar testes manuais para:
+
+✔ projeto React
+
+✔ projeto Next
+
+✔ monorepo
+
+✔ branch alternativa
+
+✔ repositório privado
+
+✔ repositório público
+
+ETAPA 11
+
+Adicionar tratamento de erros.
+
+Mensagens claras para:
+
+token expirado
+sem permissão
+branch inexistente
+commit inexistente
+limite GitHub
+falha de download
+ETAPA 12
+
+Não modificar:
+
+TechnologyAnalyzer
+
+DescriptionAnalyzer
+
+InteractionAnalyzer
+
+IntegrationAnalyzer
+
+Eles já funcionam.
+
+Esta tarefa é apenas concluir o Repository Connector.
+
+ETAPA 13
+
+Antes de finalizar:
+
+Faça uma revisão completa.
+
+Remova:
+
+código morto
+imports não usados
+duplicações
+TODOs esquecidos
+ETAPA 14
+
+No final entregue um relatório contendo:
+
+arquivos alterados
+arquivos criados
+erros encontrados
+erros corrigidos
+pendências restantes
+funcionalidades implementadas
+funcionalidades ainda não implementadas
+REGRA MAIS IMPORTANTE
+
+NÃO reinicie esta implementação.
+
+NÃO recrie código já existente.
+
+NÃO altere arquitetura pronta.
+
+Continue exatamente do ponto onde a implementação foi interrompida.
+
+Primeiro leia.
+
+Depois continue.
+
+Somente depois refatore.
