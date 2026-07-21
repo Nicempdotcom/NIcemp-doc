@@ -9,3 +9,5 @@ export type { CmsCategory } from './CmsCategoryRepository';
 export { TableUsageRepository } from './TableUsageRepository';
 export { AnnotationRepository } from './AnnotationRepository';
 export type { AnnotationEntity } from './AnnotationRepository';
+export { ProjectSnapshotRepository } from './ProjectSnapshotRepository';
+export { ProjectChangesRepository } from './ProjectChangesRepository';

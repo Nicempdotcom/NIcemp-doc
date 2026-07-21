@@ -37,6 +37,8 @@ const TABLE_NAME: Record<StoreKey, string> = {
   toolCategories:   'tool_categories',
   tableUsages:      'table_usages',
   annotations:      'annotations',
+  projectSnapshots: 'project_snapshots',
+  projectChanges:   'project_changes',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

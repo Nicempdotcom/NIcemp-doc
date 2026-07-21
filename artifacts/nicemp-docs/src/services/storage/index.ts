@@ -21,6 +21,8 @@ export {
   CmsCategoryRepository,
   TableUsageRepository,
   AnnotationRepository,
+  ProjectSnapshotRepository,
+  ProjectChangesRepository,
 } from './repositories';
 export type { CmsCategory } from './repositories';
 export type { AnnotationEntity } from './repositories';

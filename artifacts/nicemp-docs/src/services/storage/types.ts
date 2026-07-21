@@ -47,7 +47,9 @@ export type StoreKey =
   | 'importEdges'
   | 'toolCategories'
   | 'tableUsages'
-  | 'annotations';
+  | 'annotations'
+  | 'projectSnapshots'
+  | 'projectChanges';
 
 /** Maps StoreKey → the logical JSON filename it corresponds to. */
 export const STORE_FILE_NAMES: Record<StoreKey, string> = {
@@ -67,6 +69,8 @@ export const STORE_FILE_NAMES: Record<StoreKey, string> = {
   toolCategories:   'tool-categories.json',
   tableUsages:      'table-usages.json',
   annotations:      'annotations.json',
+  projectSnapshots: 'project-snapshots.json',
+  projectChanges:   'project-changes.json',
 };
 
 // ─── Base entity ──────────────────────────────────────────────────────────────
@@ -373,6 +377,81 @@ export interface TableUsageEntity {
   tableName: string;
   usages:    TableUsageEntryRecord[];
   createdAt: string;
+}
+
+// ─── Evolution Engine — Snapshot & Change types ───────────────────────────────
+
+/** Lightweight fingerprint of a single file at snapshot time. */
+export interface FileSnapshotEntry {
+  /** File path inside the ZIP / project root. */
+  path:     string;
+  /** Uncompressed size in bytes. */
+  size:     number;
+  /** FileCategory label (e.g. 'page', 'component', 'hook', …). */
+  category: string;
+  /** djb2 hash of path+size+content-prefix — detects changes without storing code. */
+  hash:     string;
+}
+
+/**
+ * A complete structural fingerprint of a project at the time of one analysis run.
+ * Stored in the `projectSnapshots` store.
+ */
+export interface ProjectSnapshotEntity {
+  /** Stable id: `evolution-snapshot:{projectId}:{versionId}` */
+  id:                 string;
+  projectId:          string;
+  versionId:          string;
+  /** ISO timestamp of when this snapshot was created. */
+  createdAt:          string;
+  /** Total number of files in the snapshot. */
+  fileCount:          number;
+  /** Total uncompressed size of all files in bytes. */
+  totalSize:          number;
+  /** 0–100 architectural quality score computed at analysis time. */
+  architecturalScore: number;
+  /** One-sentence human-readable summary of the snapshot. */
+  summary:            string;
+  /** Per-file fingerprints used by the Diff Engine. */
+  files:              FileSnapshotEntry[];
+}
+
+/** Whether a file was added, removed, or modified between two snapshots. */
+export type ChangeKind = 'added' | 'removed' | 'modified';
+
+/** A single file-level change detected by the Diff Engine. */
+export interface ProjectChangeEntry {
+  path:       string;
+  kind:       ChangeKind;
+  category:   string;
+  module:     string;
+  /** Size difference in bytes (positive = grew, negative = shrank). */
+  sizeDelta:  number;
+}
+
+/**
+ * The result of diffing two consecutive snapshots.
+ * Stored in the `projectChanges` store.
+ */
+export interface ProjectChangeEntity {
+  /** Stable id: `evolution-change:{projectId}:{fromVersionId}:{toVersionId}` */
+  id:              string;
+  projectId:       string;
+  fromVersionId:   string;
+  toVersionId:     string;
+  fromSnapshotId:  string;
+  toSnapshotId:    string;
+  createdAt:       string;
+  /** Count of files added in this diff. */
+  added:           number;
+  /** Count of files removed in this diff. */
+  removed:         number;
+  /** Count of files modified in this diff. */
+  modified:        number;
+  /** Top-level module names that had at least one change. */
+  impactedModules: string[];
+  /** Full list of per-file changes. */
+  changes:         ProjectChangeEntry[];
 }
 
 // ─── Union type ───────────────────────────────────────────────────────────────

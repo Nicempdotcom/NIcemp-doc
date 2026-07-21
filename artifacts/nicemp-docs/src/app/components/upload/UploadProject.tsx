@@ -15,6 +15,7 @@ import {
   HistoryRepository,
   ToolCategoryRepository,
 } from '@/services/storage';
+import { EvolutionEngine } from '@/services/evolution/EvolutionEngine';
 import type { ToolCategoryEntity } from '@/services/storage';
 import { VersionComparator, type VersionComparisonResult } from '@/services/comparison';
 import FileDropZone       from './FileDropZone';
@@ -245,6 +246,16 @@ export default function UploadProject() {
 
         if (previousSnapshot) {
           setComparison(VersionComparator.compare(previousSnapshot, newSnapshot));
+        }
+
+        // ── Evolution Engine (decoupled) ────────────────────────────────────
+        // Runs after all documentation entities are persisted.
+        // Creates a ProjectSnapshot + optional diff vs. previous analysis.
+        try {
+          EvolutionEngine.run(projectMap, projectId, entities.version.id);
+        } catch (evolErr) {
+          // Non-fatal — evolution data is supplemental, never blocks the save.
+          console.warn('[EvolutionEngine] Snapshot failed:', evolErr);
         }
 
         setSavedCounts({
