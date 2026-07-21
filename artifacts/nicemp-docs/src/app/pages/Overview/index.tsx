@@ -22,6 +22,8 @@ import {
 
 import DiagramNode from './DiagramNode';
 import ModuleGroupNode from './ModuleGroupNode';
+import RootNode from './RootNode';
+import SectionNode from './SectionNode';
 import { buildSimpleFlow } from './buildSimpleFlow';
 import { buildNavigationFlow } from './buildNavigationFlow';
 import { buildArchitectureFlow } from './buildArchitectureFlow';
@@ -30,6 +32,8 @@ import { ViewModeContext, type ViewMode } from './diagramUtils';
 const nodeTypes: NodeTypes = {
   diagram:     DiagramNode,
   moduleGroup: ModuleGroupNode,
+  root:        RootNode    as NodeTypes[string],
+  section:     SectionNode as NodeTypes[string],
 };
 
 const ALL_MODULES = '__all__';
@@ -65,10 +69,10 @@ export default function Overview() {
   const [selectedModule, setSelectedModule] = useState<string>(ALL_MODULES);
   const [viewMode, setViewMode] = useState<ViewMode>('simple');
 
-  // Simple view flow — all pages, grouped by module, dagre layout
+  // Simple view flow — hierarchical tree: root → sections → pages
   const simpleFlow = useMemo(
-    () => buildSimpleFlow(pages, interactions, selectedModule),
-    [pages, interactions, selectedModule],
+    () => buildSimpleFlow(pages, interactions, selectedModule, project?.name ?? 'App'),
+    [pages, interactions, selectedModule, project],
   );
 
   const filteredNavigation   = useMemo(() => filterFlow(navigationFlow,   selectedModule), [navigationFlow,   selectedModule]);
