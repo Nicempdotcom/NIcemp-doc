@@ -21,6 +21,7 @@ import { DependencyAnalyzer }      from './DependencyAnalyzer';
 import { TechnologyAnalyzer }      from './TechnologyAnalyzer';
 import { InteractionAnalyzer }     from './InteractionAnalyzer';
 import { ToolCategoryAnalyzer }    from './ToolCategoryAnalyzer';
+import { IntegrationAnalyzer }     from './IntegrationAnalyzer';
 import { LiveTableUsageAnalyzer }  from './LiveTableUsageAnalyzer';
 import { TableUsageRepository }    from '@/services/storage/repositories/TableUsageRepository';
 import type { TableUsageEntity }   from '@/services/storage/types';
@@ -97,6 +98,7 @@ export class ProjectAnalyzer {
   private technology    = new TechnologyAnalyzer();
   private interaction   = new InteractionAnalyzer();
   private toolCategory  = new ToolCategoryAnalyzer();
+  private integration   = new IntegrationAnalyzer();
   private tableUsage    = new LiveTableUsageAnalyzer();
 
   /**
@@ -131,11 +133,14 @@ export class ProjectAnalyzer {
     // ── Phase 4.6: Tool categories (ToolCategoryAnalyzer) ─────────────────
     const toolCategories = this.toolCategory.analyze(files);
 
-    // ── Phase 4.7: Table usages (LiveTableUsageAnalyzer) ──────────────────
+    // ── Phase 4.7: Integration detection (IntegrationAnalyzer) ────────────
+    const integrations = this.integration.analyze(files, dependencies);
+
+    // ── Phase 4.8: Table usages (LiveTableUsageAnalyzer) ──────────────────
     const tableUsageRaw = this.tableUsage.analyze(categorized);
 
     // ── Phase 5: Assemble (95–100%) ──────────────────────────────────────
-    const partial = { files: categorized, tree, dependencies, technology, interactions, integrations: [] as import('./types').DetectedIntegration[], toolCategories };
+    const partial = { files: categorized, tree, dependencies, technology, interactions, integrations, toolCategories };
     const rootName = detectRootName(partial);
     const stats    = buildStats({ ...partial, rootName });
 
@@ -148,7 +153,7 @@ export class ProjectAnalyzer {
       dependencies,
       technology,
       interactions,
-      integrations: [],   // populated by runAnalysisPipeline (Worker path)
+      integrations,
       toolCategories,
       stats,
     };

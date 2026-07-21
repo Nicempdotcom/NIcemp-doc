@@ -11,3 +11,4 @@ export { AnnotationRepository } from './AnnotationRepository';
 export type { AnnotationEntity } from './AnnotationRepository';
 export { ProjectSnapshotRepository } from './ProjectSnapshotRepository';
 export { ProjectChangesRepository } from './ProjectChangesRepository';
+export { IntegrationRepository } from './IntegrationRepository';

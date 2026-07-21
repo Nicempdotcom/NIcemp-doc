@@ -45,6 +45,7 @@ export type StoreKey =
   | 'history'
   | 'interactions'
   | 'importEdges'
+  | 'integrations'
   | 'toolCategories'
   | 'tableUsages'
   | 'annotations'
@@ -66,6 +67,7 @@ export const STORE_FILE_NAMES: Record<StoreKey, string> = {
   history:          'history.json',
   interactions:     'interactions.json',
   importEdges:      'import-edges.json',
+  integrations:     'integrations.json',
   toolCategories:   'tool-categories.json',
   tableUsages:      'table-usages.json',
   annotations:      'annotations.json',
@@ -342,6 +344,48 @@ export interface VersionSnapshotEntity {
   tables:     EntitySummary[];
 }
 
+// ─── Integration (IntegrationAnalyzer) ───────────────────────────────────────
+//
+// Persisted per-project record of an external service integration detected from
+// package.json dependencies, source imports, and env-var references.
+// Mirrors the DetectedIntegration shape from the engine with added storage fields.
+
+export type IntegrationCategory =
+  | 'payments'
+  | 'database'
+  | 'auth'
+  | 'storage'
+  | 'email'
+  | 'ai'
+  | 'analytics'
+  | 'monitoring'
+  | 'messaging'
+  | 'graphql'
+  | 'state'
+  | 'other';
+
+export interface IntegrationEntity {
+  /** Stable id: `integration:{projectId}:{packageName}` */
+  id:              string;
+  projectId:       string;
+  kind:            'integration';
+  /** Human-readable service name, e.g. "Stripe", "Supabase" */
+  name:            string;
+  category:        IntegrationCategory;
+  confidence:      'high' | 'medium' | 'low';
+  /** Installed version from package.json, if available */
+  version:         string;
+  /** Primary npm package that triggered detection */
+  packageName:     string;
+  /** File paths inside the project that import this package */
+  usedInFiles:     string[];
+  /** Env var names actually found in source code */
+  detectedEnvVars: string[];
+  /** Env vars this service typically requires (informational) */
+  expectedEnvVars: string[];
+  createdAt:       string;
+}
+
 // ─── Tool Category ────────────────────────────────────────────────────────────
 //
 // Represents a distinct tool/calculator category detected from an allTools
@@ -467,5 +511,6 @@ export type AnyDocEntity =
   | DependencyEntity
   | TechnologyEntity
   | InteractionEntity
+  | IntegrationEntity
   | ToolCategoryEntity
   | TableUsageEntity;

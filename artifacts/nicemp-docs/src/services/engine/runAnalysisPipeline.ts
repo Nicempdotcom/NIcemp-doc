@@ -17,7 +17,7 @@ import { TechnologyAnalyzer }   from './TechnologyAnalyzer';
 import { InteractionAnalyzer }  from './InteractionAnalyzer';
 import { ToolCategoryAnalyzer } from './ToolCategoryAnalyzer';
 import { IntegrationAnalyzer }  from './IntegrationAnalyzer';
-import type { ScannedFile, ProjectMap } from './types';
+import type { ScannedFile, ProjectMap, FileCategory } from './types';
 import { isExcludedPath } from './pathExclusions';
 
 // ─── Live counts (kept in sync with src/workers/types.ts) ─────────────────────
@@ -168,7 +168,8 @@ export async function runAnalysisPipeline(
       const dotIdx    = name.lastIndexOf('.');
       const ext       = dotIdx >= 0 ? name.slice(dotIdx).toLowerCase() : '';
       const isBinary  = BINARY_EXT.has(ext);
-      const size: number = (zipObj as any)._data?.uncompressedSize ?? 0;
+      const zipData = (zipObj as { _data?: { uncompressedSize?: number } })._data;
+      const size: number = zipData?.uncompressedSize ?? 0;
 
       let content = '';
       if (!isBinary) {
@@ -211,45 +212,48 @@ export async function runAnalysisPipeline(
   counts.apis       = categorized.filter((f) => f.category === 'api').length;
   counts.tables     = categorized.filter((f) => f.category === 'database').length;
 
-  // ── 2.5. Description generation (DescriptionAnalyzer) ───────────────────────
-  // Runs immediately after categorisation so every subsequent step (mapper,
-  // prompts, etc.) can read the plain-Portuguese description from the file.
-  const descriptionAnalyzer = new DescriptionAnalyzer();
-  const descriptions = descriptionAnalyzer.analyze(categorized);
-  for (const f of categorized) {
-    const d = descriptions.get(f.path);
-    if (d) f.description = d;
-  }
-
   checkCancelled();
-  onProgress(70, 'Identificando páginas, componentes e hooks…', { ...counts });
-  await tick();
-
-  // ── 3.5 Interactions — "o que este botão/tela faz" (EPIC 10) ──────────────
-  onProgress(73, 'Analisando cliques e interações...', { ...counts });
-  const interactionAnalyzer = new InteractionAnalyzer();
-  const interactions = interactionAnalyzer.analyze(categorized);
-  checkCancelled();
+  onProgress(65, 'Identificando páginas, componentes e hooks…', { ...counts });
   await tick();
 
   // ── 4. Dependency map ──────────────────────────────────────────────────────
-  onProgress(76, 'Construindo mapa de dependências...', { ...counts });
+  onProgress(68, 'Construindo mapa de dependências...', { ...counts });
   const depAnalyzer  = new DependencyAnalyzer();
   const dependencies = depAnalyzer.analyze(scanned);
   checkCancelled();
   await tick();
 
   // ── 5. Technology stack ─────────────────────────────────────────────────────
-  onProgress(86, 'Detectando tecnologias e frameworks...', { ...counts });
+  onProgress(74, 'Detectando tecnologias e frameworks...', { ...counts });
   const techAnalyzer = new TechnologyAnalyzer();
   const technology   = techAnalyzer.analyze(scanned, dependencies);
+  checkCancelled();
+  await tick();
+
+  // ── 5.5 Interactions — "o que este botão/tela faz" (EPIC 10) ──────────────
+  onProgress(79, 'Analisando cliques e interações...', { ...counts });
+  const interactionAnalyzer = new InteractionAnalyzer();
+  const interactions = interactionAnalyzer.analyze(categorized);
+  checkCancelled();
+  await tick();
+
+  // ── 5.6. Description generation (DescriptionAnalyzer) ────────────────────
+  // Runs after categorisation + interactions so every subsequent step (mapper,
+  // prompts, etc.) can read the plain-Portuguese description from the file.
+  onProgress(83, 'Gerando descrições dos arquivos...', { ...counts });
+  const descriptionAnalyzer = new DescriptionAnalyzer();
+  const descriptions = descriptionAnalyzer.analyze(categorized);
+  for (const f of categorized) {
+    const d = descriptions.get(f.path);
+    if (d) f.description = d;
+  }
   checkCancelled();
   await tick();
 
   // ── 6. Assemble ProjectMap ───────────────────────────────────────────────────
   onProgress(93, 'Gerando mapa do projeto...', { ...counts });
 
-  const byCategory: Record<string, number> = {};
+  const byCategory = {} as Partial<Record<FileCategory, number>>;
   const byExtension: Record<string, number> = {};
   let   maxDepth = 0;
 
@@ -268,7 +272,7 @@ export async function runAnalysisPipeline(
     totalFiles:     scanned.length,
     totalDirs:      allEntries.filter(([, f]) => f.dir).length,
     totalSizeBytes: scanned.reduce((s, f) => s + f.size, 0),
-    byCategory:     byCategory as any,
+    byCategory:     byCategory as Record<FileCategory, number>,
     byExtension,
     maxDepth,
   };

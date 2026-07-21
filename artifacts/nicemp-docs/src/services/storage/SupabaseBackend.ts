@@ -34,6 +34,7 @@ const TABLE_NAME: Record<StoreKey, string> = {
   history:          'history',
   interactions:     'interactions',
   importEdges:      'import_edges',
+  integrations:     'integrations',
   toolCategories:   'tool_categories',
   tableUsages:      'table_usages',
   annotations:      'annotations',

@@ -14,6 +14,7 @@ import {
   DocumentationRepository,
   HistoryRepository,
   ToolCategoryRepository,
+  IntegrationRepository,
 } from '@/services/storage';
 import { EvolutionEngine } from '@/services/evolution/EvolutionEngine';
 import type { ToolCategoryEntity } from '@/services/storage';
@@ -240,6 +241,9 @@ export default function UploadProject() {
           }));
           ToolCategoryRepository.saveForProject(projectId, toolCategoryEntities);
         }
+
+        // Persist integrations detected by IntegrationAnalyzer.
+        IntegrationRepository.saveForProject(projectId, entities.integrations);
 
         const newSnapshot = buildVersionSnapshot(projectId, entities.version.id, entities);
         VersionSnapshotRepository.save(newSnapshot);

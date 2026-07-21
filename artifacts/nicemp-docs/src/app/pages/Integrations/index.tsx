@@ -2,9 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Plug, CheckCircle2, AlertCircle, FileCode2, Key, ChevronDown, ChevronRight } from 'lucide-react';
 import PageHeader from '@/app/layouts/PageHeader';
 import InfoBox from '@/app/components/docs/InfoBox';
-import { Badge } from '@/app/components/ui/badge';
-import { ProjectRepository } from '@/services/storage';
-import type { DetectedIntegration, IntegrationCategory } from '@/services/engine/types';
+import { ProjectRepository, IntegrationRepository } from '@/services/storage';
+import type { IntegrationEntity, IntegrationCategory } from '@/services/storage';
 import { INTEGRATION_CATEGORY_LABELS } from '@/services/engine/types';
 
 // ─── Category badge colors ────────────────────────────────────────────────────
@@ -26,7 +25,7 @@ const CATEGORY_COLORS: Record<IntegrationCategory, string> = {
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ integration }: { integration: DetectedIntegration }) {
+function IntegrationCard({ integration }: { integration: IntegrationEntity }) {
   const [expanded, setExpanded] = useState(false);
   const hasFiles = integration.usedInFiles.length > 0;
   const hasEnvDetected = integration.detectedEnvVars.length > 0;
@@ -172,10 +171,10 @@ export default function Integrations() {
 
   const project = useMemo(() => ProjectRepository.findLatest(), []);
 
-  // Integrations are stored in the projectMap inside the project entity
-  const integrations: DetectedIntegration[] = useMemo(() => {
+  // Load integrations from IntegrationRepository, scoped to the latest project
+  const integrations: IntegrationEntity[] = useMemo(() => {
     if (!project) return [];
-    return (project as any).integrations ?? [];
+    return IntegrationRepository.findByProject(project.id);
   }, [project]);
 
   const filtered = useMemo(() => {
@@ -266,7 +265,7 @@ export default function Integrations() {
           {/* Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {filtered.map((integration) => (
-              <IntegrationCard key={integration.packageName} integration={integration} />
+              <IntegrationCard key={integration.id} integration={integration} />
             ))}
           </div>
         </>

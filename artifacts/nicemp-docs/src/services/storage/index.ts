@@ -23,6 +23,7 @@ export {
   AnnotationRepository,
   ProjectSnapshotRepository,
   ProjectChangesRepository,
+  IntegrationRepository,
 } from './repositories';
 export type { CmsCategory } from './repositories';
 export type { AnnotationEntity } from './repositories';
