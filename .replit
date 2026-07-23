@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "NicEmp Docs"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Server"
+
 [[workflows.workflow]]
 name = "NicEmp Docs"
 author = "agent"
@@ -27,6 +31,14 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/nicemp-docs run dev"
+
+[[workflows.workflow]]
+name = "API Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "API_PORT=3001 pnpm --filter @workspace/api-server run dev"
 
 [agent]
 stack = "PNPM_WORKSPACE"

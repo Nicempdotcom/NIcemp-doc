@@ -1,0 +1,17 @@
+Estou com um bug no fluxo de GitHub Device Flow: o frontend chama fetch('/api/github/device/code') e recebe "Unexpected end of JSON input" ao tentar fazer res.json().
+
+Causa raiz identificada: o workflow do Replit (.replit) só inicia o processo do frontend (pnpm --filter @workspace/nicemp-docs run dev), mas nunca inicia o processo do artifacts/api-server (onde estão as rotas /api/github/device/code e /api/github/device/token e onde ficam GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET). Além disso, o vite.config.ts do frontend (artifacts/nicemp-docs) não tem nenhum proxy configurado para /api apontando para o api-server, então mesmo com o backend rodando em outra porta as chamadas do frontend não chegam até ele em modo dev.
+
+Por favor, faça o seguinte:
+
+1. Adicione o processo do api-server ao workflow do Replit (.replit), rodando em paralelo com o frontend, cada um em sua própria porta (ex: frontend na porta padrão do Replit via PORT, api-server em outra porta fixa, ex: 3001, via variável de ambiente própria como API_PORT).
+
+2. Configure um proxy no vite.config.ts do artifacts/nicemp-docs para redirecionar todas as chamadas de "/api" para o servidor do api-server durante o desenvolvimento (server.proxy no Vite), usando a porta em que o api-server estiver escutando.
+
+3. Garanta que em produção (build/deploy) as rotas /api também sejam roteadas corretamente para o api-server (verifique se é necessário servir o frontend estático a partir do próprio api-server, ou configurar o roteamento do Replit Deployments para múltiplos serviços).
+
+4. Confirme que as variáveis de ambiente GITHUB_CLIENT_ID e GITHUB_CLIENT_SECRET estão configuradas como Secrets do Replit e acessíveis pelo processo do api-server.
+
+5. Depois de corrigir, teste o fluxo completo: clicar em "Conectar com GitHub" deve chamar POST /api/github/device/code, receber o device_code/user_code do GitHub, exibir o código para o usuário, e o polling em /api/github/device/token deve funcionar até retornar o access_token.
+
+Não altere a lógica de negócio existente em artifacts/api-server/src/routes/github.ts nem em artifacts/nicemp-docs/src/services/repositories/GitHubProvider.ts — o problema é de configuração/infraestrutura (processos e proxy), não de lógica.
