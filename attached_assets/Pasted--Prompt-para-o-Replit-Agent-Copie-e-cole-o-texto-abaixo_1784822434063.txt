@@ -1,0 +1,30 @@
+# Prompt para o Replit Agent
+
+Copie e cole o texto abaixo no chat do Replit Agent do seu projeto NicEmp Docs.
+
+---
+
+**AÇÃO PRIORITÁRIA DE SEGURANÇA:** o arquivo `.env.local` na raiz do projeto contém `VITE_GITHUB_CLIENT_ID` e `VITE_GITHUB_CLIENT_SECRET`. Isso está errado por dois motivos: (1) qualquer variável com prefixo `VITE_` é embutida no bundle JavaScript público, expondo o Client Secret no navegador de qualquer visitante; (2) esse arquivo não está no `.gitignore`, então pode ter sido commitado. Já gerei um novo Client Secret no GitHub (o antigo foi revogado). Faça o seguinte:
+
+1. Delete as linhas `VITE_GITHUB_CLIENT_ID` e `VITE_GITHUB_CLIENT_SECRET` do `.env.local`.
+2. Adicione `.env.local` ao `.gitignore`.
+3. Verifique com `git log --all --full-history -- .env.local` se esse arquivo já foi commitado alguma vez; se sim, me avise antes de continuar, pois vamos precisar limpar o histórico do Git.
+4. Configure duas novas Secrets do Replit (variáveis de ambiente do servidor, SEM prefixo VITE_): `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET`. Vou fornecer os valores manualmente no painel de Secrets do Replit — não escreva os valores reais em nenhum arquivo do repositório.
+
+**IMPLEMENTAÇÃO — mover o Device Flow do GitHub para o backend (`artifacts/api-server`):**
+
+O fluxo de autenticação Device Flow do GitHub hoje é feito inteiramente no frontend (`artifacts/nicemp-docs/src/services/repositories/GitHubProvider.ts`, funções `initiateDeviceFlow` e `pollDeviceFlow`), chamando `https://github.com/login/device/code` e `https://github.com/login/oauth/access_token` diretamente do navegador. Isso não funciona de forma confiável (CORS) e obrigaria expor o Client Secret no frontend. Precisamos migrar essas duas chamadas para o backend Express existente em `artifacts/api-server`.
+
+1. Crie um novo arquivo de rotas `artifacts/api-server/src/routes/github.ts` com duas rotas:
+   - `POST /github/device/code`: lê `GITHUB_CLIENT_ID` de `process.env`, faz um POST para `https://github.com/login/device/code` com `Accept: application/json` e body `{ client_id, scope: "repo read:user" }`, e repassa a resposta (`device_code`, `user_code`, `verification_uri`, `expires_in`, `interval`) para o cliente em JSON. Se `GITHUB_CLIENT_ID` não estiver definido, responda 500 com uma mensagem clara de configuração ausente.
+   - `POST /github/device/token`: recebe `{ device_code }` no body, lê `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` de `process.env`, faz um POST para `https://github.com/login/oauth/access_token` com `Accept: application/json` e body `{ client_id, client_secret, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }`, e repassa a resposta (`access_token` ou `error`/`error_description`) para o cliente em JSON, sem nunca logar o `access_token` ou o `client_secret` no console/log do servidor.
+2. Registre esse router em `artifacts/api-server/src/routes/index.ts` (mesmo padrão do `healthRouter`).
+3. No frontend, edite `artifacts/nicemp-docs/src/services/repositories/GitHubProvider.ts`:
+   - Substitua o corpo de `initiateDeviceFlow()` para chamar `POST /api/github/device/code` no backend da aplicação (use a mesma configuração de base URL/client já usada pelo restante do app para falar com a API, seguindo o padrão de `lib/api-client-react/src/custom-fetch.ts` / `setBaseUrl`), em vez de chamar `github.com` diretamente.
+   - Substitua o corpo de `pollDeviceFlow()` para chamar `POST /api/github/device/token` repetidamente no intervalo indicado (`interval`), tratando `authorization_pending`, `slow_down` e `expired_token` exatamente como hoje, só que a chamada HTTP vai para o nosso backend em vez de para o GitHub.
+   - Remova completamente as referências a `import.meta.env.VITE_GITHUB_CLIENT_ID`.
+4. Atualize o comentário de cabeçalho do arquivo removendo a menção a "sem backend" e mencione que a troca do código passa pelo `api-server`.
+5. Não altere o comportamento de armazenamento do token de acesso do usuário: ele deve continuar guardado apenas na sessão do navegador (como hoje via `GitHubSession`), nunca persistido no backend ou em banco de dados.
+6. Rode o typecheck (`pnpm run typecheck`) e me avise se algo quebrar.
+
+Ao final, quero poder clicar em "Conectar com GitHub" na tela "Importar do GitHub" e completar o fluxo de Device Flow normalmente, sem o erro "GitHub OAuth App não configurado".

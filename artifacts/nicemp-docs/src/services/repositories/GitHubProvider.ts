@@ -5,9 +5,10 @@
  * Uses Personal Access Tokens (PAT) or OAuth tokens — both work identically
  * with this implementation.
  *
- * Designed to be extended for GitHub Device Flow OAuth:
- * set VITE_GITHUB_CLIENT_ID in the environment and call initiateDeviceFlow() /
- * pollDeviceFlow() to exchange a device code for an access token.
+ * Supports GitHub Device Flow OAuth: call initiateDeviceFlow() to start the
+ * handshake, then pollDeviceFlow() to exchange the device code for an access
+ * token. Both functions proxy through the api-server backend, keeping
+ * GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET out of the browser bundle.
  *
  * Extensible for GitLab/Bitbucket/Azure DevOps without modifying the pipeline.
  */
@@ -354,9 +355,12 @@ export class GitHubProvider implements RepositoryProvider {
   }
 }
 
-// ─── GitHub Device Flow (optional — requires VITE_GITHUB_CLIENT_ID) ──────────
-// When a client_id is configured, initiateDeviceFlow() starts the OAuth handshake.
-// The user visits a URL and enters a code; pollDeviceFlow() returns the token.
+// ─── GitHub Device Flow (via api-server) ─────────────────────────────────────
+// initiateDeviceFlow() and pollDeviceFlow() call the backend api-server routes
+// (/api/github/device/code and /api/github/device/token) so that OAuth
+// credentials (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) never leave the server.
+// The resulting access token is stored in the browser session only — it is
+// never sent to or persisted by the backend.
 
 export interface DeviceFlowStart {
   deviceCode:      string;
@@ -367,35 +371,32 @@ export interface DeviceFlowStart {
 }
 
 export async function initiateDeviceFlow(): Promise<DeviceFlowStart> {
-  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID as string | undefined;
-  if (!clientId) {
-    throw new RepositoryError(
-      'GitHub OAuth App não configurado. Defina VITE_GITHUB_CLIENT_ID.',
-      'TOKEN_INVALID',
-    );
-  }
-
-  const res = await fetch('https://github.com/login/device/code', {
+  const res = await fetch('/api/github/device/code', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ client_id: clientId, scope: 'repo read:user' }),
   });
-  if (!res.ok) throw new RepositoryError('Falha ao iniciar autenticação OAuth.', 'UNKNOWN');
 
   const data = await res.json() as {
-    device_code: string;
-    user_code:   string;
-    verification_uri: string;
-    expires_in:  number;
-    interval:    number;
+    device_code?:      string;
+    user_code?:        string;
+    verification_uri?: string;
+    expires_in?:       number;
+    interval?:         number;
+    error?:            string;
+    error_description?: string;
   };
 
+  if (!res.ok || data.error) {
+    const msg = data.error_description ?? data.error ?? 'Falha ao iniciar autenticação OAuth.';
+    throw new RepositoryError(msg, 'TOKEN_INVALID');
+  }
+
   return {
-    deviceCode:      data.device_code,
-    userCode:        data.user_code,
-    verificationUrl: data.verification_uri,
-    expiresIn:       data.expires_in,
-    interval:        data.interval,
+    deviceCode:      data.device_code!,
+    userCode:        data.user_code!,
+    verificationUrl: data.verification_uri!,
+    expiresIn:       data.expires_in!,
+    interval:        data.interval!,
   };
 }
 
@@ -403,20 +404,13 @@ export async function pollDeviceFlow(
   deviceCode: string,
   interval:   number,
 ): Promise<string> {
-  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID as string | undefined;
-  if (!clientId) throw new RepositoryError('GitHub OAuth App não configurado.', 'TOKEN_INVALID');
-
   for (;;) {
     await new Promise((r) => setTimeout(r, interval * 1000));
 
-    const res = await fetch('https://github.com/login/oauth/access_token', {
+    const res = await fetch('/api/github/device/token', {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id:   clientId,
-        device_code: deviceCode,
-        grant_type:  'urn:ietf:params:oauth:grant-type:device_code',
-      }),
+      body: JSON.stringify({ device_code: deviceCode }),
     });
     const data = await res.json() as {
       access_token?: string;
