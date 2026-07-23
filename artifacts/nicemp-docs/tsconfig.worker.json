@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["worker.ts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["esnext"],
+    "types": ["@cloudflare/workers-types"],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true
+  }
+}

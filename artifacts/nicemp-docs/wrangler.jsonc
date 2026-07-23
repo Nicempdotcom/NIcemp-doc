@@ -4,10 +4,19 @@
   // `--config` so the deploy step doesn't try to auto-detect a project from
   // the monorepo root.
   //
+  // Worker script — handles /api/github/* routes; everything else is served
+  // from the static Vite build via the ASSETS binding.
+  //
   "name": "nicempdoc",
   "compatibility_date": "2026-07-11",
+  "main": "./worker.ts",
   "assets": {
     "directory": "./dist/public",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS"
   }
+  // Secrets (set via Cloudflare dashboard → Workers → nicempdoc → Settings →
+  // Variables, or `wrangler secret put GITHUB_CLIENT_ID`):
+  //   GITHUB_CLIENT_ID
+  //   GITHUB_CLIENT_SECRET
 }

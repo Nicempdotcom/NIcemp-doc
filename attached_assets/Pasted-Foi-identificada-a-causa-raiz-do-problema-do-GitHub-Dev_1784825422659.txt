@@ -1,0 +1,264 @@
+Foi identificada a causa raiz do problema do GitHub Device Flow.
+
+Situação atual
+
+O projeto possui:
+
+Frontend React/Vite publicado no Cloudflare Workers.
+O deploy é feito através do wrangler.jsonc, servindo apenas os arquivos estáticos (dist/public).
+Existe um api-server (Express/Fastify) que roda apenas no ambiente do Replit.
+Durante o desenvolvimento tudo funciona porque o frontend conversa com esse servidor.
+No ambiente publicado (Cloudflare Workers) esse servidor não existe.
+
+Consequentemente:
+
+POST /api/github/device/code
+POST /api/github/device/token
+
+não possuem nenhuma implementação em produção.
+
+O navegador recebe uma resposta vazia.
+
+Depois tenta executar:
+
+await response.json()
+
+e ocorre:
+
+Failed to execute 'json' on 'Response':
+Unexpected end of JSON input
+
+Este erro NÃO é a causa.
+
+É apenas consequência da inexistência das rotas.
+
+Objetivo
+
+Eliminar totalmente a dependência do api-server para o fluxo GitHub OAuth Device Flow.
+
+Toda a comunicação com o GitHub deverá ocorrer diretamente dentro do Cloudflare Worker.
+
+O projeto deve funcionar integralmente publicado na Cloudflare, sem depender do servidor do Replit.
+
+Arquitetura desejada
+
+Atualmente:
+
+Browser
+    ↓
+Cloudflare (arquivos estáticos)
+
+Express/Fastify (somente Replit)
+    ↓
+GitHub API
+
+Nova arquitetura:
+
+Browser
+    ↓
+Cloudflare Worker
+    ↓
+GitHub API
+
+O Worker deverá servir:
+
+frontend
+assets
+APIs
+
+no mesmo deploy.
+
+Implementar
+
+Criar um Worker com handler fetch() que implemente:
+
+POST /api/github/device/code
+
+POST /api/github/device/token
+
+Essas rotas devem substituir completamente o api-server.
+
+Rota 1
+POST /api/github/device/code
+
+Receber:
+
+{}
+
+ou nenhum body.
+
+Fazer proxy para:
+
+https://github.com/login/device/code
+
+Headers:
+
+Accept: application/json
+Content-Type: application/x-www-form-urlencoded
+
+Body:
+
+client_id=<CLIENT_ID>
+scope=repo
+
+Retornar exatamente o JSON do GitHub.
+
+Rota 2
+POST /api/github/device/token
+
+Receber:
+
+{
+   "device_code":"..."
+}
+
+Enviar para:
+
+https://github.com/login/oauth/access_token
+
+com
+
+client_id
+client_secret
+device_code
+grant_type=urn:ietf:params:oauth:grant-type:device_code
+
+Retornar exatamente o JSON do GitHub.
+
+Secrets
+
+Não utilizar variáveis do Replit.
+
+O Worker deverá ler:
+
+env.GITHUB_CLIENT_ID
+
+env.GITHUB_CLIENT_SECRET
+
+Adicionar suporte no Worker para esses secrets.
+
+Wrangler
+
+Atualizar o projeto para utilizar um Worker que:
+
+responda às APIs
+continue servindo os arquivos estáticos
+
+Não quebrar o deploy existente.
+
+Caso utilize:
+
+assets
+
+ou
+
+ASSETS.fetch()
+
+manter esse comportamento.
+
+Frontend
+
+O frontend NÃO deverá sofrer alterações de arquitetura.
+
+Ele continuará chamando:
+
+/api/github/device/code
+
+/api/github/device/token
+
+Apenas essas URLs passarão a responder corretamente em produção.
+
+Tratamento de erros
+
+Nunca retornar resposta vazia.
+
+Todos os erros devem retornar JSON.
+
+Exemplo:
+
+{
+  "error": "github_request_failed",
+  "message": "GitHub returned 401"
+}
+
+ou
+
+{
+  "error": "missing_configuration"
+}
+Melhorar o helper HTTP
+
+Hoje existe algo semelhante a:
+
+const data = await response.json();
+
+Isso deve ser substituído por uma implementação segura.
+
+Exemplo:
+
+const text = await response.text();
+
+if (!text) {
+    throw new Error("Resposta vazia da API");
+}
+
+let data;
+
+try {
+    data = JSON.parse(text);
+} catch {
+    throw new Error(
+        `Resposta inválida da API: ${text}`
+    );
+}
+
+Assim nunca mais aparecerá:
+
+Unexpected end of JSON input
+
+sem contexto.
+
+Logs
+
+Adicionar logs apenas em desenvolvimento.
+
+Exemplo:
+
+[GitHub Worker]
+
+POST /device/code
+
+GitHub status: 200
+
+GitHub body: ...
+
+Não expor:
+
+client_secret
+tokens
+device_code
+Compatibilidade
+
+Não alterar:
+
+pipeline de análise
+GitHubProvider
+RepositoryFactory
+AnalyzerProvider
+Upload ZIP
+
+O único objetivo é substituir o backend Express pelas rotas nativas do Cloudflare Worker.
+
+Critérios de aceite
+
+Ao finalizar:
+
+O site publicado na Cloudflare funciona sem o api-server.
+O Device Flow funciona integralmente em produção.
+Nenhuma chamada depende do Replit.
+Todas as respostas da API são JSON válido.
+O erro "Unexpected end of JSON input" desaparece.
+Os secrets são lidos do Cloudflare Worker.
+O frontend permanece inalterado.
+
+Observação importante para o agente: Antes de implementar, analise a estrutura atual do projeto (especialmente wrangler.jsonc, worker.ts/index.ts caso exista e a configuração de assets) para integrar as rotas ao Worker existente, evitando criar um segundo Worker ou quebrar o deploy atual dos arquivos estáticos. A implementação deve seguir a arquitetura recomendada pela Cloudflare para Workers com Assets e preservar todas as funcionalidades já existentes.
