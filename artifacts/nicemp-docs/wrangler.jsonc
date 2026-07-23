@@ -13,7 +13,13 @@
   "assets": {
     "directory": "./dist/public",
     "not_found_handling": "single-page-application",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    // Run the Worker's fetch() handler first for all /api/* requests, instead
+    // of letting the asset handler intercept them. Without this, GET requests
+    // to /api/* fall through to the SPA fallback (index.html) before the
+    // Worker has a chance to respond — POST routes were unaffected because the
+    // Cloudflare asset handler only intercepts GET/HEAD.
+    "run_worker_first": ["/api/*"]
   },
   // Workers AI binding — enables env.AI.run() inside the Worker.
   // No extra configuration needed; Cloudflare provisions the binding automatically.
