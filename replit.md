@@ -20,13 +20,15 @@ A Portuguese-language documentation and analysis platform for software projects.
 
 Set these in Replit's Secrets panel before using the corresponding features:
 
-| Secret | Required for | How to obtain |
-|---|---|---|
-| `GITHUB_CLIENT_ID` | GitHub import (Device Flow) | Create a GitHub OAuth App — see below |
-| `GITHUB_CLIENT_SECRET` | GitHub import (Device Flow) | Same OAuth App |
-| `SUPABASE_URL` | Persistent storage | Supabase project settings → API |
-| `SUPABASE_ANON_KEY` | Persistent storage | Supabase project settings → API |
-| `SESSION_SECRET` | Session signing | Any long random string |
+| Secret | Status | Required for | How to obtain |
+|---|---|---|---|
+| `GITHUB_CLIENT_ID` | ✅ configured | GitHub import (Device Flow) | Create a GitHub OAuth App — see below |
+| `GITHUB_CLIENT_SECRET` | ✅ configured | GitHub import (Device Flow) | Same OAuth App |
+| `SESSION_SECRET` | ✅ configured | Session signing | Any long random string |
+| `SUPABASE_URL` | ⚠️ not set | Persistent cloud storage | Supabase project settings → API |
+| `SUPABASE_ANON_KEY` | ⚠️ not set | Persistent cloud storage | Supabase project settings → API |
+
+> **Note**: Without Supabase secrets, all project analyses are stored in `localStorage` only — they will be lost if the browser is cleared or a different device is used.
 
 ### Creating a GitHub OAuth App (for "Importar do GitHub")
 
@@ -34,8 +36,8 @@ Set these in Replit's Secrets panel before using the corresponding features:
 2. Fill in:
    - **Application name**: NicEmp Docs (or any name)
    - **Homepage URL**: your Replit app URL
-   - **Authorization callback URL**: leave blank (Device Flow does not use it)
-3. Check **"Enable Device Flow"**
+   - **Authorization callback URL**: `http://localhost` (Device Flow does not use it, but the field is required)
+3. ⚠️ **Critical**: Check **"Enable Device Flow"** — without this, the GitHub login button will fail even with correct credentials
 4. Click **Register application**
 5. Copy the **Client ID** → set as `GITHUB_CLIENT_ID`
 6. Click **Generate a new client secret** → set as `GITHUB_CLIENT_SECRET`
