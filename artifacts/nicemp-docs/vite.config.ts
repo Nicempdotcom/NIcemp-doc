@@ -62,6 +62,10 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    // In Replit dev, browser requests to /api/* are handled by Replit's
+    // reverse proxy (routed to the api-server artifact), so this proxy entry
+    // is only active for local development outside Replit. Set API_PORT in
+    // your local env to match the port the api-server binds to (default 3001).
     proxy: {
       '/api': {
         target: `http://localhost:${process.env.API_PORT ?? '3001'}`,
