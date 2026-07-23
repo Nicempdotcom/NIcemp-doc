@@ -6,3 +6,4 @@
 - [NicEmp Docs entity relationship arrays are unpopulated](nicemp-docs-relationships-unpopulated.md) — PageEntity.components/hooks/apis are always []; group by `module` string instead of these arrays.
 - [NicEmp Docs Supabase persistence](nicemp-docs-supabase.md) — sync cache + write-through strategy; table naming quirk (tables→database_tables); auth model; Cloudflare build PORT quirk.
 - [Route regression pattern](route-regression-pattern.md) — Overview/Explorer/Glossario dropped twice from App.tsx/Sidebar.tsx rewrites; run check:routes after any edit to these files.
+- [Vite proxy / api-server port alignment](vite-proxy-api-port-alignment.md) — Replit routes all browser traffic through Vite; Vite proxy and api-server must share the same port (API_PORT=3001).
