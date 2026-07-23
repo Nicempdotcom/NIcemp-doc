@@ -14,6 +14,11 @@
     "directory": "./dist/public",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS"
+  },
+  // Workers AI binding — enables env.AI.run() inside the Worker.
+  // No extra configuration needed; Cloudflare provisions the binding automatically.
+  "ai": {
+    "binding": "AI"
   }
   // Secrets (set via Cloudflare dashboard → Workers → nicempdoc → Settings →
   // Variables, or `wrangler secret put GITHUB_CLIENT_ID`):

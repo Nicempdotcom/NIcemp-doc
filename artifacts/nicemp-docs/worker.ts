@@ -20,6 +20,8 @@ interface Env {
   ASSETS: Fetcher;
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
+  /** Workers AI binding — provisioned by Cloudflare, declared in wrangler.jsonc */
+  AI: Ai;
 }
 
 // Worker console output is only visible to the developer (wrangler dev / wrangler tail)
@@ -181,6 +183,27 @@ async function handleDeviceToken(request: Request, env: Env): Promise<Response> 
   return jsonResponse(data);
 }
 
+/** GET /api/ai/ping — smoke-test for the Workers AI binding */
+async function handleAiPing(env: Env): Promise<Response> {
+  if (!env.AI) {
+    return errorResponse(
+      "missing_configuration",
+      "Workers AI binding (AI) is not available in this environment.",
+    );
+  }
+
+  try {
+    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      messages: [{ role: "user", content: "Responda apenas: ok" }],
+    }) as { response?: string };
+
+    return jsonResponse({ ok: true, response: result.response ?? null });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return errorResponse("ai_error", message, 502);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -192,6 +215,9 @@ export default {
     }
     if (request.method === "POST" && pathname === "/api/github/device/token") {
       return handleDeviceToken(request, env);
+    }
+    if (request.method === "GET" && pathname === "/api/ai/ping") {
+      return handleAiPing(env);
     }
 
     // ── Static assets (Vite build output) ────────────────────────────────────
