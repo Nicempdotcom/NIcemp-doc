@@ -186,23 +186,26 @@ async function handleDeviceToken(request: Request, env: Env): Promise<Response> 
 }
 
 // ── Rate-limit helpers ────────────────────────────────────────────────────────
-// Tracks AI objective calls per browser using a first-party cookie:
-//   ai_obj_rate=YYYY-MM-DD:N
-// Resets automatically at UTC day rollover. 60 calls/day per browser.
+// Tracks AI calls per browser using first-party cookies:
+//   ai_obj_rate=YYYY-MM-DD:N   (prompt-objective)
+//   ai_asst_rate=YYYY-MM-DD:N  (assistant)
+// Both reset automatically at UTC day rollover. 60 calls/day per browser.
 
 const AI_RATE_LIMIT = 60;
 const AI_RATE_COOKIE = "ai_obj_rate";
+const AI_ASST_RATE_COOKIE = "ai_asst_rate";
 
-function parseRateCookie(cookieHeader: string | null): { date: string; count: number } {
+function parseRateCookie(cookieHeader: string | null, cookieName: string): { date: string; count: number } {
   if (!cookieHeader) return { date: "", count: 0 };
-  const match = cookieHeader.match(/ai_obj_rate=([^;]+)/);
+  const regex = new RegExp(`${cookieName}=([^;]+)`);
+  const match = cookieHeader.match(regex);
   if (!match) return { date: "", count: 0 };
   const [date = "", rawCount = "0"] = match[1].split(":");
   return { date, count: parseInt(rawCount, 10) || 0 };
 }
 
-function rateSetCookieHeader(date: string, count: number): string {
-  return `${AI_RATE_COOKIE}=${date}:${count}; Path=/; SameSite=Strict; Max-Age=86400`;
+function rateSetCookieHeader(cookieName: string, date: string, count: number): string {
+  return `${cookieName}=${date}:${count}; Path=/; SameSite=Strict; Max-Age=86400`;
 }
 
 /** POST /api/ai/prompt-objective — generates "Objetivo da alteração" text via Workers AI */
@@ -210,7 +213,7 @@ async function handlePromptObjective(request: Request, env: Env): Promise<Respon
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
 
   // ── Rate limit ────────────────────────────────────────────────────────────
-  const { date, count } = parseRateCookie(request.headers.get("Cookie"));
+  const { date, count } = parseRateCookie(request.headers.get("Cookie"), AI_RATE_COOKIE);
   const todayCount = date === today ? count : 0;
   if (todayCount >= AI_RATE_LIMIT) {
     return new Response(
@@ -296,7 +299,85 @@ async function handlePromptObjective(request: Request, env: Env): Promise<Respon
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        "Set-Cookie": rateSetCookieHeader(today, todayCount + 1),
+        "Set-Cookie": rateSetCookieHeader(AI_RATE_COOKIE, today, todayCount + 1),
+      },
+    },
+  );
+}
+
+/** POST /api/ai/assistant — conversational assistant aware of the loaded project */
+async function handleAssistant(request: Request, env: Env): Promise<Response> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // ── Rate limit ────────────────────────────────────────────────────────────
+  const { date, count } = parseRateCookie(request.headers.get("Cookie"), AI_ASST_RATE_COOKIE);
+  const todayCount = date === today ? count : 0;
+  if (todayCount >= AI_RATE_LIMIT) {
+    return new Response(
+      JSON.stringify({ reply: null, fallback: true, limitReached: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Parse body ────────────────────────────────────────────────────────────
+  let body: { message?: string; context?: string };
+  try {
+    body = await request.json() as typeof body;
+  } catch {
+    return new Response(
+      JSON.stringify({ reply: null, fallback: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const message = (body.message ?? "").trim();
+  const context = (body.context ?? "Nenhum projeto carregado.").trim();
+
+  if (!message) {
+    return new Response(
+      JSON.stringify({ reply: null, fallback: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Build prompts ─────────────────────────────────────────────────────────
+  const systemPrompt =
+    `Você é um assistente técnico integrado ao NicEmp Docs, uma plataforma de documentação de projetos de software. ` +
+    `Responda sempre em português, de forma clara e objetiva.\n\n` +
+    `Contexto do projeto carregado:\n${context}\n\n` +
+    `Regras obrigatórias:\n` +
+    `1. Responda SOMENTE com base no contexto acima. Não invente nomes de arquivo, módulo, tecnologia ou entidade que não estejam no contexto.\n` +
+    `2. Se a pergunta pedir para localizar algo (ex.: "onde fica X"), indique o módulo ou tipo de entidade mais provável com base no contexto, deixando CLARO que é uma sugestão a confirmar no Organograma ou Explorador — nunca afirme com certeza absoluta.\n` +
+    `3. Se a pergunta for sobre como formular um prompt para o Replit, oriente o usuário a usar o botão "Gerar Prompt" na página de detalhes da entidade correspondente, em vez de tentar escrever o prompt inteiro no chat.\n` +
+    `4. Se a pergunta estiver fora do escopo do projeto (ex.: perguntas gerais de programação sem relação com o contexto), responda brevemente dizendo que só pode ajudar com o projeto carregado e sugira uma busca no Explorador ao vivo.\n` +
+    `5. Seja conciso: no máximo 5 frases por resposta, sem markdown pesado.`;
+
+  // ── Call Workers AI ───────────────────────────────────────────────────────
+  let reply: string | null = null;
+  try {
+    if (!env.AI) throw new Error("AI binding unavailable");
+    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user",   content: message },
+      ],
+    }) as { response?: string };
+    reply = result.response?.trim() ?? null;
+  } catch {
+    return new Response(
+      JSON.stringify({ reply: null, fallback: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Success — increment rate counter ──────────────────────────────────────
+  return new Response(
+    JSON.stringify({ reply }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": rateSetCookieHeader(AI_ASST_RATE_COOKIE, today, todayCount + 1),
       },
     },
   );
@@ -340,6 +421,9 @@ export default {
     }
     if (request.method === "POST" && pathname === "/api/ai/prompt-objective") {
       return handlePromptObjective(request, env);
+    }
+    if (request.method === "POST" && pathname === "/api/ai/assistant") {
+      return handleAssistant(request, env);
     }
 
     // ── Static assets (Vite build output) ────────────────────────────────────

@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 
 import Sidebar from '@/app/layouts/Sidebar';
 import Topbar from '@/app/layouts/Topbar';
+import { AIAssistant } from '@/app/components/assistant/AIAssistant';
 
 import Dashboard    from '@/app/pages/Dashboard';
 import Upload       from '@/app/pages/Upload';
@@ -174,6 +175,7 @@ function Layout() {
             {allRoutes}
           </div>
         </main>
+        <AIAssistant />
       </div>
     );
   }
@@ -197,6 +199,8 @@ function Layout() {
           </div>
         </main>
       </div>
+
+      <AIAssistant />
     </div>
   );
 }
