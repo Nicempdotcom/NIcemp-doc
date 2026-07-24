@@ -9,6 +9,8 @@
 // currently derived. New modules must follow the same folder convention so
 // they are correctly detected on the next ZIP upload.
 
+import { PROMPT_GENERAL_RULES } from './promptRules';
+
 export type ModuleProject = 'NicEmp Docs' | 'nicemp.com';
 
 export interface ModuleCreationPromptInput {
@@ -160,5 +162,7 @@ export function buildModuleCreationPrompt(input: ModuleCreationPromptInput): str
     '',
     '## 6. Ao concluir',
     '⚠️ Obrigatório: liste todos os arquivos que foram criados/modificados.',
+    '',
+    PROMPT_GENERAL_RULES,
   ].join('\n');
 }

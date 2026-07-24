@@ -8,6 +8,8 @@
 // than once, so the generated prompt is deliberately explicit about touching
 // only one line at a time.
 
+import { PROMPT_GENERAL_RULES } from './promptRules';
+
 export type NavGroupName = 'Plataforma' | 'Documentação' | 'Sistema';
 
 export interface PageCreationPromptInput {
@@ -113,5 +115,7 @@ export function buildPageCreationPrompt(input: PageCreationPromptInput): string 
     '',
     '## 6. Ao concluir',
     '⚠️ Obrigatório: liste todos os arquivos que foram criados/modificados.',
+    '',
+    PROMPT_GENERAL_RULES,
   ].join('\n');
 }

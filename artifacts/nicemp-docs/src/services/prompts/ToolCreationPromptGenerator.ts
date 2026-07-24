@@ -11,6 +11,8 @@
 // `ToolsCarousel.tsx` (carrossel da home) são listas manuais e separadas,
 // cada uma com sua própria estrutura de dados.
 
+import { PROMPT_GENERAL_RULES } from './promptRules';
+
 /** String category (union replaced by string to support dynamic categories). */
 export type ToolCategory = string;
 
@@ -168,5 +170,7 @@ export function buildToolCreationPrompt(input: ToolCreationPromptInput): string 
     '',
     '## 6. Ao concluir',
     '⚠️ Obrigatório: liste todos os arquivos que foram criados/modificados.',
+    '',
+    PROMPT_GENERAL_RULES,
   ].join('\n');
 }

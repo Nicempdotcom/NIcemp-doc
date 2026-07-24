@@ -8,6 +8,7 @@
 
 import type { LiveColumn } from '@/services/engine/LiveSupabaseIntrospector';
 import type { TableUsageEntry } from '@/services/engine/LiveTableUsageAnalyzer';
+import { PROMPT_GENERAL_RULES } from './promptRules';
 
 export type ChangeType =
   | 'Adicionar coluna'
@@ -144,5 +145,7 @@ export function buildEditSupabaseTablePrompt(input: EditSupabaseTablePromptInput
     '',
     '## 7. Ao concluir',
     '⚠️ Obrigatório: confirmar que a mudança foi aplicada, listar o que foi alterado e verificar que nenhuma tela/API quebrou.',
+    '',
+    PROMPT_GENERAL_RULES,
   ].join('\n');
 }

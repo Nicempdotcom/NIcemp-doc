@@ -7,6 +7,7 @@
 // or facts that were not detected during analysis.
 
 import type { RiskLevel } from '@/services/storage/types';
+import { PROMPT_GENERAL_RULES } from './promptRules';
 
 export type PromptEntityKind = 'page' | 'component' | 'hook' | 'api' | 'module';
 
@@ -182,5 +183,7 @@ export function buildReplitPrompt(input: PromptEntityInput, options: PromptTaskO
     '',
     '## 7. Ao concluir',
     '⚠️ Obrigatório: ao final da tarefa, liste TODOS os arquivos que foram criados, modificados ou removidos — mesmo que a alteração pareça pequena. Não omita nenhum arquivo da lista.',
+    '',
+    PROMPT_GENERAL_RULES,
   ].join('\n');
 }

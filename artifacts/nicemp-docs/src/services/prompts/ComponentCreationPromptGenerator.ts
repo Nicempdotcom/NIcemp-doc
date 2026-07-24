@@ -4,6 +4,8 @@
 // component in either NicEmp Docs or nicemp.com. Only produces TEXT — it
 // never creates files by itself.
 
+import { PROMPT_GENERAL_RULES } from './promptRules';
+
 export type ComponentProject = 'NicEmp Docs' | 'nicemp.com';
 export type ComponentCategory = 'ui' | 'layout' | 'forms' | 'outro';
 
@@ -99,5 +101,7 @@ export function buildComponentCreationPrompt(input: ComponentCreationPromptInput
     '',
     '## 6. Ao concluir',
     '⚠️ Obrigatório: liste todos os arquivos que foram criados/modificados.',
+    '',
+    PROMPT_GENERAL_RULES,
   ].join('\n');
 }

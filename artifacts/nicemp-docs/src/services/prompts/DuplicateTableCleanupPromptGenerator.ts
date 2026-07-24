@@ -10,6 +10,7 @@
 
 import type { LiveColumn }      from '@/services/engine/LiveSupabaseIntrospector';
 import type { TableUsageEntry } from '@/services/engine/LiveTableUsageAnalyzer';
+import { PROMPT_GENERAL_RULES } from './promptRules';
 
 // ─── Tipos de entrada ──────────────────────────────────────────────────────────
 
@@ -172,5 +173,7 @@ export function buildDuplicateTableCleanupPrompt(input: DuplicateTableCleanupInp
     '',
     '## 7. Ao concluir',
     '⚠️ Obrigatório: confirmar que a tabela foi removida, listar os arquivos alterados no código e verificar que nenhuma tela ou API quebrou.',
+    '',
+    PROMPT_GENERAL_RULES,
   ].join('\n');
 }
