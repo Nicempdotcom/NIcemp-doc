@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ReactFlow, ReactFlowProvider, Background, Controls, MiniMap, type NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -16,9 +16,15 @@ import {
   ProjectRepository,
   PageRepository,
   ComponentRepository,
+  HookRepository,
+  ApiRepository,
   InteractionRepository,
   ImportEdgeRepository,
 } from '@/services/storage';
+import {
+  ModuleSummaryContext,
+  type ModuleSummaryState,
+} from './moduleSummaryContext';
 
 import DiagramNode from './DiagramNode';
 import ModuleGroupNode from './ModuleGroupNode';
@@ -51,8 +57,48 @@ export default function Overview() {
 
   const pages        = useMemo(() => (project ? PageRepository.findByProject(project.id)        : []), [project]);
   const components   = useMemo(() => (project ? ComponentRepository.findByProject(project.id)   : []), [project]);
+  const hooks        = useMemo(() => (project ? HookRepository.findByProject(project.id)        : []), [project]);
+  const apis         = useMemo(() => (project ? ApiRepository.findByProject(project.id)         : []), [project]);
   const interactions = useMemo(() => (project ? InteractionRepository.findByProject(project.id) : []), [project]);
   const importEdges  = useMemo(() => (project ? ImportEdgeRepository.findByProject(project.id)  : []), [project]);
+
+  // ── AI module summaries ────────────────────────────────────────────────────
+  const [summaries, setSummaries] = useState<Record<string, ModuleSummaryState>>({});
+  // Tracks in-flight requests so double-clicks don't fire twice
+  const inflight = useRef<Set<string>>(new Set());
+
+  const requestSummary = useCallback(async (moduleName: string) => {
+    if (inflight.current.has(moduleName)) return;
+    inflight.current.add(moduleName);
+    setSummaries((prev) => ({ ...prev, [moduleName]: { status: 'loading' } }));
+
+    try {
+      // Build compact entity list for this module (name + description only)
+      const entities = [
+        ...pages.filter((e) => e.module === moduleName).map((e) => ({ name: e.name, description: e.description })),
+        ...components.filter((e) => e.module === moduleName).map((e) => ({ name: e.name, description: e.description })),
+        ...hooks.filter((e) => e.module === moduleName).map((e) => ({ name: e.name, description: e.description })),
+        ...apis.filter((e) => e.module === moduleName).map((e) => ({ name: e.name, description: e.description })),
+      ];
+
+      const res  = await fetch('/api/ai/module-summary', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ moduleName, entities }),
+      });
+      const data = await res.json() as { summary?: string | null; fallback?: boolean };
+
+      if (data.fallback || !data.summary) {
+        setSummaries((prev) => ({ ...prev, [moduleName]: { status: 'error' } }));
+      } else {
+        setSummaries((prev) => ({ ...prev, [moduleName]: { status: 'done', text: data.summary! } }));
+      }
+    } catch {
+      setSummaries((prev) => ({ ...prev, [moduleName]: { status: 'error' } }));
+    } finally {
+      inflight.current.delete(moduleName);
+    }
+  }, [pages, components, hooks, apis]);
 
   const navigationFlow   = useMemo(() => buildNavigationFlow(pages, interactions),  [pages, interactions]);
   const architectureFlow = useMemo(() => buildArchitectureFlow(importEdges),         [importEdges]);
@@ -151,11 +197,13 @@ export default function Overview() {
               Nenhuma página foi encontrada para este filtro.
             </InfoBox>
           ) : (
-            <DiagramCanvas
-              nodes={simpleFlow.nodes}
-              edges={simpleFlow.edges}
-              className="h-[calc(100vh-260px)] min-h-[520px]"
-            />
+            <ModuleSummaryContext.Provider value={{ summaries, requestSummary }}>
+              <DiagramCanvas
+                nodes={simpleFlow.nodes}
+                edges={simpleFlow.edges}
+                className="h-[calc(100vh-260px)] min-h-[520px]"
+              />
+            </ModuleSummaryContext.Provider>
           )
         )}
 

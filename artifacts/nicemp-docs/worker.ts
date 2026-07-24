@@ -305,6 +305,91 @@ async function handlePromptObjective(request: Request, env: Env): Promise<Respon
   );
 }
 
+/** POST /api/ai/module-summary — plain-language summary of what a module does */
+async function handleModuleSummary(request: Request, env: Env): Promise<Response> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // ── Rate limit (shared assistant cookie) ──────────────────────────────────
+  const AI_MOD_COOKIE = "ai_mod_rate";
+  const { date, count } = parseRateCookie(request.headers.get("Cookie"), AI_MOD_COOKIE);
+  const todayCount = date === today ? count : 0;
+  if (todayCount >= AI_RATE_LIMIT) {
+    return new Response(
+      JSON.stringify({ summary: null, fallback: true, limitReached: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Parse body ────────────────────────────────────────────────────────────
+  let body: { moduleName?: string; entities?: { name: string; description?: string }[] };
+  try {
+    body = await request.json() as typeof body;
+  } catch {
+    return new Response(
+      JSON.stringify({ summary: null, fallback: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const moduleName = (body.moduleName ?? "").trim();
+  const entities   = body.entities ?? [];
+
+  if (!moduleName) {
+    return new Response(
+      JSON.stringify({ summary: null, fallback: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Build prompt ──────────────────────────────────────────────────────────
+  const entityLines = entities
+    .slice(0, 30) // cap to keep prompt compact
+    .map((e) => `- ${e.name}${e.description ? `: ${e.description.slice(0, 120)}` : ""}`)
+    .join("\n");
+
+  const systemPrompt =
+    `Você é um assistente que explica o código de um projeto de software para pessoas sem conhecimento técnico. ` +
+    `Responda sempre em português, de forma simples, clara e acolhedora.`;
+
+  const userPrompt =
+    `O módulo abaixo faz parte de um site ou aplicação. ` +
+    `Com base nas telas, componentes, hooks e APIs listados, explique em até 3 frases o que este módulo faz ` +
+    `para o usuário final — sem citar nomes técnicos de arquivos, sem listar itens, ` +
+    `usando linguagem que qualquer pessoa entenderia.\n\n` +
+    `Módulo: ${moduleName}\n` +
+    `Elementos:\n${entityLines || "(nenhum elemento descrito)"}\n\n` +
+    `Escreva apenas o parágrafo explicativo, sem saudação, sem título.`;
+
+  // ── Call Workers AI ───────────────────────────────────────────────────────
+  let summary: string | null = null;
+  try {
+    if (!env.AI) throw new Error("AI binding unavailable");
+    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user",   content: userPrompt   },
+      ],
+    }) as { response?: string };
+    summary = result.response?.trim() ?? null;
+  } catch {
+    return new Response(
+      JSON.stringify({ summary: null, fallback: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  return new Response(
+    JSON.stringify({ summary }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": rateSetCookieHeader(AI_MOD_COOKIE, today, todayCount + 1),
+      },
+    },
+  );
+}
+
 /** POST /api/ai/assistant — conversational assistant aware of the loaded project */
 async function handleAssistant(request: Request, env: Env): Promise<Response> {
   const today = new Date().toISOString().slice(0, 10);
@@ -424,6 +509,9 @@ export default {
     }
     if (request.method === "POST" && pathname === "/api/ai/assistant") {
       return handleAssistant(request, env);
+    }
+    if (request.method === "POST" && pathname === "/api/ai/module-summary") {
+      return handleModuleSummary(request, env);
     }
 
     // ── Static assets (Vite build output) ────────────────────────────────────
