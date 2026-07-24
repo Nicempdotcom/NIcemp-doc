@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { PackagePlus, Sparkles, Copy, Check } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { PackagePlus, Sparkles, Copy, Check, Loader2, Wand2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -15,6 +15,7 @@ import {
   buildModuleCreationPrompt,
   type ModuleProject,
 } from '@/services/prompts/ModuleCreationPromptGenerator';
+import { usePromptObjectiveAI } from './usePromptObjectiveAI';
 
 /**
  * "Criar Módulos" — gera um prompt pronto para pedir ao Replit Agent a criação
@@ -22,25 +23,38 @@ import {
  * pasta usadas para que o NicEmp Docs detecte o módulo corretamente.
  */
 export default function CreateModulePromptDialog() {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [open, setOpen]               = useState(false);
+  const [copied, setCopied]           = useState(false);
 
-  const [moduleName, setModuleName] = useState('');
-  const [project, setProject] = useState<ModuleProject>('NicEmp Docs');
-  const [objective, setObjective] = useState('');
-  const [hasPage, setHasPage] = useState(true);
-  const [hasApi, setHasApi] = useState(false);
+  const [moduleName, setModuleName]   = useState('');
+  const [project, setProject]         = useState<ModuleProject>('NicEmp Docs');
+  const [objective, setObjective]     = useState('');
+  const [hasPage, setHasPage]         = useState(true);
+  const [hasApi, setHasApi]           = useState(false);
+  const [userRequest, setUserRequest] = useState('');
 
-  const [prompt, setPrompt] = useState<string | null>(null);
+  const [prompt, setPrompt]           = useState<string | null>(null);
+
+  const { aiLoading, requestImprovement } = usePromptObjectiveAI();
 
   const canGenerate = moduleName.trim().length > 0;
+
+  const handleImproveWithAI = useCallback(async () => {
+    const result = await requestImprovement({
+      kind:        'module',
+      name:        moduleName.trim() || 'Novo módulo',
+      module:      project,
+      userRequest: userRequest.trim(),
+    });
+    if (result) setObjective(result);
+  }, [requestImprovement, moduleName, project, userRequest]);
 
   const handleGenerate = () => {
     if (!canGenerate) return;
     const generated = buildModuleCreationPrompt({
       moduleName: moduleName.trim(),
       project,
-      objective: objective.trim(),
+      objective:  objective.trim(),
       hasPage,
       hasApi,
     });
@@ -67,6 +81,7 @@ export default function CreateModulePromptDialog() {
       setObjective('');
       setHasPage(true);
       setHasApi(false);
+      setUserRequest('');
       setPrompt(null);
       setCopied(false);
     }
@@ -126,6 +141,30 @@ export default function CreateModulePromptDialog() {
               />
               <p className="text-xs text-muted-foreground">Use PascalCase, ex: Pedidos, ContasReceber. É o nome que aparecerá no NicEmp Docs como "Módulo: X".</p>
             </div>
+
+            {/* ── Melhorar objetivo com IA ──────────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="mod-user-request">Descreva o que você quer mudar</Label>
+              <Textarea
+                id="mod-user-request"
+                placeholder="Ex.: quero que esse botão fique desabilitado enquanto a página carrega"
+                rows={2}
+                value={userRequest}
+                onChange={(e) => setUserRequest(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={!userRequest.trim() || aiLoading}
+              onClick={handleImproveWithAI}
+            >
+              {aiLoading
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Gerando...</>
+                : <><Wand2 className="h-3.5 w-3.5" />Melhorar objetivo com IA</>}
+            </Button>
 
             <div className="space-y-1.5">
               <Label htmlFor="mod-objective">Objetivo do módulo</Label>

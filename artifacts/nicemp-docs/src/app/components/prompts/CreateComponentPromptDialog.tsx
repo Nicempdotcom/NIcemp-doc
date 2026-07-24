@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { LayoutTemplate, Sparkles, Copy, Check } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { LayoutTemplate, Sparkles, Copy, Check, Loader2, Wand2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -16,6 +16,7 @@ import {
   type ComponentProject,
   type ComponentCategory,
 } from '@/services/prompts/ComponentCreationPromptGenerator';
+import { usePromptObjectiveAI } from './usePromptObjectiveAI';
 
 const CATEGORY_OPTIONS: { value: ComponentCategory; label: string }[] = [
   { value: 'ui',     label: 'UI genérico (botões, badges, cards)' },
@@ -27,24 +28,41 @@ const CATEGORY_OPTIONS: { value: ComponentCategory; label: string }[] = [
 /**
  * "Criar Componentes" — gera um prompt pronto para colar no Replit Agent
  * pedindo a criação de um novo componente reutilizável no projeto de destino.
+ *
+ * Nota estrutural: este gerador não possui um campo "objective" separado —
+ * o campo "Props e comportamento esperado" cumpre esse papel. O botão
+ * "Melhorar objetivo com IA" pré-preenche esse campo com o texto gerado.
  */
 export default function CreateComponentPromptDialog() {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [open, setOpen]                     = useState(false);
+  const [copied, setCopied]                 = useState(false);
 
-  const [componentName, setComponentName] = useState('');
-  const [project, setProject] = useState<ComponentProject>('NicEmp Docs');
-  const [category, setCategory] = useState<ComponentCategory>('ui');
+  const [componentName, setComponentName]   = useState('');
+  const [project, setProject]               = useState<ComponentProject>('NicEmp Docs');
+  const [category, setCategory]             = useState<ComponentCategory>('ui');
   const [propsDescription, setPropsDescription] = useState('');
+  const [userRequest, setUserRequest]       = useState('');
 
-  const [prompt, setPrompt] = useState<string | null>(null);
+  const [prompt, setPrompt]                 = useState<string | null>(null);
+
+  const { aiLoading, requestImprovement } = usePromptObjectiveAI();
 
   const canGenerate = componentName.trim().length > 0;
+
+  const handleImproveWithAI = useCallback(async () => {
+    const result = await requestImprovement({
+      kind:        'component',
+      name:        componentName.trim() || 'Novo componente',
+      module:      `${project} — ${category}`,
+      userRequest: userRequest.trim(),
+    });
+    if (result) setPropsDescription(result);
+  }, [requestImprovement, componentName, project, category, userRequest]);
 
   const handleGenerate = () => {
     if (!canGenerate) return;
     const generated = buildComponentCreationPrompt({
-      componentName: componentName.trim(),
+      componentName:    componentName.trim(),
       project,
       category,
       propsDescription: propsDescription.trim(),
@@ -71,6 +89,7 @@ export default function CreateComponentPromptDialog() {
       setProject('NicEmp Docs');
       setCategory('ui');
       setPropsDescription('');
+      setUserRequest('');
       setPrompt(null);
       setCopied(false);
     }
@@ -144,6 +163,30 @@ export default function CreateComponentPromptDialog() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* ── Melhorar objetivo com IA ──────────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="comp-user-request">Descreva o que você quer mudar</Label>
+              <Textarea
+                id="comp-user-request"
+                placeholder="Ex.: quero que esse botão fique desabilitado enquanto a página carrega"
+                rows={2}
+                value={userRequest}
+                onChange={(e) => setUserRequest(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={!userRequest.trim() || aiLoading}
+              onClick={handleImproveWithAI}
+            >
+              {aiLoading
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Gerando...</>
+                : <><Wand2 className="h-3.5 w-3.5" />Melhorar objetivo com IA</>}
+            </Button>
 
             <div className="space-y-1.5">
               <Label htmlFor="comp-props">Props e comportamento esperado</Label>

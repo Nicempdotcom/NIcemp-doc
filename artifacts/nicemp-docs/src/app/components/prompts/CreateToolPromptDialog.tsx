@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calculator, Sparkles, Copy, Check, Plus, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calculator, Sparkles, Copy, Check, Plus, Loader2, Wand2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -16,6 +16,7 @@ import {
   buildToolCreationPrompt,
 } from '@/services/prompts/ToolCreationPromptGenerator';
 import { ProjectRepository, ToolCategoryRepository, CmsCategoryRepository } from '@/services/storage';
+import { usePromptObjectiveAI } from './usePromptObjectiveAI';
 
 // ─── Fallback categories (used when no analysis has been done yet) ─────────────
 
@@ -52,37 +53,34 @@ interface CategoryOption {
  * do prompt — ela não cria arquivos nem edita rotas/catálogos sozinha.
  */
 export default function CreateToolPromptDialog() {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [open, setOpen]               = useState(false);
+  const [copied, setCopied]           = useState(false);
 
-  const [toolName, setToolName] = useState('');
-  const [routeSlug, setRouteSlug] = useState('');
+  const [toolName, setToolName]       = useState('');
+  const [routeSlug, setRouteSlug]     = useState('');
   const [routeTouched, setRouteTouched] = useState(false);
-  const [category, setCategory] = useState('Financeiro');
-  const [iconName, setIconName] = useState('');
+  const [category, setCategory]       = useState('Financeiro');
+  const [iconName, setIconName]       = useState('');
   const [featureOnHome, setFeatureOnHome] = useState(false);
-  const [objective, setObjective] = useState('');
+  const [objective, setObjective]     = useState('');
+  const [userRequest, setUserRequest] = useState('');
 
-  const [prompt, setPrompt] = useState<string | null>(null);
+  const [prompt, setPrompt]           = useState<string | null>(null);
 
   // ── Dynamic categories ─────────────────────────────────────────────────────
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(
     FALLBACK_CATEGORIES.map((name) => ({ name, toolCount: null })),
   );
-  // Whether the current category was typed by the user (not from the list)
   const [isNewCategory, setIsNewCategory] = useState(false);
-  // Controls visibility of the inline "new category" text field
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryDraft, setNewCategoryDraft] = useState('');
   const [newCategoryError, setNewCategoryError] = useState('');
   const [insertingCategory, setInsertingCategory] = useState(false);
-
-  // ── Load categories when dialog opens ─────────────────────────────────────
-  // Priority: 1) CmsCategoryRepository (live from nicemp.com Supabase)
-  //           2) ToolCategoryRepository (heuristic, project-level fallback)
-  //           3) FALLBACK_CATEGORIES (static list)
   const [loadingCategories, setLoadingCategories] = useState(false);
 
+  const { aiLoading, requestImprovement } = usePromptObjectiveAI();
+
+  // ── Load categories when dialog opens ─────────────────────────────────────
   useEffect(() => {
     if (!open) return;
 
@@ -91,7 +89,6 @@ export default function CreateToolPromptDialog() {
 
     (async () => {
       try {
-        // 1. Try the analyzed project Supabase (cms_categories on nicemp.com)
         const cmsCategories = await CmsCategoryRepository.findAll();
         if (cancelled) return;
 
@@ -103,7 +100,6 @@ export default function CreateToolPromptDialog() {
           return;
         }
 
-        // 2. Fallback: heuristic categories from the last analyzed project
         const project = ProjectRepository.findLatest();
         if (project) {
           const stored = ToolCategoryRepository.findByProject(project.id);
@@ -114,8 +110,6 @@ export default function CreateToolPromptDialog() {
             return;
           }
         }
-
-        // 3. Static fallback — already set as initial state; nothing to do
       } catch (err) {
         console.warn('[CreateToolPromptDialog] Erro ao carregar categorias:', err);
       } finally {
@@ -151,7 +145,6 @@ export default function CreateToolPromptDialog() {
       (c) => c.name.toLowerCase() === trimmed.toLowerCase(),
     );
     if (existing) {
-      // Already in the list — just select it
       setCategory(existing.name);
       setIsNewCategory(false);
       setShowNewCategoryInput(false);
@@ -165,7 +158,6 @@ export default function CreateToolPromptDialog() {
 
     try {
       const created = await CmsCategoryRepository.create(trimmed);
-      // Add to top of list (sorted insertion) and auto-select
       const newOpt: CategoryOption = { name: created.name, toolCount: null };
       setCategoryOptions((prev) => {
         const merged = [...prev, newOpt];
@@ -173,7 +165,7 @@ export default function CreateToolPromptDialog() {
         return merged;
       });
       setCategory(created.name);
-      setIsNewCategory(false); // it's now persisted in the DB — not "new" anymore
+      setIsNewCategory(false);
       setShowNewCategoryInput(false);
       setNewCategoryDraft('');
       toast({ title: 'Categoria criada', description: `"${created.name}" foi adicionada ao banco com sucesso.` });
@@ -191,16 +183,27 @@ export default function CreateToolPromptDialog() {
     setNewCategoryError('');
   };
 
+  const handleImproveWithAI = useCallback(async () => {
+    const result = await requestImprovement({
+      kind:        'tool',
+      name:        toolName.trim() || 'Nova ferramenta',
+      location:    `/ferramentas/${effectiveSlug}`,
+      module:      category,
+      userRequest: userRequest.trim(),
+    });
+    if (result) setObjective(result);
+  }, [requestImprovement, toolName, effectiveSlug, category, userRequest]);
+
   const handleGenerate = () => {
     if (!canGenerate) return;
     const generated = buildToolCreationPrompt({
-      toolName: toolName.trim(),
-      routeKey: effectiveSlug.replace(/-/g, ''),
-      routePath: `/ferramentas/${effectiveSlug}`,
+      toolName:      toolName.trim(),
+      routeKey:      effectiveSlug.replace(/-/g, ''),
+      routePath:     `/ferramentas/${effectiveSlug}`,
       category,
-      iconName: iconName.trim() || 'Calculator',
+      iconName:      iconName.trim() || 'Calculator',
       featureOnHome,
-      objective: objective.trim(),
+      objective:     objective.trim(),
       isNewCategory,
     });
     setPrompt(generated);
@@ -221,7 +224,6 @@ export default function CreateToolPromptDialog() {
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) {
-      // Reset the form for the next time the dialog is opened.
       setToolName('');
       setRouteSlug('');
       setRouteTouched(false);
@@ -233,9 +235,9 @@ export default function CreateToolPromptDialog() {
       setIconName('');
       setFeatureOnHome(false);
       setObjective('');
+      setUserRequest('');
       setPrompt(null);
       setCopied(false);
-      // Reset categories to fallback — will reload on next open
       setCategoryOptions(FALLBACK_CATEGORIES.map((name) => ({ name, toolCount: null })));
     }
   };
@@ -304,7 +306,6 @@ export default function CreateToolPromptDialog() {
             <div className="space-y-1.5">
               <Label htmlFor="tool-category">Categoria</Label>
 
-              {/* Show selected new category as a badge when not editing */}
               {isNewCategory && !showNewCategoryInput && (
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/5 px-2.5 py-1.5 text-sm font-medium text-primary">
@@ -349,7 +350,6 @@ export default function CreateToolPromptDialog() {
                 </Select>
               )}
 
-              {/* Inline new-category input */}
               {showNewCategoryInput && (
                 <div className="space-y-2">
                   <div className="flex gap-2">
@@ -418,6 +418,30 @@ export default function CreateToolPromptDialog() {
               </div>
               <Switch id="tool-feature-home" checked={featureOnHome} onCheckedChange={setFeatureOnHome} />
             </div>
+
+            {/* ── Melhorar objetivo com IA ──────────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="tool-user-request">Descreva o que você quer mudar</Label>
+              <Textarea
+                id="tool-user-request"
+                placeholder="Ex.: quero que esse botão fique desabilitado enquanto a página carrega"
+                rows={2}
+                value={userRequest}
+                onChange={(e) => setUserRequest(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={!userRequest.trim() || aiLoading}
+              onClick={handleImproveWithAI}
+            >
+              {aiLoading
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Gerando...</>
+                : <><Wand2 className="h-3.5 w-3.5" />Melhorar objetivo com IA</>}
+            </Button>
 
             <div className="space-y-1.5">
               <Label htmlFor="tool-objective">Objetivo</Label>

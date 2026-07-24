@@ -1,0 +1,17 @@
+Preciso melhorar o fluxo de geração de prompts em artifacts/nicemp-docs/src/app/components/prompts/GeneratePromptButton.tsx, que hoje monta o prompt só com buildReplitPrompt (services/prompts/PromptGenerator.ts) e mostra num Textarea somente leitura.
+
+O que preciso, sem quebrar o comportamento atual:
+
+1. Antes do Textarea do prompt final, adicionar um campo de texto (Textarea editável) com o rótulo "Descreva o que você quer mudar" e um placeholder do tipo "Ex.: quero que esse botão fique desabilitado enquanto a página carrega".
+
+2. Adicionar um botão "Melhorar objetivo com IA" (usar o mesmo estilo dos outros botões da tela). Ao clicar:
+   - Chama a rota POST /api/ai/prompt-objective enviando os dados da entidade (kind, name, location, module, dependencies) já disponíveis nesse componente, mais a descrição da entidade (se existir) e o texto que o usuário digitou no campo novo.
+   - Enquanto espera a resposta, mostrar um estado de carregamento simples no botão (ex.: desabilitado + texto "Gerando...").
+   - Se a resposta vier com objective preenchido, usar esse texto como objectiveOverride ao chamar buildReplitPrompt (o parâmetro já existe em PromptTaskOptions, em PromptGenerator.ts).
+   - Se a resposta vier com fallback: true (erro, indisponibilidade ou limite diário atingido), mostrar um toast avisando "Não foi possível usar a IA agora, o prompt padrão foi mantido" e continuar usando o texto padrão de objetivo (o que já existe hoje, sem quebrar nada).
+
+3. Manter 100% do comportamento de arquivos permitidos, proibidos, dependências, risco e checklist exatamente como estão hoje — a IA só deve influenciar o texto do objetivo, nunca essas outras seções.
+
+4. Aplicar essa mesma melhoria em todos os outros diálogos de prompt da pasta artifacts/nicemp-docs/src/app/components/prompts/ que também usam buildReplitPrompt (CreatePagePromptDialog.tsx, CreateComponentPromptDialog.tsx, CreateModulePromptDialog.tsx, CreateToolPromptDialog.tsx, EditSupabaseTablePromptDialog.tsx, DuplicateTableCleanupPromptDialog.tsx), mantendo o mesmo padrão de campo + botão + fallback.
+
+Ao final, me diga exatamente quais arquivos foram alterados e me avise se algum desses diálogos tem uma estrutura diferente que impediu de aplicar o mesmo padrão.

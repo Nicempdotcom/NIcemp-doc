@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { PenLine, Sparkles, Copy, Check } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { PenLine, Sparkles, Copy, Check, Loader2, Wand2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -15,6 +15,7 @@ import {
   buildPageCreationPrompt,
   type NavGroupName,
 } from '@/services/prompts/PageCreationPromptGenerator';
+import { usePromptObjectiveAI } from './usePromptObjectiveAI';
 
 const NAV_GROUP_OPTIONS: NavGroupName[] = ['Plataforma', 'Documentação', 'Sistema'];
 
@@ -38,30 +39,43 @@ function slugify(value: string): string {
  * prompt — ela não cria arquivos nem edita rotas por conta própria.
  */
 export default function CreatePagePromptDialog() {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [open, setOpen]               = useState(false);
+  const [copied, setCopied]           = useState(false);
 
-  const [pageName, setPageName] = useState('');
-  const [routeSlug, setRouteSlug] = useState('');
+  const [pageName, setPageName]       = useState('');
+  const [routeSlug, setRouteSlug]     = useState('');
   const [routeTouched, setRouteTouched] = useState(false);
-  const [navGroup, setNavGroup] = useState<NavGroupName>('Plataforma');
-  const [iconName, setIconName] = useState('');
-  const [objective, setObjective] = useState('');
+  const [navGroup, setNavGroup]       = useState<NavGroupName>('Plataforma');
+  const [iconName, setIconName]       = useState('');
+  const [objective, setObjective]     = useState('');
+  const [userRequest, setUserRequest] = useState('');
 
-  const [prompt, setPrompt] = useState<string | null>(null);
+  const [prompt, setPrompt]           = useState<string | null>(null);
+
+  const { aiLoading, requestImprovement } = usePromptObjectiveAI();
 
   const effectiveSlug = routeTouched ? routeSlug : slugify(pageName);
+  const canGenerate   = pageName.trim().length > 0 && effectiveSlug.trim().length > 0;
 
-  const canGenerate = pageName.trim().length > 0 && effectiveSlug.trim().length > 0;
+  const handleImproveWithAI = useCallback(async () => {
+    const result = await requestImprovement({
+      kind:        'page',
+      name:        pageName.trim() || 'Nova página',
+      location:    `/${effectiveSlug}`,
+      module:      navGroup,
+      userRequest: userRequest.trim(),
+    });
+    if (result) setObjective(result);
+  }, [requestImprovement, pageName, effectiveSlug, navGroup, userRequest]);
 
   const handleGenerate = () => {
     if (!canGenerate) return;
     const generated = buildPageCreationPrompt({
-      pageName: pageName.trim(),
-      routeKey: effectiveSlug.replace(/-/g, ''),
+      pageName:  pageName.trim(),
+      routeKey:  effectiveSlug.replace(/-/g, ''),
       routePath: `/${effectiveSlug}`,
       navGroup,
-      iconName: iconName.trim() || 'FileText',
+      iconName:  iconName.trim() || 'FileText',
       objective: objective.trim(),
     });
     setPrompt(generated);
@@ -82,13 +96,13 @@ export default function CreatePagePromptDialog() {
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) {
-      // Reset the form for the next time the dialog is opened.
       setPageName('');
       setRouteSlug('');
       setRouteTouched(false);
       setNavGroup('Plataforma');
       setIconName('');
       setObjective('');
+      setUserRequest('');
       setPrompt(null);
       setCopied(false);
     }
@@ -176,6 +190,30 @@ export default function CreatePagePromptDialog() {
               />
               <p className="text-xs text-muted-foreground">Nome de um ícone de lucide-react, ex: FileText.</p>
             </div>
+
+            {/* ── Melhorar objetivo com IA ──────────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="page-user-request">Descreva o que você quer mudar</Label>
+              <Textarea
+                id="page-user-request"
+                placeholder="Ex.: quero que esse botão fique desabilitado enquanto a página carrega"
+                rows={2}
+                value={userRequest}
+                onChange={(e) => setUserRequest(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={!userRequest.trim() || aiLoading}
+              onClick={handleImproveWithAI}
+            >
+              {aiLoading
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Gerando...</>
+                : <><Wand2 className="h-3.5 w-3.5" />Melhorar objetivo com IA</>}
+            </Button>
 
             <div className="space-y-1.5">
               <Label htmlFor="page-objective">Objetivo da página</Label>
