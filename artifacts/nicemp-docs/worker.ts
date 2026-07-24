@@ -8,8 +8,10 @@
  * Cloudflare without a separate Express backend.
  *
  * Routes handled here:
- *   POST /api/github/device/code   — initiates GitHub Device Flow
- *   POST /api/github/device/token  — polls for an OAuth access token
+ *   POST /api/github/device/code      — initiates GitHub Device Flow
+ *   POST /api/github/device/token     — polls for an OAuth access token
+ *   GET  /api/ai/ping                 — Workers AI smoke-test
+ *   POST /api/ai/prompt-objective     — generates "Objetivo da alteração" text via Workers AI
  *
  * Secrets required (set in Cloudflare dashboard or via `wrangler secret put`):
  *   GITHUB_CLIENT_ID
@@ -183,6 +185,123 @@ async function handleDeviceToken(request: Request, env: Env): Promise<Response> 
   return jsonResponse(data);
 }
 
+// ── Rate-limit helpers ────────────────────────────────────────────────────────
+// Tracks AI objective calls per browser using a first-party cookie:
+//   ai_obj_rate=YYYY-MM-DD:N
+// Resets automatically at UTC day rollover. 60 calls/day per browser.
+
+const AI_RATE_LIMIT = 60;
+const AI_RATE_COOKIE = "ai_obj_rate";
+
+function parseRateCookie(cookieHeader: string | null): { date: string; count: number } {
+  if (!cookieHeader) return { date: "", count: 0 };
+  const match = cookieHeader.match(/ai_obj_rate=([^;]+)/);
+  if (!match) return { date: "", count: 0 };
+  const [date = "", rawCount = "0"] = match[1].split(":");
+  return { date, count: parseInt(rawCount, 10) || 0 };
+}
+
+function rateSetCookieHeader(date: string, count: number): string {
+  return `${AI_RATE_COOKIE}=${date}:${count}; Path=/; SameSite=Strict; Max-Age=86400`;
+}
+
+/** POST /api/ai/prompt-objective — generates "Objetivo da alteração" text via Workers AI */
+async function handlePromptObjective(request: Request, env: Env): Promise<Response> {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+
+  // ── Rate limit ────────────────────────────────────────────────────────────
+  const { date, count } = parseRateCookie(request.headers.get("Cookie"));
+  const todayCount = date === today ? count : 0;
+  if (todayCount >= AI_RATE_LIMIT) {
+    return new Response(
+      JSON.stringify({ objective: null, fallback: true, limitReached: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Parse body ────────────────────────────────────────────────────────────
+  let body: {
+    kind?: string;
+    name?: string;
+    location?: string;
+    module?: string;
+    description?: string;
+    dependencies?: string;
+    userRequest?: string;
+  };
+  try {
+    body = await request.json() as typeof body;
+  } catch {
+    // Malformed JSON — fail silently, never 500
+    return new Response(
+      JSON.stringify({ objective: null, fallback: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const {
+    kind        = "",
+    name        = "",
+    location    = "",
+    module      = "",
+    description = "",
+    dependencies = "",
+    userRequest  = "",
+  } = body;
+
+  // ── Build prompt ──────────────────────────────────────────────────────────
+  const systemPrompt =
+    `Você é um assistente técnico de documentação de software. ` +
+    `Sua tarefa é escrever a seção "Objetivo da alteração" de um prompt de engenharia de software.\n\n` +
+    `Regras obrigatórias:\n` +
+    `1. Escreva um parágrafo objetivo e específico descrevendo a mudança pedida, cruzando com a descrição da entidade fornecida.\n` +
+    `2. Nunca invente nomes de arquivo, tecnologia ou dependência que não estejam nos dados recebidos.\n` +
+    `3. Nunca sugira mudanças em arquivos de configuração global, banco de dados, migrations ou qualquer escopo fora do que o usuário pediu explicitamente.\n` +
+    `4. Responda em no máximo 4 frases. Sem markdown. Sem saudação. Apenas o parágrafo do objetivo.`;
+
+  const userPrompt =
+    `Entidade:\n` +
+    `- Tipo: ${kind}\n` +
+    `- Nome: ${name}\n` +
+    `- Localização: ${location}\n` +
+    `- Módulo: ${module}\n` +
+    `- Descrição: ${description}\n` +
+    `- Dependências: ${dependencies}\n\n` +
+    `Pedido do usuário: ${userRequest}\n\n` +
+    `Escreva o objetivo da alteração.`;
+
+  // ── Call Workers AI ───────────────────────────────────────────────────────
+  let objective: string | null = null;
+  try {
+    if (!env.AI) throw new Error("AI binding unavailable");
+    const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user",   content: userPrompt   },
+      ],
+    }) as { response?: string };
+    objective = result.response?.trim() ?? null;
+  } catch {
+    // Any failure — return fallback, never propagate as 500
+    return new Response(
+      JSON.stringify({ objective: null, fallback: true }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Success — increment rate counter ──────────────────────────────────────
+  return new Response(
+    JSON.stringify({ objective }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": rateSetCookieHeader(today, todayCount + 1),
+      },
+    },
+  );
+}
+
 /** GET /api/ai/ping — smoke-test for the Workers AI binding */
 async function handleAiPing(env: Env): Promise<Response> {
   if (!env.AI) {
@@ -218,6 +337,9 @@ export default {
     }
     if (request.method === "GET" && pathname === "/api/ai/ping") {
       return handleAiPing(env);
+    }
+    if (request.method === "POST" && pathname === "/api/ai/prompt-objective") {
+      return handlePromptObjective(request, env);
     }
 
     // ── Static assets (Vite build output) ────────────────────────────────────
